@@ -62,7 +62,6 @@
     <button
       wx:if="{{showLeaveAction}}"
       class="secondary-btn profile-action"
-      style="border-radius: 24rpx;"
       bindtap="handlePrimaryAction"
     >
       {{pageData.primaryActionLabel}}
@@ -70,7 +69,6 @@
     <button
       wx:if="{{showDissolveAction}}"
       class="danger-btn profile-action"
-      style="border-radius: 24rpx;"
       bindtap="handlePrimaryAction"
     >
       {{pageData.primaryActionLabel}}
@@ -96,7 +94,6 @@
 
         <button
           class="ghost-btn demo-switch"
-          style="border-radius: 24rpx;"
           disabled="{{item.isActive}}"
           data-user-id="{{item.id}}"
           bindtap="handleSwitchDemoUser"

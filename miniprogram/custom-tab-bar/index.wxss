@@ -35,7 +35,7 @@
 }
 
 .tab-label {
-  color: #111111;
+  color: var(--text-primary);
   font-size: var(--font-caption);
   font-weight: 500;
   line-height: 1.2;

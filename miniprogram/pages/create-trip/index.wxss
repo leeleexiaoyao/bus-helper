@@ -40,8 +40,8 @@
 .custom-back-icon {
   width: 24rpx;
   height: 24rpx;
-  border-left: 5rpx solid #111111;
-  border-bottom: 5rpx solid #111111;
+  border-left: 5rpx solid var(--text-primary);
+  border-bottom: 5rpx solid var(--text-primary);
   transform: rotate(45deg);
   box-sizing: border-box;
 }
@@ -49,7 +49,7 @@
 .custom-nav-title {
   width: 100%;
   padding-right: 40rpx;
-  color: #111111;
+  color: var(--text-primary);
   font-size: 34rpx;
   font-weight: 700;
   text-align: center;
@@ -72,7 +72,7 @@
 .field-label {
   font-size: 28rpx;
   font-weight: 600;
-  color: #111111;
+  color: var(--text-primary);
 }
 
 .field-input {
@@ -83,11 +83,11 @@
   border: 1rpx solid #e5e7eb;
   background: #ffffff;
   font-size: 28rpx;
-  color: #111111;
+  color: var(--text-primary);
 }
 
 .field-placeholder {
-  color: #b6bfcc;
+  color: var(--text-tertiary);
 }
 
 .template-list {
@@ -121,12 +121,12 @@
 .template-name {
   font-size: 28rpx;
   font-weight: 700;
-  color: #111111;
+  color: var(--text-primary);
 }
 
 .template-text {
   margin-top: 10rpx;
-  color: #6b7280;
+  color: var(--text-secondary);
   font-size: 24rpx;
 }
 
@@ -155,10 +155,4 @@
 
 .submit-btn {
   margin-top: 48rpx;
-  min-height: 96rpx;
-  border-radius: 24rpx;
-  background: #1677ff;
-  line-height: 96rpx;
-  font-size: 32rpx;
-  font-weight: 700;
 }

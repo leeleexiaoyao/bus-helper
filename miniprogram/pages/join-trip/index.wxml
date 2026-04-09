@@ -15,7 +15,7 @@
       />
     </view>
 
-    <button class="primary-btn submit-btn" style="border-radius: 24rpx;" loading="{{submitting}}" bindtap="handleSubmit">
+    <button class="primary-btn submit-btn" loading="{{submitting}}" bindtap="handleSubmit">
       加入车次
     </button>
   </view>

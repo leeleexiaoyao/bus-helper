@@ -5,18 +5,18 @@
   padding-right: 0;
   padding-left: 0;
   padding-bottom: 40rpx;
-  background: linear-gradient(180deg, #8dbaf5 0%, #97bff4 18%, #b7d1f6 38%, #dbe8fb 58%, #ffffff 82%);
+  background: linear-gradient(180deg, #d7deea 0%, #fafafa 100%);
 }
 
 auth-gate {
   display: block;
-  margin: 0 24rpx;
+  margin: 0 20rpx;
   position: relative;
   z-index: 1;
 }
 
 .home-hero {
-  padding: 0 24rpx;
+  padding: 0 20rpx;
   position: relative;
   z-index: 1;
 }
@@ -59,8 +59,8 @@ auth-gate {
 
 .viewer-seat {
   margin-top: 8rpx;
-  color: rgba(17, 17, 17, 0.72);
-  font-size: 22rpx;
+  color: #c6c8cb;
+  font-size: 20rpx;
 }
 
 .trip-panel {
@@ -68,7 +68,7 @@ auth-gate {
   margin-left: 20rpx;
   margin-right: 20rpx;
   margin-bottom: 24rpx;
-  padding: 28rpx 16rpx 44rpx;
+  padding: 16rpx 16rpx 44rpx;
   min-height: calc(100vh - 388rpx);
   box-sizing: border-box;
   background: #ffffff;
@@ -95,23 +95,25 @@ auth-gate {
 .home-tab {
   position: relative;
   padding-bottom: 8rpx;
-  color: #9d9d9d;
-  font-size: 34rpx;
-  font-weight: 500;
+  color: var(--text-primary);
+  opacity: 0.4;
+  font-size: 28rpx;
+  font-weight: 400;
 }
 
 .home-tab.is-active {
   color: var(--text-primary);
+  opacity: 1;
   font-weight: 700;
 }
 
 .tabs-stat {
-  color: var(--text-secondary);
-  font-size: 22rpx;
+  color: #c6c8cb;
+  font-size: 28rpx;
 }
 
 .entry-card {
-  margin: 0 24rpx;
+  margin: 0 20rpx;
   padding: 34rpx 28rpx;
   position: relative;
   z-index: 1;

@@ -16,7 +16,7 @@
     </view>
     <view wx:else class="preview-empty">保存后会同步到首页成员列表和成员详情。</view>
 
-    <button class="primary-btn save-btn" style="border-radius: 24rpx;" loading="{{submitting}}" bindtap="handleSave">
+    <button class="primary-btn save-btn" loading="{{submitting}}" bindtap="handleSave">
       保存标签
     </button>
   </view>

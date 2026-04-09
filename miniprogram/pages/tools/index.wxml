@@ -16,7 +16,7 @@
       <view class="section-title">{{pageData.emptyTitle}}</view>
       <view class="section-subtitle">{{pageData.emptyDescription}}</view>
 
-      <button wx:if="{{showGoHomeAction}}" class="secondary-btn tools-btn" style="border-radius: 24rpx;" bindtap="goHome">
+      <button wx:if="{{showGoHomeAction}}" class="secondary-btn tools-btn" bindtap="goHome">
         去首页创建或加入
       </button>
     </view>

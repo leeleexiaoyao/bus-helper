@@ -13,6 +13,6 @@
       <view class="setting-value">{{templateLabel}}</view>
     </view>
 
-    <button class="danger-btn dissolve-btn" style="border-radius: 24rpx;" bindtap="handleDissolve">解散车次</button>
+    <button class="danger-btn dissolve-btn" bindtap="handleDissolve">解散车次</button>
   </view>
 </view>

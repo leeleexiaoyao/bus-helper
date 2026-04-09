@@ -34,10 +34,9 @@
   <button
     wx:if="{{showAdminActions}}"
     class="secondary-btn action-btn"
-    style="border-radius: 24rpx;"
     bindtap="handleSettingTap"
   >
     车次设置
   </button>
-  <button wx:else class="ghost-btn action-btn" style="border-radius: 24rpx;" bindtap="handleLeaveTap">退出车次</button>
+  <button wx:else class="ghost-btn action-btn" bindtap="handleLeaveTap">退出车次</button>
 </view>

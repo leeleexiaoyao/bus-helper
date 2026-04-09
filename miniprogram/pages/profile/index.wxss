@@ -46,7 +46,7 @@
 .profile-seat,
 .profile-trip {
   margin-top: 10rpx;
-  color: var(--text-secondary);
+  color: #c6c8cb;
   font-size: 22rpx;
 }
 
@@ -106,8 +106,7 @@
 }
 
 .profile-action {
-  margin: 32rpx auto 0;
-  width: 280rpx;
+  margin: 32rpx 24rpx 0;
   position: relative;
   z-index: 1;
 }
@@ -154,5 +153,7 @@
 }
 
 .demo-switch {
-  width: 150rpx;
+  width: auto;
+  margin: 0;
+  flex-shrink: 0;
 }

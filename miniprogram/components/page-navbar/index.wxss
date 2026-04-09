@@ -25,16 +25,19 @@
   align-items: center;
   justify-content: flex-start;
   box-sizing: border-box;
-  padding-bottom: 4px;
+  padding-bottom: 0;
 }
 
 .page-navbar-title {
+  display: flex;
+  align-items: center;
+  height: 100%;
   width: 100%;
   text-align: left;
-  color: #111111;
-  font-size: 48rpx;
+  color: var(--text-primary);
+  font-size: 40rpx;
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

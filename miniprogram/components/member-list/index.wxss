@@ -1,5 +1,5 @@
 .member-list {
-  padding-top: 24rpx;
+  padding-top: 12rpx;
 }
 
 .member-item {
@@ -47,7 +47,7 @@
 }
 
 .member-seat {
-  color: var(--text-secondary);
+  color: #c6c8cb;
   font-size: 22rpx;
 }
 
@@ -67,7 +67,7 @@
   border-radius: 999rpx;
   background: rgba(245, 188, 17, 0.14);
   color: #b48400;
-  font-size: 20rpx;
+  font-size: 26rpx;
 }
 
 .mini-tag--admin {

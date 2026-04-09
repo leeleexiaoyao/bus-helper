@@ -51,8 +51,8 @@
       </view>
 
       <view class="entry-actions">
-        <button class="primary-btn" style="border-radius: 24rpx;" bindtap="goCreateTrip">创建车次</button>
-        <button class="secondary-btn" style="border-radius: 24rpx;" bindtap="goJoinTrip">加入车次</button>
+        <button class="primary-btn" bindtap="goCreateTrip">创建车次</button>
+        <button class="secondary-btn" bindtap="goJoinTrip">加入车次</button>
       </view>
     </view>
   </block>

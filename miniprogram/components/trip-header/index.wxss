@@ -20,7 +20,7 @@
 
 .hero-subtitle {
   margin-top: 10rpx;
-  color: var(--text-secondary);
+  color: #c6c8cb;
   font-size: 22rpx;
 }
 
@@ -29,7 +29,7 @@
   border-radius: 999rpx;
   background: #f2e8dd;
   color: var(--text-secondary);
-  font-size: 20rpx;
+  font-size: 26rpx;
   font-weight: 600;
 }
 
@@ -64,7 +64,7 @@
 
 .stat-label {
   font-size: 20rpx;
-  color: var(--text-secondary);
+  color: #c6c8cb;
 }
 
 .stat-value {
