@@ -1,0 +1,48 @@
+{
+  "pages": [
+    "pages/home/index",
+    "pages/tools/index",
+    "pages/profile/index",
+    "pages/create-trip/index",
+    "pages/join-trip/index",
+    "pages/tag-editor/index",
+    "pages/feedback/index",
+    "pages/about/index",
+    "pages/trip-settings/index"
+  ],
+  "window": {
+    "navigationBarTitleText": "巴士认座助手",
+    "navigationBarBackgroundColor": "#eff5fc",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#edf3fa",
+    "backgroundTextStyle": "light"
+  },
+  "tabBar": {
+    "color": "#6e7f92",
+    "selectedColor": "#ff6b3d",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/home/index",
+        "text": "首页",
+        "iconPath": "assets/icons/tab-home.png",
+        "selectedIconPath": "assets/icons/tab-home-active.png"
+      },
+      {
+        "pagePath": "pages/tools/index",
+        "text": "工具",
+        "iconPath": "assets/icons/tab-tools.png",
+        "selectedIconPath": "assets/icons/tab-tools-active.png"
+      },
+      {
+        "pagePath": "pages/profile/index",
+        "text": "我的",
+        "iconPath": "assets/icons/tab-profile.png",
+        "selectedIconPath": "assets/icons/tab-profile-active.png"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "../sitemap.json"
+}

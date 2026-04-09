@@ -1,0 +1,11 @@
+<view class="page-navbar-spacer" style="height: {{navTotalHeight}}px;"></view>
+
+<view class="page-navbar-fixed" style="height: {{navTotalHeight}}px; padding-top: {{statusBarHeight}}px;">
+  <view class="page-navbar-bg" style="{{navOpacityStyle}}"></view>
+  <view
+    class="page-navbar-content"
+  style="height: {{navHeight}}px; padding-left: {{titleLeftPadding}}px; padding-right: {{titleRightPadding}}px;"
+>
+  <view class="page-navbar-title">{{title}}</view>
+</view>
+</view>

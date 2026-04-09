@@ -1,0 +1,17 @@
+{
+  "name": "bus-seat-buddy-miniapp",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx tests/trip-service.test.ts",
+    "watch": "tsc -w --preserveWatchOutput"
+  },
+  "devDependencies": {
+    "@types/node": "^24.9.1",
+    "miniprogram-api-typings": "^4.1.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}

@@ -1,0 +1,22 @@
+<view class="page-shell">
+  <view class="card join-card" style="border-radius: 32rpx; overflow: hidden; background: #ffffff;">
+    <view class="section-title">输入 6 位密码加入车次</view>
+    <view class="section-subtitle">密码正确后，你会直接回到首页并看到当前车次内容。</view>
+
+    <view class="form-block">
+      <view class="field-label">车次密码</view>
+      <input
+        class="field-input password-input"
+        value="{{password}}"
+        maxlength="6"
+        type="number"
+        placeholder="请输入 6 位数字密码"
+        bindinput="handlePasswordInput"
+      />
+    </view>
+
+    <button class="primary-btn submit-btn" style="border-radius: 24rpx;" loading="{{submitting}}" bindtap="handleSubmit">
+      加入车次
+    </button>
+  </view>
+</view>

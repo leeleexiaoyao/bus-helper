@@ -1,0 +1,17 @@
+.join-card {
+  padding: 30rpx 26rpx;
+}
+
+.form-block {
+  margin-top: 28rpx;
+}
+
+.password-input {
+  text-align: center;
+  letter-spacing: 8rpx;
+  font-size: 30rpx;
+}
+
+.submit-btn {
+  margin-top: 28rpx;
+}

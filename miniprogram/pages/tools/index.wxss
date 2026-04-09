@@ -1,0 +1,18 @@
+.tools-page {
+  min-height: 100vh;
+  position: relative;
+  padding-top: 40rpx;
+  padding-bottom: 40rpx;
+  background: linear-gradient(180deg, #8dbaf5 0%, #97bff4 18%, #b7d1f6 38%, #dbe8fb 58%, #ffffff 82%);
+}
+
+.tools-card {
+  padding: 26rpx 24rpx;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+
+.tools-btn {
+  margin-top: 28rpx;
+}

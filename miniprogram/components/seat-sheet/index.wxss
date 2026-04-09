@@ -1,0 +1,118 @@
+.sheet-mask {
+  position: fixed;
+  inset: 0;
+  padding: 32rpx;
+  box-sizing: border-box;
+  background: rgba(17, 17, 17, 0.24);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99;
+}
+
+.sheet-panel {
+  width: 100%;
+  max-width: 380px;
+  padding: 30rpx 28rpx 32rpx;
+  box-sizing: border-box;
+  border-radius: 32rpx;
+  background: #ffffff;
+  overflow: hidden;
+  box-shadow: none;
+}
+
+.sheet-handle {
+  width: 72rpx;
+  height: 8rpx;
+  margin: 0 auto 16rpx;
+  border-radius: 999rpx;
+  background: rgba(17, 17, 17, 0.08);
+}
+
+.sheet-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  text-align: center;
+}
+
+.sheet-subtitle {
+  margin-top: 12rpx;
+  color: var(--text-secondary);
+  font-size: 22rpx;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.claim-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18rpx;
+  padding: 28rpx 0 8rpx;
+}
+
+.claim-avatar,
+.detail-avatar {
+  width: 92rpx;
+  height: 92rpx;
+  border-radius: 50%;
+}
+
+.claim-avatar--fallback,
+.detail-avatar--fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #d78871 0%, #dd9d86 100%);
+  color: #fff8f2;
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.claim-copy {
+  text-align: left;
+}
+
+.claim-name {
+  font-size: 26rpx;
+  font-weight: 600;
+}
+
+.claim-seat {
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  color: var(--text-secondary);
+}
+
+.sheet-action {
+  margin-top: 22rpx;
+}
+
+.detail-card {
+  margin-top: 20rpx;
+  text-align: center;
+}
+
+.detail-title {
+  margin-top: 18rpx;
+}
+
+.detail-subtitle {
+  margin-top: 10rpx;
+}
+
+.detail-line {
+  display: flex;
+  justify-content: center;
+  gap: 10rpx;
+  margin-top: 14rpx;
+}
+
+.detail-card .tag-list {
+  justify-content: center;
+  margin-top: 14rpx;
+}
+
+.sheet-close {
+  margin-top: 14rpx;
+}

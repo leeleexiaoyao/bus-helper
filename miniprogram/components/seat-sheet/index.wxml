@@ -1,0 +1,67 @@
+<view wx:if="{{visible}}" class="sheet-mask" bindtap="handleMaskTap">
+  <view class="sheet-panel" style="border-radius: 32rpx; overflow: hidden; background: #ffffff;" catchtap="stopPropagation">
+    <view class="sheet-handle"></view>
+
+    <block wx:if="{{isClaimMode}}">
+      <view class="sheet-title">确认入座</view>
+      <view class="sheet-subtitle">{{seat.label}} 会展示你的微信头像和昵称。</view>
+
+      <view class="claim-preview">
+        <image wx:if="{{claimAvatarUrl}}" class="claim-avatar" src="{{claimAvatarUrl}}" mode="aspectFill" />
+        <view wx:else class="claim-avatar claim-avatar--fallback">{{localInitial}}</view>
+        <view class="claim-copy">
+          <view class="claim-name">{{claimNickname}}</view>
+          <view class="claim-seat">{{seat.label}}</view>
+        </view>
+      </view>
+
+      <button class="primary-btn sheet-action" style="border-radius: 24rpx;" bindtap="handleConfirmClaim">确认入座</button>
+    </block>
+
+    <block wx:elif="{{isSwitchMode}}">
+      <view class="sheet-title">确认换座</view>
+      <view class="sheet-subtitle">将你的座位变更为 {{seat.label}}。</view>
+      <button class="primary-btn sheet-action" style="border-radius: 24rpx;" bindtap="handleConfirmSwitch">确认换座</button>
+    </block>
+
+    <block wx:elif="{{isSelfMode}}">
+      <view class="sheet-title">解除当前座位</view>
+      <view class="sheet-subtitle">{{seat.label}} 将被释放，你会回到未入座状态。</view>
+      <button class="danger-btn sheet-action" style="border-radius: 24rpx;" bindtap="handleReleaseMine">解除我的座位</button>
+    </block>
+
+    <block wx:else>
+      <view class="detail-card">
+        <image wx:if="{{member.avatarUrl}}" class="detail-avatar" src="{{member.avatarUrl}}" mode="aspectFill" />
+        <view wx:else class="detail-avatar detail-avatar--fallback">{{member.initial}}</view>
+        <view class="sheet-title detail-title">{{member.nickname}}</view>
+        <view class="sheet-subtitle detail-subtitle">{{detailSeatLabel}}</view>
+        <view class="detail-line">
+          <view class="mini-tag" wx:if="{{member.isSelf}}">我</view>
+          <view class="mini-tag mini-tag--admin" wx:if="{{showAdminBadge}}">管理员</view>
+        </view>
+        <view class="tag-list" wx:if="{{member.tags.length}}">
+          <view class="tag-chip" wx:for="{{member.tags}}" wx:key="*this">{{item}}</view>
+        </view>
+      </view>
+
+      <button
+        wx:if="{{showAdminReleaseButton}}"
+        class="danger-btn sheet-action"
+        style="border-radius: 24rpx;"
+        bindtap="handleAdminRelease"
+      >
+        解除该座位
+      </button>
+      <button
+        wx:if="{{showAdminReleaseButton}}"
+        class="ghost-btn sheet-close"
+        style="border-radius: 24rpx;"
+        bindtap="handleClose"
+      >
+        关闭
+      </button>
+      <button wx:else class="secondary-btn sheet-action" style="border-radius: 24rpx;" bindtap="handleClose">确定</button>
+    </block>
+  </view>
+</view>

@@ -1,0 +1,10 @@
+.static-card {
+  padding: 34rpx 30rpx;
+}
+
+.static-copy {
+  margin-top: 24rpx;
+  color: var(--text-secondary);
+  font-size: 22rpx;
+  line-height: 1.8;
+}

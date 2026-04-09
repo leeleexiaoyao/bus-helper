@@ -1,0 +1,164 @@
+.create-trip-page {
+  min-height: 100vh;
+  background: #f3f4f6;
+}
+
+.custom-nav-spacer {
+  width: 100%;
+}
+
+.custom-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  background: #f3f4f6;
+}
+
+.custom-nav-inner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-left: 120rpx;
+  box-sizing: border-box;
+}
+
+.custom-back {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 88rpx;
+  height: 88rpx;
+  transform: translateY(-50%);
+}
+
+.custom-back-icon {
+  width: 24rpx;
+  height: 24rpx;
+  border-left: 5rpx solid #111111;
+  border-bottom: 5rpx solid #111111;
+  transform: rotate(45deg);
+  box-sizing: border-box;
+}
+
+.custom-nav-title {
+  width: 100%;
+  padding-right: 40rpx;
+  color: #111111;
+  font-size: 34rpx;
+  font-weight: 700;
+  text-align: center;
+}
+
+.page-shell.create-trip-content {
+  padding: 28rpx 32rpx 48rpx;
+  background: transparent;
+  box-sizing: border-box;
+}
+
+.form-block {
+  margin-top: 28rpx;
+}
+
+.form-block:first-child {
+  margin-top: 0;
+}
+
+.field-label {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #111111;
+}
+
+.field-input {
+  margin-top: 16rpx;
+  min-height: 96rpx;
+  padding: 0 24rpx;
+  border-radius: 24rpx;
+  border: 1rpx solid #e5e7eb;
+  background: #ffffff;
+  font-size: 28rpx;
+  color: #111111;
+}
+
+.field-placeholder {
+  color: #b6bfcc;
+}
+
+.template-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+  margin-top: 16rpx;
+}
+
+.template-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx;
+  border-radius: 24rpx;
+  background: #ffffff;
+  border: 2rpx solid #edf0f3;
+  box-sizing: border-box;
+}
+
+.template-card.is-active {
+  border-color: #1677ff;
+  background: #f8fbff;
+}
+
+.template-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.template-name {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #111111;
+}
+
+.template-text {
+  margin-top: 10rpx;
+  color: #6b7280;
+  font-size: 24rpx;
+}
+
+.template-check {
+  position: relative;
+  width: 32rpx;
+  height: 32rpx;
+  margin-left: 20rpx;
+  border-radius: 50%;
+  border: 2rpx solid #d3dae6;
+  background: #ffffff;
+  box-sizing: border-box;
+}
+
+.template-card.is-active .template-check {
+  border-color: #1677ff;
+}
+
+.template-card.is-active .template-check::after {
+  content: "";
+  position: absolute;
+  inset: 7rpx;
+  border-radius: 50%;
+  background: #1677ff;
+}
+
+.submit-btn {
+  margin-top: 48rpx;
+  min-height: 96rpx;
+  border-radius: 24rpx;
+  background: #1677ff;
+  line-height: 96rpx;
+  font-size: 32rpx;
+  font-weight: 700;
+}

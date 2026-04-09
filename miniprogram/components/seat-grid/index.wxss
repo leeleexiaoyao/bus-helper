@@ -1,0 +1,105 @@
+.seat-grid {
+  padding: 24rpx 0 0;
+}
+
+.seat-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.seat-row {
+  display: block;
+}
+
+.row-slots {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16rpx;
+}
+
+.seat-card {
+  min-height: 188rpx;
+  padding: 18rpx 10rpx 16rpx;
+  border-radius: 24rpx;
+  background: #f7f7f7;
+  border: 3rpx solid transparent;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.seat-card.is-empty {
+  background: #f7f7f7;
+}
+
+.seat-card.is-occupied {
+  background: #f7f7f7;
+}
+
+.seat-card.is-mine {
+  border-color: #f5bc11;
+  background: #ffffff;
+}
+
+.seat-card.is-admin {
+  border-color: #21c980;
+  background: #ffffff;
+}
+
+.seat-empty {
+  color: #c8ccd2;
+  font-size: 44rpx;
+  font-weight: 500;
+}
+
+.seat-avatar {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 50%;
+}
+
+.seat-avatar-shell {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  background: #d78871;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.seat-avatar--fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: #fff8f2;
+  font-size: 22rpx;
+  font-weight: 700;
+}
+
+.seat-name {
+  margin-top: 14rpx;
+  max-width: 100%;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.seat-code {
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  color: var(--text-secondary);
+}
+
+.aisle {
+  min-height: 188rpx;
+}

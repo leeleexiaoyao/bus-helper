@@ -1,0 +1,22 @@
+<view class="member-list">
+  <view class="member-item" wx:for="{{members}}" wx:key="userId" wx:for-item="member" wx:for-index="memberIndex" data-index="{{memberIndex}}" bindtap="handleMemberTap">
+    <image wx:if="{{member.avatarUrl}}" class="member-avatar" src="{{member.avatarUrl}}" mode="aspectFill" />
+    <view wx:else class="member-avatar member-avatar--fallback">{{member.initial}}</view>
+
+    <view class="member-main">
+      <view class="member-line">
+        <view class="member-name">{{member.nickname}}</view>
+        <view class="member-seat">{{member.seatLabel}}</view>
+      </view>
+
+      <view class="tag-list" wx:if="{{member.tags.length}}">
+        <view class="tag-chip" wx:for="{{member.tags}}" wx:key="*this">{{item}}</view>
+      </view>
+
+      <view class="member-meta" wx:if="{{member.showMeta}}">
+        <view class="mini-tag" wx:if="{{member.isSelf}}">我</view>
+        <view class="mini-tag mini-tag--admin" wx:if="{{member.isAdmin}}">管理员</view>
+      </view>
+    </view>
+  </view>
+</view>

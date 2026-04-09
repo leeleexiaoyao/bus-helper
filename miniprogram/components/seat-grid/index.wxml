@@ -1,0 +1,36 @@
+<view class="seat-grid">
+  <view class="seat-rows">
+    <view class="seat-row" wx:for="{{rows}}" wx:key="rowNumber" wx:for-item="row" wx:for-index="rowIndex">
+      <view class="row-slots">
+        <block wx:for="{{row.slots}}" wx:key="*this" wx:for-item="slot" wx:for-index="slotIndex">
+          <view
+            wx:if="{{slot}}"
+            class="seat-card {{slot.className}}"
+            style="border-radius: 24rpx; overflow: hidden;"
+            data-row="{{rowIndex}}"
+            data-slot="{{slotIndex}}"
+            bindtap="handleSeatTap"
+          >
+            <view wx:if="{{slot.isEmpty}}" class="seat-empty">{{slot.label}}</view>
+            <block wx:else>
+              <view class="seat-avatar-shell">
+                <image
+                  wx:if="{{slot.occupant.avatarUrl}}"
+                  class="seat-avatar"
+                  src="{{slot.occupant.avatarUrl}}"
+                  mode="aspectFill"
+                />
+                <view wx:else class="seat-avatar seat-avatar--fallback">{{slot.occupant.initial}}</view>
+              </view>
+              <view class="seat-name">
+                {{slot.occupant.isSelf ? "我" : (slot.occupant.role === "admin" ? "管理员" : slot.occupant.nickname)}}
+              </view>
+              <view class="seat-code">{{slot.label}}</view>
+            </block>
+          </view>
+          <view wx:else class="aisle"></view>
+        </block>
+      </view>
+    </view>
+  </view>
+</view>

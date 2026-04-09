@@ -1,0 +1,74 @@
+<view class="page-shell home-page">
+  <page-navbar title="{{navTitle}}" progress="{{navProgress}}" />
+
+  <block wx:if="{{showAuthGate}}">
+    <auth-gate
+      title="先授权头像和昵称"
+      subtitle="首次使用前，先用演示身份完成一次模拟授权。授权成功后才能创建车次、加入车次和查看成员信息。"
+      presetNickname="{{authPresetNickname}}"
+      presetAvatarUrl="{{authPresetAvatarUrl}}"
+      bindauthorized="handleAuthorizeProfile"
+    />
+  </block>
+
+  <block wx:if="{{showTripContent}}">
+    <view class="home-hero">
+      <view class="viewer-row">
+        <image
+          wx:if="{{currentUser.avatarUrl}}"
+          class="viewer-avatar"
+          src="{{currentUser.avatarUrl}}"
+          mode="aspectFill"
+        />
+        <view wx:else class="viewer-avatar viewer-avatar--fallback">{{currentUserInitial}}</view>
+
+        <view class="viewer-copy">
+          <view class="viewer-name">{{currentUser.nickname}}</view>
+          <view class="viewer-seat">座位号:{{viewerSeatText}}</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="trip-panel" style="border-radius: 40rpx; overflow: hidden; background: #ffffff;">
+      <view class="trip-tabs">
+        <view class="tabs-left">
+          <view class="{{seatsTabClassName}}" data-tab="seats" bindtap="handleTabChange">座位图</view>
+          <view class="{{membersTabClassName}}" data-tab="members" bindtap="handleTabChange">成员列表</view>
+        </view>
+        <view class="tabs-stat">已入座{{currentTrip.tripMeta.seatedCount}}/{{currentTrip.tripMeta.seatCount}}</view>
+      </view>
+
+      <seat-grid wx:if="{{isSeatsTab}}" rows="{{currentTrip.seatRows}}" bindseattap="handleSeatTap" />
+      <member-list wx:else members="{{seatedMembers}}" bindmembertap="handleMemberTap" />
+    </view>
+  </block>
+
+  <block wx:if="{{showTripEntry}}">
+    <view class="entry-card card" style="border-radius: 32rpx; overflow: hidden; background: #ffffff;">
+      <view class="section-title">先创建或加入一个车次</view>
+      <view class="section-subtitle">
+        授权完成后，你就可以开始认座、查看成员列表，并在“我的”页维护自己的标签信息。
+      </view>
+
+      <view class="entry-actions">
+        <button class="primary-btn" style="border-radius: 24rpx;" bindtap="goCreateTrip">创建车次</button>
+        <button class="secondary-btn" style="border-radius: 24rpx;" bindtap="goJoinTrip">加入车次</button>
+      </view>
+    </view>
+  </block>
+</view>
+
+<seat-sheet
+  visible="{{sheetVisible}}"
+  mode="{{sheetMode}}"
+  seat="{{selectedSeat}}"
+  member="{{selectedMember}}"
+  claimNickname="{{claimNickname}}"
+  claimAvatarUrl="{{claimAvatarUrl}}"
+  canAdminRelease="{{sheetCanAdminRelease}}"
+  bindclose="handleSheetClose"
+  bindconfirmclaim="handleClaimConfirm"
+  bindconfirmswitch="handleSwitchConfirm"
+  bindreleasemine="handleReleaseMine"
+  bindadminrelease="handleAdminRelease"
+/>

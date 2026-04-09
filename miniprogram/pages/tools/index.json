@@ -1,0 +1,8 @@
+{
+  "navigationBarTitleText": "工具",
+  "navigationStyle": "custom",
+  "usingComponents": {
+    "auth-gate": "/components/auth-gate/index",
+    "page-navbar": "/components/page-navbar/index"
+  }
+}

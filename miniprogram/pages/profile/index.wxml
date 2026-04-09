@@ -1,0 +1,109 @@
+<view class="page-shell profile-page">
+  <page-navbar title="我的" progress="{{navProgress}}" />
+
+  <block wx:if="{{showAuthGate}}">
+    <auth-gate
+      title="先完成模拟授权"
+      subtitle="先用演示身份完成模拟授权，才能查看“我的”信息、创建车次、加入车次以及同步个人标签。"
+      presetNickname="{{authPresetNickname}}"
+      presetAvatarUrl="{{authPresetAvatarUrl}}"
+      bindauthorized="handleAuthorizeProfile"
+    />
+  </block>
+
+  <block wx:if="{{showProfileContent}}">
+    <view class="profile-head">
+      <image
+        wx:if="{{pageData.currentUser.avatarUrl}}"
+        class="profile-avatar"
+        src="{{pageData.currentUser.avatarUrl}}"
+        mode="aspectFill"
+      />
+      <view wx:else class="profile-avatar profile-avatar--fallback">{{pageData.currentUserInitial}}</view>
+
+      <view class="profile-copy">
+        <view class="profile-name">{{pageData.currentUser.nickname}}</view>
+        <view class="profile-seat">座位号:{{pageData.currentSeatLabel}}</view>
+        <view class="profile-trip">{{pageData.currentTripTitle}}</view>
+      </view>
+    </view>
+
+    <view
+      class="card tags-card"
+      style="border-radius: 32rpx; overflow: hidden; background: #ffffff;"
+      wx:if="{{pageData.showTagsCard}}"
+      bindtap="goTagEditor"
+    >
+      <view class="card-head">
+        <view class="card-title">我的标签</view>
+        <view class="card-link">去编辑 ></view>
+      </view>
+
+      <view class="tag-list" wx:if="{{pageData.tags.length}}">
+        <view class="tag-chip" wx:for="{{pageData.tags}}" wx:key="*this">{{item}}</view>
+      </view>
+      <view wx:else class="card-empty">还没有标签，去补充几个让大家更容易认出你。</view>
+    </view>
+
+    <view class="card section-card" style="border-radius: 32rpx; overflow: hidden; background: #ffffff;">
+      <view class="card-title">其他</view>
+
+      <view class="menu-item" bindtap="goFeedback">
+        <view class="menu-label">建议反馈</view>
+        <view class="menu-arrow">></view>
+      </view>
+
+      <view class="menu-item menu-item--last" bindtap="goAbout">
+        <view class="menu-label">关于小程序</view>
+        <view class="menu-arrow">></view>
+      </view>
+    </view>
+
+    <button
+      wx:if="{{showLeaveAction}}"
+      class="secondary-btn profile-action"
+      style="border-radius: 24rpx;"
+      bindtap="handlePrimaryAction"
+    >
+      {{pageData.primaryActionLabel}}
+    </button>
+    <button
+      wx:if="{{showDissolveAction}}"
+      class="danger-btn profile-action"
+      style="border-radius: 24rpx;"
+      bindtap="handlePrimaryAction"
+    >
+      {{pageData.primaryActionLabel}}
+    </button>
+
+    <view class="card demo-card" style="border-radius: 32rpx; overflow: hidden; background: #ffffff;">
+      <view class="card-title">演示身份切换</view>
+      <view class="section-subtitle">本地版专用。切换后首页会展示该身份的当前车次和座位视角。</view>
+
+      <view class="demo-item" wx:for="{{pageData.demoUsers}}" wx:key="id">
+        <view class="demo-main">
+          <image wx:if="{{item.avatarUrl}}" class="demo-avatar" src="{{item.avatarUrl}}" mode="aspectFill" />
+          <view wx:else class="demo-avatar demo-avatar--fallback">{{item.initial}}</view>
+
+          <view class="demo-copy">
+            <view class="demo-name">
+              {{item.nickname}}
+              <text wx:if="{{item.isActive}}" class="demo-active">当前</text>
+            </view>
+            <view class="demo-trip">{{item.currentTripName}}</view>
+          </view>
+        </view>
+
+        <button
+          class="ghost-btn demo-switch"
+          style="border-radius: 24rpx;"
+          disabled="{{item.isActive}}"
+          data-user-id="{{item.id}}"
+          bindtap="handleSwitchDemoUser"
+        >
+          {{item.switchLabel}}
+        </button>
+      </view>
+    </view>
+  </block>
+</view>

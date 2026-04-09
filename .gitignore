@@ -1,0 +1,6 @@
+node_modules/
+.npm-cache/
+dist/
+miniprogram_npm/
+*.log
+project.private.config.json

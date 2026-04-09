@@ -1,0 +1,24 @@
+<view class="page-shell tools-page">
+  <page-navbar title="工具" progress="{{navProgress}}" />
+
+  <block wx:if="{{showAuthGate}}">
+    <auth-gate
+      title="先完成模拟授权"
+      subtitle="先用演示身份完成模拟授权，后面才能进入工具区；等主流程跑通后再切回真实微信授权。"
+      presetNickname="{{authPresetNickname}}"
+      presetAvatarUrl="{{authPresetAvatarUrl}}"
+      bindauthorized="handleAuthorizeProfile"
+    />
+  </block>
+
+  <block wx:if="{{showToolsContent}}">
+    <view class="card tools-card" style="border-radius: 32rpx; overflow: hidden; background: #ffffff;">
+      <view class="section-title">{{pageData.emptyTitle}}</view>
+      <view class="section-subtitle">{{pageData.emptyDescription}}</view>
+
+      <button wx:if="{{showGoHomeAction}}" class="secondary-btn tools-btn" style="border-radius: 24rpx;" bindtap="goHome">
+        去首页创建或加入
+      </button>
+    </view>
+  </block>
+</view>

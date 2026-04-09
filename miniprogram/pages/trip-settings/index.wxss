@@ -1,0 +1,21 @@
+.settings-card {
+  padding: 30rpx 26rpx;
+}
+
+.setting-item {
+  margin-top: 24rpx;
+  padding: 20rpx;
+  border-radius: 24rpx;
+  background: rgba(255, 255, 255, 0.94);
+  overflow: hidden;
+}
+
+.setting-value {
+  margin-top: 10rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.dissolve-btn {
+  margin-top: 30rpx;
+}

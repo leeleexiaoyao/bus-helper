@@ -1,0 +1,18 @@
+<view class="page-shell" wx:if="{{settings}}">
+  <view class="card settings-card" style="border-radius: 32rpx; overflow: hidden; background: #ffffff;">
+    <view class="section-title">{{settings.tripName}}</view>
+    <view class="section-subtitle">{{settings.departureTime}}</view>
+
+    <view class="setting-item" style="border-radius: 24rpx; overflow: hidden;">
+      <view class="field-label">当前密码</view>
+      <view class="setting-value">{{settings.password}}</view>
+    </view>
+
+    <view class="setting-item" style="border-radius: 24rpx; overflow: hidden;">
+      <view class="field-label">座位模板</view>
+      <view class="setting-value">{{templateLabel}}</view>
+    </view>
+
+    <button class="danger-btn dissolve-btn" style="border-radius: 24rpx;" bindtap="handleDissolve">解散车次</button>
+  </view>
+</view>

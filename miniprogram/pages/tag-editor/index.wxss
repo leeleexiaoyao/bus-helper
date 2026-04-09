@@ -1,0 +1,27 @@
+.tag-card {
+  padding: 32rpx 28rpx;
+}
+
+.current-tags {
+  margin-top: 24rpx;
+}
+
+.current-tags .tag-chip {
+  min-width: 88rpx;
+  justify-content: center;
+}
+
+.preview-list {
+  margin-top: 14rpx;
+}
+
+.preview-empty {
+  margin-top: 14rpx;
+  color: var(--text-secondary);
+  font-size: 22rpx;
+  line-height: 1.7;
+}
+
+.save-btn {
+  margin-top: 30rpx;
+}

@@ -1,0 +1,11 @@
+<view class="auth-gate card" style="border-radius: 32rpx; overflow: hidden; background: #ffffff;">
+  <view class="auth-badge">演示授权</view>
+  <view class="auth-title">{{title}}</view>
+  <view class="auth-subtitle">{{subtitle}}</view>
+
+  <view class="auth-note">
+    当前先用本地模拟身份授权跑通主流程。确认后会使用当前演示身份的头像和昵称进入小程序，后续再切换到真实微信授权。
+  </view>
+
+  <button class="auth-btn" style="border-radius: 24rpx;" bindtap="handleAuthorize">{{buttonText}}</button>
+</view>

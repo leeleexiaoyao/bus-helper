@@ -1,0 +1,11 @@
+{
+  "navigationBarTitleText": "巴士认座",
+  "navigationStyle": "custom",
+  "usingComponents": {
+    "auth-gate": "/components/auth-gate/index",
+    "page-navbar": "/components/page-navbar/index",
+    "seat-grid": "/components/seat-grid/index",
+    "member-list": "/components/member-list/index",
+    "seat-sheet": "/components/seat-sheet/index"
+  }
+}

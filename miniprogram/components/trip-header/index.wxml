@@ -1,0 +1,43 @@
+<view
+  class="trip-header card"
+  style="border-radius: 32rpx; overflow: hidden; background: #ffffff;"
+  wx:if="{{tripMeta}}"
+>
+  <view class="hero-top">
+    <view class="hero-main">
+      <view class="hero-title">{{tripMeta.tripName}}</view>
+      <view class="hero-subtitle">{{tripMeta.departureTime}}</view>
+    </view>
+    <view class="role-chip {{roleClassName}}">
+      {{roleLabel}}
+    </view>
+  </view>
+
+  <view class="viewer-seat">{{tripMeta.viewerSeatLabel}}</view>
+
+  <view class="stats-grid">
+    <view class="stat-card" style="border-radius: 24rpx; overflow: hidden;">
+      <view class="stat-label">已入座</view>
+      <view class="stat-value">{{tripMeta.seatedCount}} / {{tripMeta.seatCount}}</view>
+    </view>
+    <view class="stat-card" style="border-radius: 24rpx; overflow: hidden;">
+      <view class="stat-label">成员数</view>
+      <view class="stat-value">{{tripMeta.memberCount}}</view>
+    </view>
+  </view>
+
+  <view class="meta-row">
+    <view class="pill">模板 {{templateLabel}}</view>
+    <view class="pill" wx:if="{{showAdminActions}}">密码 {{tripMeta.password}}</view>
+  </view>
+
+  <button
+    wx:if="{{showAdminActions}}"
+    class="secondary-btn action-btn"
+    style="border-radius: 24rpx;"
+    bindtap="handleSettingTap"
+  >
+    车次设置
+  </button>
+  <button wx:else class="ghost-btn action-btn" style="border-radius: 24rpx;" bindtap="handleLeaveTap">退出车次</button>
+</view>
