@@ -12,13 +12,31 @@
   </block>
 
   <block wx:if="{{showToolsContent}}">
-    <view class="card tools-card" style="border-radius: 32rpx; overflow: hidden; background: #ffffff;">
-      <view class="section-title">{{pageData.emptyTitle}}</view>
-      <view class="section-subtitle">{{pageData.emptyDescription}}</view>
-
-      <button wx:if="{{showGoHomeAction}}" class="secondary-btn tools-btn" bindtap="goHome">
+    <view class="tools-hero">
+      <view class="hero-eyebrow">当前车次</view>
+      <view class="hero-title">{{pageData.tripName}}</view>
+      <view class="hero-meta">你的角色：{{pageData.viewerRoleLabel}}</view>
+      <button wx:if="{{showGoHomeAction}}" class="secondary-btn tools-btn hero-btn" bindtap="goHome">
         去首页创建或加入
       </button>
+    </view>
+
+    <view class="tool-grid">
+      <view
+        class="card tool-card {{item.canEnter ? 'is-clickable' : ''}}"
+        wx:for="{{pageData.toolCards}}"
+        wx:key="type"
+        data-tool-type="{{item.type}}"
+        bindtap="handleEnterTool"
+      >
+        <view class="tool-card-top">
+          <view class="{{item.iconClassName}}">{{item.iconGlyph}}</view>
+        </view>
+        <view class="tool-card-body">
+          <view class="tool-title">{{item.title}}</view>
+          <view class="tool-description">{{item.description}}</view>
+        </view>
+      </view>
     </view>
   </block>
 </view>

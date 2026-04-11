@@ -25,7 +25,7 @@ Component({
       const navHeight = Math.max(44, capsule.bottom - statusBarHeight);
       const navTotalHeight = statusBarHeight + navHeight;
       const titleRightPadding = Math.max(systemInfo.windowWidth - capsule.left + 10, 102);
-      const titleLeftPadding = 10;
+      const titleLeftPadding = 20;
 
       this.setData({
         navHeight,

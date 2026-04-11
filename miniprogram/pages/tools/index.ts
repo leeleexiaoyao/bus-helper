@@ -1,4 +1,4 @@
-import type { ToolsPageViewModel } from "../../shared/types";
+import type { ToolType, ToolsPageViewModel } from "../../shared/types";
 import { tripService } from "../../services/trip-service";
 import { showErrorToast, showSuccessToast } from "../../utils/feedback";
 
@@ -54,6 +54,21 @@ Page({
     } catch (error) {
       showErrorToast(error);
     }
+  },
+
+  handleEnterTool(event: WechatMiniprogram.CustomEvent) {
+    const toolType = String(event.currentTarget.dataset.toolType) as ToolType;
+    if (!this.data.pageData?.hasCurrentTrip) {
+      showErrorToast(new Error("请先创建或加入车次"));
+      return;
+    }
+    this.goToolDetail(toolType);
+  },
+
+  goToolDetail(toolType: ToolType) {
+    wx.navigateTo({
+      url: `/pages/tool-detail/index?type=${toolType}`
+    });
   },
 
   goHome() {

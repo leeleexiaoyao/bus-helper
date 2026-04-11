@@ -2,6 +2,13 @@ export type TemplateId = "template-49" | "template-53" | "template-57";
 export type TripStatus = "active" | "dissolved";
 export type MemberRole = "admin" | "member";
 export type SeatProfileMode = "wechat" | "custom";
+export type ToolType = "seat-draw" | "vote" | "wheel" | "lottery";
+export type VoteChoice = "approve" | "reject" | "abstain";
+export type VoteSelectionMode = "single" | "multiple";
+export type SeatDrawPhase = "ready" | "rolling" | "result";
+export type VotePhase = "draft" | "active";
+export type WheelPhase = "draft" | "result";
+export type LotteryPhase = "ready" | "active";
 
 export interface User {
   id: string;
@@ -10,6 +17,89 @@ export interface User {
   tags: string[];
   currentTripId: string | null;
   isAuthorized: boolean;
+}
+
+export interface PublishedToolBaseState {
+  type: ToolType;
+  publishedAt: number;
+  publishedByUserId: string;
+}
+
+export interface ToolMemberSnapshot {
+  userId: string;
+  seatCode: string | null;
+}
+
+export interface PublishedSeatDrawToolState extends PublishedToolBaseState {
+  type: "seat-draw";
+  phase: SeatDrawPhase;
+  topic: string;
+  config: {
+    drawCount: number;
+    excludePreviouslyDrawn: boolean;
+    excludeAdmin: boolean;
+  };
+  rollingDisplayEntries: ToolMemberSnapshot[];
+  pendingResult: ToolMemberSnapshot[];
+  drawnEntries: ToolMemberSnapshot[];
+  resultRounds: ToolMemberSnapshot[][];
+  rollingStartedAt: number | null;
+  rollingEndsAt: number | null;
+  lastResult: ToolMemberSnapshot[];
+}
+
+export interface PublishedVoteToolState extends PublishedToolBaseState {
+  type: "vote";
+  phase: VotePhase;
+  topic: string;
+  excludeAdmin: boolean;
+  selectionMode: VoteSelectionMode;
+  options: VoteOption[];
+  participantUserIds: string[];
+  submissions: Record<string, VoteSubmission>;
+}
+
+export interface PublishedWheelToolState extends PublishedToolBaseState {
+  type: "wheel";
+  phase: WheelPhase;
+  items: string[];
+  resultIndex: number | null;
+  resultHistoryLabels: string[];
+  spunAt: number | null;
+}
+
+export interface LotteryClaim {
+  claimedAt: number;
+  isWinner: boolean;
+}
+
+export interface PublishedLotteryToolState extends PublishedToolBaseState {
+  type: "lottery";
+  phase: LotteryPhase;
+  winnerCount: number;
+  excludeAdmin: boolean;
+  participantUserIds: string[];
+  winnerUserIds: string[];
+  claims: Record<string, LotteryClaim>;
+}
+
+export type PublishedToolState =
+  | PublishedSeatDrawToolState
+  | PublishedVoteToolState
+  | PublishedWheelToolState
+  | PublishedLotteryToolState;
+
+export type TripToolsState = Record<ToolType, PublishedToolState | null>;
+
+export interface VoteOption {
+  id: string;
+  label: string;
+}
+
+export interface VoteSubmission {
+  choice: VoteChoice;
+  optionIds: string[];
+  submittedAt: number;
 }
 
 export interface Trip {
@@ -22,6 +112,7 @@ export interface Trip {
   status: TripStatus;
   seatCodes: string[];
   seatMap: Record<string, string | null>;
+  tools: TripToolsState;
   createdAt: number;
 }
 
@@ -159,9 +250,158 @@ export interface TripSettingsViewModel {
   role: MemberRole;
 }
 
+export interface ToolCardView {
+  type: ToolType;
+  title: string;
+  description: string;
+  iconGlyph: string;
+  iconClassName: string;
+  stateLabel: string;
+  stateClassName: string;
+  helperText: string;
+  isStarted: boolean;
+  canEnter: boolean;
+}
+
 export interface ToolsPageViewModel extends AccessStateViewModel {
+  tripName: string;
+  viewerRoleLabel: string;
+  isAdmin: boolean;
   emptyTitle: string;
   emptyDescription: string;
+  toolCards: ToolCardView[];
+}
+
+export interface ToolResultMemberView {
+  userId: string;
+  nickname: string;
+  avatarUrl: string;
+  initial: string;
+  seatLabel: string;
+  isSelf: boolean;
+}
+
+export interface SeatDrawDisplaySlotView {
+  id: string;
+  label: string;
+  isPlaceholder: boolean;
+}
+
+export interface SeatDrawRoundResultView {
+  id: string;
+  labels: string[];
+  displayText: string;
+}
+
+export interface SeatDrawDetailView {
+  phase: SeatDrawPhase;
+  topic: string;
+  drawCount: number;
+  maxDrawCount: number;
+  excludePreviouslyDrawn: boolean;
+  excludeAdmin: boolean;
+  remainingCount: number;
+  displaySlots: SeatDrawDisplaySlotView[];
+  eligibleMembers: ToolResultMemberView[];
+  lastResult: ToolResultMemberView[];
+  resultRounds: SeatDrawRoundResultView[];
+  canDrawAgain: boolean;
+  rollingEndsAt: number | null;
+}
+
+export interface VoteOptionView {
+  id: string;
+  label: string;
+  supportCount: number;
+  selectedByViewer: boolean;
+}
+
+export interface VoteDetailView {
+  phase: VotePhase;
+  topic: string;
+  excludeAdmin: boolean;
+  selectionMode: VoteSelectionMode;
+  participantCount: number;
+  submittedCount: number;
+  approveCount: number;
+  rejectCount: number;
+  abstainCount: number;
+  options: VoteOptionView[];
+  viewerChoice: VoteChoice | null;
+  viewerSelectedOptionIds: string[];
+  viewerHasSubmitted: boolean;
+  viewerEligible: boolean;
+}
+
+export interface WheelDetailView {
+  phase: WheelPhase;
+  items: string[];
+  resultIndex: number | null;
+  resultLabel: string | null;
+  resultHistoryLabels: string[];
+}
+
+export interface LotteryParticipantView extends ToolResultMemberView {
+  statusText: string;
+  statusClassName: string;
+  claimed: boolean;
+}
+
+export interface LotteryDetailView {
+  phase: LotteryPhase;
+  winnerCount: number;
+  excludeAdmin: boolean;
+  participantCount: number;
+  claimedCount: number;
+  viewerHasClaimed: boolean;
+  viewerIsWinner: boolean | null;
+  viewerResultText: string;
+  viewerEligible: boolean;
+  participants: LotteryParticipantView[];
+}
+
+export interface ToolDetailViewModel extends AccessStateViewModel {
+  tripName: string;
+  viewerRoleLabel: string;
+  isAdmin: boolean;
+  toolType: ToolType;
+  toolTitle: string;
+  toolDescription: string;
+  isStarted: boolean;
+  phaseLabel: string;
+  statusMessage: string;
+  seatDrawDetail: SeatDrawDetailView | null;
+  voteDetail: VoteDetailView | null;
+  wheelDetail: WheelDetailView | null;
+  lotteryDetail: LotteryDetailView | null;
+}
+
+export interface SeatDrawPublishInput {
+  topic: string;
+  drawCount: number;
+  excludePreviouslyDrawn: boolean;
+  excludeAdmin: boolean;
+}
+
+export interface VotePublishInput {
+  topic: string;
+  options: string[];
+  selectionMode: VoteSelectionMode;
+  excludeAdmin: boolean;
+}
+
+export interface VoteSubmitInput {
+  choice: VoteChoice;
+  optionIds: string[];
+}
+
+export interface WheelPublishInput {
+  items: string[];
+}
+
+export interface LotteryPublishInput {
+  winnerCount: number;
+  excludeAdmin: boolean;
 }
 
 export type ProfilePrimaryActionKind = "leave" | "dissolve" | "none";

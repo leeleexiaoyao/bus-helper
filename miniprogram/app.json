@@ -3,6 +3,7 @@
     "pages/home/index",
     "pages/tools/index",
     "pages/profile/index",
+    "pages/tool-detail/index",
     "pages/create-trip/index",
     "pages/join-trip/index",
     "pages/tag-editor/index",
