@@ -1,16 +1,18 @@
 .member-list {
-  padding-top: 12rpx;
+  padding: 24rpx 24rpx 0;
 }
 
 .member-item {
   display: flex;
-  gap: 18rpx;
+  gap: 14rpx;
   align-items: center;
-  padding: 22rpx 20rpx;
-  margin-bottom: 16rpx;
+  min-height: 138rpx;
+  padding: 24rpx 20rpx;
+  margin-bottom: 24rpx;
   border-radius: 24rpx;
-  background: #f7f7f7;
+  background: #ffffff;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .member-avatar {
@@ -21,56 +23,68 @@
 }
 
 .member-avatar--fallback {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #d78871 0%, #dd9d86 100%);
-  color: #fff9f4;
-  font-size: 24rpx;
-  font-weight: 700;
+  display: block;
 }
 
 .member-main {
   flex: 1;
+  min-width: 0;
 }
 
-.member-line {
+.member-title-row {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12rpx;
+  align-items: center;
+  gap: 8rpx;
 }
 
 .member-name {
   font-size: 28rpx;
   font-weight: 600;
+  color: #000000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .member-seat {
-  color: #c6c8cb;
-  font-size: 22rpx;
+  color: #7f7f7f;
+  font-size: 24rpx;
+  flex-shrink: 0;
+  margin-left: 12rpx;
 }
 
 .tag-list {
-  margin-top: 10rpx;
-}
-
-.member-meta {
   display: flex;
+  flex-wrap: wrap;
+  gap: 8rpx;
+  margin-top: 4rpx;
+}
+
+.member-role-pill {
+  min-width: 58rpx;
+  height: 26rpx;
+  padding: 0 10rpx;
+  border-radius: 16rpx;
+  background: #f4c433;
+  color: #ffffff;
+  font-size: 16rpx;
+  font-weight: 500;
+  display: inline-flex;
   align-items: center;
-  gap: 10rpx;
-  margin-top: 12rpx;
+  justify-content: center;
+  box-sizing: border-box;
 }
 
-.mini-tag {
-  padding: 4rpx 12rpx;
-  border-radius: 999rpx;
-  background: rgba(245, 188, 17, 0.14);
-  color: #b48400;
-  font-size: 26rpx;
-}
-
-.mini-tag--admin {
-  background: rgba(33, 201, 128, 0.14);
-  color: var(--admin);
+.member-tag-chip {
+  height: 36rpx;
+  padding: 0 12rpx;
+  border-radius: 8rpx;
+  border: 1rpx solid rgba(43, 145, 255, 0.2);
+  background: rgba(43, 145, 255, 0.1);
+  color: #2b91ff;
+  font-size: 22rpx;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
 }

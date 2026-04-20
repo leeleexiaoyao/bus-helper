@@ -1,8 +1,11 @@
 import {
+  DEFAULT_WHEEL_ITEMS,
   DEMO_SWITCHABLE_USER_IDS,
+  HOME_PERSONA_OPTIONS,
   TOOL_META,
   TOOL_TYPES,
   TRIP_TEMPLATES,
+  WHEEL_MAX_ITEMS,
   createEmptyTripTools
 } from "../shared/constants";
 import { BusinessError } from "../shared/errors";
@@ -73,6 +76,45 @@ import { UserRepository } from "../repositories/user-repository";
 
 const SEAT_DRAW_MAX_COUNT = 5;
 const SEAT_DRAW_ROLLING_DURATION_MS = 3000;
+const TOOL_PAGE_META: Record<
+  ToolType,
+  {
+    displayTitle: string;
+    displayDescription: string;
+    imageUrl: string;
+    ctaLabel: string;
+    sortOrder: number;
+  }
+> = {
+  vote: {
+    displayTitle: "投票",
+    displayDescription: "选出你喜欢的",
+    imageUrl: "/assets/icons/icon_tools_投票.png",
+    ctaLabel: "玩这个>",
+    sortOrder: 1
+  },
+  "seat-draw": {
+    displayTitle: "随机选号",
+    displayDescription: "看看谁运气好",
+    imageUrl: "/assets/icons/icon_tools_随机选号.png",
+    ctaLabel: "玩这个>",
+    sortOrder: 2
+  },
+  lottery: {
+    displayTitle: "抽签",
+    displayDescription: "谁是天选之人",
+    imageUrl: "/assets/icons/icon_tools_抽签.png",
+    ctaLabel: "玩这个>",
+    sortOrder: 3
+  },
+  wheel: {
+    displayTitle: "幸运大转盘",
+    displayDescription: "幸运转转转",
+    imageUrl: "/assets/icons/icon_tools_幸运大转盘.png",
+    ctaLabel: "玩这个>",
+    sortOrder: 4
+  }
+};
 
 function assertTripName(tripName: string): void {
   if (!tripName.trim()) {
@@ -116,8 +158,8 @@ function assertSeatDrawTopic(topic: string): string {
   if (!trimmed) {
     throw new BusinessError("INVALID_SEAT_DRAW_TOPIC", "请填写抽号主题。");
   }
-  if (trimmed.length > 10) {
-    throw new BusinessError("SEAT_DRAW_TOPIC_TOO_LONG", "主题最多输入 10 个字。");
+  if (trimmed.length > 20) {
+    throw new BusinessError("SEAT_DRAW_TOPIC_TOO_LONG", "主题最多输入 20 个字。");
   }
   return trimmed;
 }
@@ -157,14 +199,21 @@ function assertVoteOptions(options: string[]): string[] {
 function assertWheelItems(items: string[]): string[] {
   const normalized = items
     .map((item) => item.trim())
-    .filter(Boolean)
-    .slice(0, 49);
+    .filter(Boolean);
 
   if (normalized.length < 2) {
     throw new BusinessError("INVALID_WHEEL_ITEMS", "请至少填写 2 个转盘内容。");
   }
 
+  if (normalized.length > WHEEL_MAX_ITEMS) {
+    throw new BusinessError("WHEEL_ITEMS_LIMIT_EXCEEDED", `大转盘最多可填写 ${WHEEL_MAX_ITEMS} 个奖品项。`);
+  }
+
   return normalized;
+}
+
+function isLegacyGeneratedWheelItem(item: string): boolean {
+  return /^选项\d+\s*[-—:：]\s*.+$/.test(item.trim());
 }
 
 function assertPositiveCount(count: number, code: string, message: string): number {
@@ -371,7 +420,7 @@ export class TripService {
           : null,
       wheelDetail:
         toolType === "wheel"
-          ? this.buildWheelDetail(toolState as PublishedWheelToolState | null)
+          ? this.buildWheelDetail(trip, toolState as PublishedWheelToolState | null, context.currentUser.id, context.role)
           : null,
       lotteryDetail:
         toolType === "lottery"
@@ -748,6 +797,7 @@ export class TripService {
       throw new BusinessError("TOOL_ALREADY_STARTED", "玩法已创建，不能再次修改，请使用重置。");
     }
     const items = assertWheelItems(input.items);
+    const permissionConfig = this.resolveWheelPermissionConfig(context.tripId, input);
 
     this.tripRepository.updateTrip(context.tripId, (trip) => {
       trip.tools.wheel = {
@@ -756,6 +806,8 @@ export class TripService {
         publishedByUserId: context.currentUser.id,
         phase: "draft",
         items,
+        allowAssignedUser: permissionConfig.allowAssignedUser,
+        assignedUserId: permissionConfig.assignedUserId,
         resultIndex: null,
         resultHistoryLabels: [],
         spunAt: null
@@ -769,6 +821,7 @@ export class TripService {
     const context = this.requireAdminTripContext();
     const toolState = this.requireStartedTool(context.trip, "wheel") as PublishedWheelToolState;
     const items = assertWheelItems(input.items);
+    const permissionConfig = this.resolveWheelPermissionConfig(context.tripId, input);
     const previousResultLabel =
       toolState.resultIndex === null ? null : toolState.items[toolState.resultIndex] ?? null;
     const nextResultIndex = previousResultLabel ? items.indexOf(previousResultLabel) : -1;
@@ -781,6 +834,8 @@ export class TripService {
       nextState.publishedAt = Date.now();
       nextState.publishedByUserId = context.currentUser.id;
       nextState.items = items;
+      nextState.allowAssignedUser = permissionConfig.allowAssignedUser;
+      nextState.assignedUserId = permissionConfig.assignedUserId;
       nextState.resultIndex = nextResultIndex >= 0 ? nextResultIndex : null;
       nextState.resultHistoryLabels = previousHistoryLabels;
       nextState.phase = nextState.resultIndex === null ? "draft" : "result";
@@ -789,11 +844,15 @@ export class TripService {
     return this.getToolDetailPageData("wheel");
   }
 
-  spinWheel(): ToolDetailViewModel {
-    const context = this.requireAdminTripContext();
+  spinWheel(selectedIndex?: number): ToolDetailViewModel {
+    const context = this.requireTripContext();
     const toolState = this.requireStartedTool(context.trip, "wheel") as PublishedWheelToolState;
+    this.assertViewerCanSpinWheel(toolState, context.currentUser.id, context.role);
     const items = assertWheelItems(toolState.items);
-    const resultIndex = Math.floor(Math.random() * items.length);
+    const resultIndex =
+      typeof selectedIndex === "number" && Number.isInteger(selectedIndex) && selectedIndex >= 0 && selectedIndex < items.length
+        ? selectedIndex
+        : Math.floor(Math.random() * items.length);
 
     this.tripRepository.updateTrip(context.tripId, (trip) => {
       const nextState = this.requireStartedTool(trip, "wheel") as PublishedWheelToolState;
@@ -1050,6 +1109,20 @@ export class TripService {
 
     const nextUser = this.userRepository.getUser(currentUser.id);
     return this.buildTagEditorView(nextUser);
+  }
+
+  updateHomePersona(homePersonaAssetId: string | null): BootstrapResult {
+    const currentUser = this.ensureAuthorizedAccess();
+    const normalizedHomePersonaAssetId =
+      homePersonaAssetId && HOME_PERSONA_OPTIONS.some((option) => option.id === homePersonaAssetId)
+        ? homePersonaAssetId
+        : null;
+
+    this.userRepository.updateUser(currentUser.id, (user) => {
+      user.homePersonaAssetId = normalizedHomePersonaAssetId;
+    });
+
+    return this.bootstrapApp();
   }
 
   authorizeProfile(input: AuthorizeProfileInput): BootstrapResult {
@@ -1360,6 +1433,55 @@ export class TripService {
           );
           if (!publisherRelation || publisherRelation.role !== "admin") {
             trip.tools[toolType] = null;
+            return;
+          }
+
+          if (toolType === "wheel") {
+            const wheelState = toolState as PublishedWheelToolState;
+            const normalizedItems = Array.isArray(wheelState.items)
+              ? wheelState.items
+                  .map((item) => (typeof item === "string" ? item.trim() : ""))
+                  .filter(Boolean)
+              : [];
+
+            if (normalizedItems.length && normalizedItems.every(isLegacyGeneratedWheelItem)) {
+              wheelState.items = DEFAULT_WHEEL_ITEMS.slice(0, WHEEL_MAX_ITEMS);
+              wheelState.phase = "draft";
+              wheelState.resultIndex = null;
+              wheelState.resultHistoryLabels = [];
+              wheelState.spunAt = null;
+              return;
+            }
+
+            wheelState.items = normalizedItems.slice(0, WHEEL_MAX_ITEMS);
+            if (wheelState.items.length < 2) {
+              trip.tools[toolType] = null;
+              return;
+            }
+
+            wheelState.allowAssignedUser = Boolean(wheelState.allowAssignedUser);
+            if (
+              !wheelState.allowAssignedUser ||
+              typeof wheelState.assignedUserId !== "string" ||
+              !state.tripMembers.some(
+                (member) => member.tripId === trip.id && member.userId === wheelState.assignedUserId
+              )
+            ) {
+              wheelState.allowAssignedUser = false;
+              wheelState.assignedUserId = null;
+            }
+
+            if (
+              typeof wheelState.resultIndex !== "number" ||
+              wheelState.resultIndex < 0 ||
+              wheelState.resultIndex >= wheelState.items.length
+            ) {
+              wheelState.resultIndex = null;
+            }
+
+            wheelState.resultHistoryLabels = Array.isArray(wheelState.resultHistoryLabels)
+              ? wheelState.resultHistoryLabels.filter((label) => wheelState.items.includes(label))
+              : [];
           }
         });
       });
@@ -1536,6 +1658,7 @@ export class TripService {
     return TOOL_TYPES.map((toolType) => {
       const toolState = trip ? this.getPublishedToolState(trip, toolType) : null;
       const hasCurrentTrip = Boolean(trip);
+      const displayMeta = TOOL_PAGE_META[toolType];
       let helperText = "先授权";
 
       if (currentUser.isAuthorized && !hasCurrentTrip) {
@@ -1554,13 +1677,19 @@ export class TripService {
         description: TOOL_META[toolType].description,
         iconGlyph: TOOL_META[toolType].iconGlyph,
         iconClassName: TOOL_META[toolType].iconClassName,
+        displayTitle: displayMeta.displayTitle,
+        displayDescription: displayMeta.displayDescription,
+        imageUrl: displayMeta.imageUrl,
+        themeKey: toolType,
+        ctaLabel: displayMeta.ctaLabel,
+        sortOrder: displayMeta.sortOrder,
         stateLabel: toolState ? "已开启" : "未开启",
         stateClassName: toolState ? "tool-state is-active" : "tool-state",
         helperText,
         isStarted: Boolean(toolState),
         canEnter: Boolean(currentUser.isAuthorized && hasCurrentTrip)
       };
-    });
+    }).sort((left, right) => left.sortOrder - right.sortOrder);
   }
 
   private buildToolStatusMessage(
@@ -1615,10 +1744,17 @@ export class TripService {
 
     if (toolType === "wheel") {
       const wheelState = toolState as PublishedWheelToolState;
+      const canSpin = this.canViewerSpinWheel(wheelState, viewerId, viewerRole);
+      const assignedUserLabel =
+        wheelState.allowAssignedUser && wheelState.assignedUserId
+          ? this.userRepository.getUser(wheelState.assignedUserId).nickname
+          : "";
       return wheelState.resultIndex === null
-        ? viewerRole === "admin"
-          ? "当前配置已发布，点击“开始转动”生成结果。"
-          : "玩法已开启，等待管理员开始转动。"
+        ? canSpin
+          ? "当前配置已发布，点击“开始”生成结果。"
+          : wheelState.allowAssignedUser && assignedUserLabel
+            ? `当前由 ${assignedUserLabel} 转动大转盘。`
+            : "当前由管理员转动大转盘。"
         : "当前转盘结果已经同步。";
     }
 
@@ -1741,22 +1877,87 @@ export class TripService {
     };
   }
 
-  private buildWheelDetail(toolState: PublishedWheelToolState | null): WheelDetailView | null {
-    if (!toolState) {
-      return null;
-    }
-
-    const resultHistoryLabels = Array.isArray(toolState.resultHistoryLabels)
+  private buildWheelDetail(
+    trip: Trip,
+    toolState: PublishedWheelToolState | null,
+    viewerId: string,
+    viewerRole: MemberRole
+  ): WheelDetailView {
+    const eligibleUsers = this.listTripParticipantUserIds(trip.id, false).map((userId) =>
+      this.buildToolResultMemberView(
+        {
+          userId,
+          seatCode: findSeatCodeByUserId(trip.seatMap, userId)
+        },
+        viewerId
+      )
+    );
+    const assignedUserId = toolState?.allowAssignedUser ? toolState.assignedUserId ?? null : null;
+    const assignedUser = assignedUserId
+      ? eligibleUsers.find((member) => member.userId === assignedUserId) ?? null
+      : null;
+    const resultHistoryLabels = Array.isArray(toolState?.resultHistoryLabels)
       ? toolState.resultHistoryLabels.filter((label) => typeof label === "string" && Boolean(label))
       : [];
 
     return {
-      phase: toolState.phase,
-      items: toolState.items,
-      resultIndex: toolState.resultIndex,
-      resultLabel: toolState.resultIndex === null ? null : toolState.items[toolState.resultIndex] ?? null,
+      phase: toolState?.phase ?? "draft",
+      items: toolState?.items ?? [],
+      viewerCanSpin: toolState ? this.canViewerSpinWheel(toolState, viewerId, viewerRole) : false,
+      allowAssignedUser: Boolean(toolState?.allowAssignedUser),
+      assignedUserId,
+      assignedUserLabel: assignedUser?.nickname ?? null,
+      eligibleUsers,
+      resultIndex: toolState?.resultIndex ?? null,
+      resultLabel:
+        toolState && toolState.resultIndex !== null ? toolState.items[toolState.resultIndex] ?? null : null,
       resultHistoryLabels
     };
+  }
+
+  private resolveWheelPermissionConfig(
+    tripId: string,
+    input: WheelPublishInput
+  ): { allowAssignedUser: boolean; assignedUserId: string | null } {
+    const allowAssignedUser = Boolean(input.allowAssignedUser);
+    if (!allowAssignedUser) {
+      return {
+        allowAssignedUser: false,
+        assignedUserId: null
+      };
+    }
+
+    const assignedUserId = typeof input.assignedUserId === "string" ? input.assignedUserId : "";
+    const participantUserIds = this.listTripParticipantUserIds(tripId, false);
+    if (!assignedUserId || !participantUserIds.includes(assignedUserId)) {
+      throw new BusinessError("INVALID_WHEEL_ASSIGNED_USER", "请选择可使用大转盘的成员。");
+    }
+
+    return {
+      allowAssignedUser: true,
+      assignedUserId
+    };
+  }
+
+  private canViewerSpinWheel(
+    toolState: PublishedWheelToolState,
+    viewerId: string,
+    viewerRole: MemberRole
+  ): boolean {
+    if (toolState.allowAssignedUser) {
+      return toolState.assignedUserId === viewerId;
+    }
+    return viewerRole === "admin";
+  }
+
+  private assertViewerCanSpinWheel(
+    toolState: PublishedWheelToolState,
+    viewerId: string,
+    viewerRole: MemberRole
+  ): void {
+    if (!this.canViewerSpinWheel(toolState, viewerId, viewerRole)) {
+      throw new BusinessError("WHEEL_FORBIDDEN", "当前没有使用大转盘的权限。");
+    }
   }
 
   private buildLotteryDetail(

@@ -8,7 +8,7 @@
 
       <view class="claim-preview">
         <image wx:if="{{claimAvatarUrl}}" class="claim-avatar" src="{{claimAvatarUrl}}" mode="aspectFill" />
-        <view wx:else class="claim-avatar claim-avatar--fallback">{{localInitial}}</view>
+        <view wx:else class="claim-avatar claim-avatar--fallback avatar-fallback">{{localInitial}}</view>
         <view class="claim-copy">
           <view class="claim-name">{{claimNickname}}</view>
           <view class="claim-seat">{{seat.label}}</view>
@@ -33,7 +33,7 @@
     <block wx:else>
       <view class="detail-card">
         <image wx:if="{{member.avatarUrl}}" class="detail-avatar" src="{{member.avatarUrl}}" mode="aspectFill" />
-        <view wx:else class="detail-avatar detail-avatar--fallback">{{member.initial}}</view>
+        <view wx:else class="detail-avatar detail-avatar--fallback avatar-fallback">{{member.initial}}</view>
         <view class="sheet-title detail-title">{{member.nickname}}</view>
         <view class="sheet-subtitle detail-subtitle">{{detailSeatLabel}}</view>
         <view class="detail-line">

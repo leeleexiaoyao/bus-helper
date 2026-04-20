@@ -149,6 +149,39 @@ page {
   border: none;
 }
 
+.avatar-fallback {
+  position: relative;
+  overflow: hidden;
+  background: #dfe4ec;
+  color: transparent;
+  font-size: 0;
+  box-shadow: inset 0 0 0 1rpx rgba(117, 122, 134, 0.08);
+}
+
+.avatar-fallback::before {
+  content: "";
+  position: absolute;
+  top: 22%;
+  left: 50%;
+  width: 32%;
+  height: 32%;
+  border-radius: 50%;
+  background: #bcc4d0;
+  transform: translateX(-50%);
+}
+
+.avatar-fallback::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 15%;
+  width: 56%;
+  height: 28%;
+  border-radius: 999rpx 999rpx 22rpx 22rpx;
+  background: #bcc4d0;
+  transform: translateX(-50%);
+}
+
 .muted {
   color: var(--text-secondary);
 }

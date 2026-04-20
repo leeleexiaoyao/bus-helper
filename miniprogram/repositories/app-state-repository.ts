@@ -10,6 +10,7 @@ import type {
   PublishedSeatDrawToolState,
   PublishedToolState,
   PublishedVoteToolState,
+  User,
   ToolType,
   Trip,
   ToolMemberSnapshot,
@@ -240,10 +241,29 @@ function normalizeTrip(trip: Trip): Trip {
   };
 }
 
+function normalizeUser(user: User): User {
+  const nextHomePersonaAssetId =
+    typeof (user as User & { homePersonaAssetId?: unknown }).homePersonaAssetId === "string" &&
+    (user as User & { homePersonaAssetId?: string }).homePersonaAssetId?.trim()
+      ? (user as User & { homePersonaAssetId: string }).homePersonaAssetId.trim()
+      : null;
+
+  return {
+    ...user,
+    tags: normalizeStringArray(user.tags),
+    homePersonaAssetId: nextHomePersonaAssetId
+  };
+}
+
 function normalizeState(state: AppState | null): AppState {
   if (!state) {
     return createInitialAppState();
   }
+
+  const normalizedUsers = Object.entries(state.users).reduce<AppState["users"]>((accumulator, [userId, user]) => {
+    accumulator[userId] = normalizeUser(user as User);
+    return accumulator;
+  }, {});
 
   const nextState: AppState = {
     ...state,
@@ -251,7 +271,7 @@ function normalizeState(state: AppState | null): AppState {
     users: DEMO_USERS.reduce<AppState["users"]>((accumulator, demoUser) => {
       accumulator[demoUser.id] = accumulator[demoUser.id] ?? { ...demoUser };
       return accumulator;
-    }, { ...state.users }),
+    }, normalizedUsers),
     trips: Object.values(state.trips).reduce<AppState["trips"]>((accumulator, trip) => {
       accumulator[trip.id] = normalizeTrip(trip as Trip);
       return accumulator;

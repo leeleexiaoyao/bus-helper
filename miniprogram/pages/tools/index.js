@@ -7,7 +7,6 @@ Page({
         pageData: null,
         showAuthGate: true,
         showToolsContent: false,
-        showGoHomeAction: false,
         navProgress: 0,
         authPresetNickname: "",
         authPresetAvatarUrl: ""
@@ -31,7 +30,6 @@ Page({
                 pageData,
                 showAuthGate: !pageData.isAuthorized,
                 showToolsContent: pageData.isAuthorized,
-                showGoHomeAction: !pageData.hasCurrentTrip,
                 navProgress: 0,
                 authPresetNickname: pageData.currentUser.nickname,
                 authPresetAvatarUrl: pageData.currentUser.avatarUrl
@@ -63,11 +61,6 @@ Page({
     goToolDetail(toolType) {
         wx.navigateTo({
             url: `/pages/tool-detail/index?type=${toolType}`
-        });
-    },
-    goHome() {
-        wx.switchTab({
-            url: "/pages/home/index"
         });
     }
 });

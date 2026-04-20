@@ -1,14 +1,21 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.TOOL_META = exports.TOOL_TYPES = exports.DEMO_SWITCHABLE_USER_IDS = exports.DEMO_USERS = exports.TRIP_TEMPLATES = exports.DEFAULT_AVATAR_URL = exports.DEFAULT_DEPARTURE_TIME = exports.DEFAULT_TRIP_NAME = exports.APP_STATE_STORAGE_KEY = exports.APP_STATE_VERSION = void 0;
+exports.TOOL_META = exports.TOOL_TYPES = exports.DEMO_SWITCHABLE_USER_IDS = exports.DEMO_USERS = exports.TRIP_TEMPLATES = exports.HOME_PERSONA_OPTIONS = exports.DEFAULT_WHEEL_ITEMS = exports.WHEEL_MAX_ITEMS = exports.HOME_PERSONA_IMAGE_URL = exports.DEFAULT_AVATAR_URL = exports.DEFAULT_DEPARTURE_TIME = exports.DEFAULT_TRIP_NAME = exports.APP_STATE_STORAGE_KEY = exports.APP_STATE_VERSION = void 0;
 exports.createEmptyTripTools = createEmptyTripTools;
 exports.createInitialAppState = createInitialAppState;
 exports.createSeededDemoAppState = createSeededDemoAppState;
-exports.APP_STATE_VERSION = 6;
+exports.APP_STATE_VERSION = 7;
 exports.APP_STATE_STORAGE_KEY = "bus-seat-buddy-state";
 exports.DEFAULT_TRIP_NAME = "未命名车次";
 exports.DEFAULT_DEPARTURE_TIME = "待定";
 exports.DEFAULT_AVATAR_URL = "";
+exports.HOME_PERSONA_IMAGE_URL = "/assets/personas/home-persona.png";
+exports.WHEEL_MAX_ITEMS = 10;
+exports.DEFAULT_WHEEL_ITEMS = ["免单", "零食礼包", "饮料一杯", "神秘福袋", "再来一次", "感谢参与"];
+exports.HOME_PERSONA_OPTIONS = Array.from({ length: 9 }, (_, index) => ({
+    id: `home-persona-${index + 1}`,
+    imageUrl: exports.HOME_PERSONA_IMAGE_URL
+}));
 exports.TRIP_TEMPLATES = [
     {
         id: "template-49",
@@ -34,6 +41,7 @@ exports.DEMO_USERS = [
         id: "user-1",
         nickname: "小雨",
         avatarUrl: exports.DEFAULT_AVATAR_URL,
+        homePersonaAssetId: null,
         tags: ["摄影", "靠窗党"],
         currentTripId: null,
         isAuthorized: false
@@ -42,6 +50,7 @@ exports.DEMO_USERS = [
         id: "user-2",
         nickname: "阿山",
         avatarUrl: exports.DEFAULT_AVATAR_URL,
+        homePersonaAssetId: null,
         tags: ["徒步", "社牛"],
         currentTripId: null,
         isAuthorized: false
@@ -50,6 +59,7 @@ exports.DEMO_USERS = [
         id: "user-3",
         nickname: "Miya",
         avatarUrl: exports.DEFAULT_AVATAR_URL,
+        homePersonaAssetId: null,
         tags: ["轻装", "周末玩家"],
         currentTripId: null,
         isAuthorized: false
@@ -58,6 +68,7 @@ exports.DEMO_USERS = [
         id: "user-4",
         nickname: "老周",
         avatarUrl: exports.DEFAULT_AVATAR_URL,
+        homePersonaAssetId: null,
         tags: ["老司机"],
         currentTripId: null,
         isAuthorized: false
@@ -140,6 +151,7 @@ function buildSeedPassengerUsers(tripId) {
             id: `user-${userNumber}`,
             nickname: `成员${String(userNumber).padStart(2, "0")}`,
             avatarUrl: exports.DEFAULT_AVATAR_URL,
+            homePersonaAssetId: null,
             tags: [`乘客${String(userNumber).padStart(2, "0")}`],
             currentTripId: tripId,
             isAuthorized: false
@@ -176,7 +188,7 @@ function buildSeedTrip(users, seatCodes) {
 }
 function buildSeedTripTools(occupiedUsers) {
     const participantUserIds = occupiedUsers.map((user) => user.id);
-    const wheelItems = occupiedUsers.slice(0, 12).map((user, index) => `选项${index + 1}-${user.nickname}`);
+    const wheelItems = exports.DEFAULT_WHEEL_ITEMS;
     return {
         "seat-draw": {
             type: "seat-draw",
@@ -220,6 +232,8 @@ function buildSeedTripTools(occupiedUsers) {
             publishedByUserId: "user-1",
             phase: "draft",
             items: wheelItems,
+            allowAssignedUser: false,
+            assignedUserId: null,
             resultIndex: null,
             resultHistoryLabels: [],
             spunAt: null

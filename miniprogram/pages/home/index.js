@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const trip_service_1 = require("../../services/trip-service");
+const constants_1 = require("../../shared/constants");
 const feedback_1 = require("../../utils/feedback");
 const initialData = {
     showAuthGate: true,
@@ -20,6 +21,12 @@ const initialData = {
     currentTrip: null,
     seatedMembers: [],
     viewerSeatText: "未入座",
+    currentPersonaId: "",
+    currentPersonaImageUrl: "",
+    personaOptions: constants_1.HOME_PERSONA_OPTIONS.map((option) => (Object.assign(Object.assign({}, option), { className: "persona-option" }))),
+    showPersonaSheet: false,
+    personaSheetActive: false,
+    personaDraftId: "",
     activeTab: "seats",
     sheetVisible: false,
     sheetMode: "detail",
@@ -29,8 +36,16 @@ const initialData = {
     claimAvatarUrl: "",
     sheetCanAdminRelease: false
 };
+function resolveHomePersonaImageUrl(user) {
+    var _a, _b;
+    if (!user.homePersonaAssetId) {
+        return "";
+    }
+    return (_b = (_a = constants_1.HOME_PERSONA_OPTIONS.find((option) => option.id === user.homePersonaAssetId)) === null || _a === void 0 ? void 0 : _a.imageUrl) !== null && _b !== void 0 ? _b : "";
+}
 Page({
     data: initialData,
+    personaSheetCloseTimer: 0,
     onShow() {
         this.refreshPage();
     },
@@ -53,17 +68,19 @@ Page({
         }
     },
     applyBootstrapResult(result) {
-        var _a, _b, _c, _d, _e, _f;
+        var _a, _b, _c, _d, _e, _f, _g;
         const showAuthGate = !result.currentUser.isAuthorized;
         const hasCurrentTrip = result.currentUser.isAuthorized && Boolean(result.currentTrip);
         const showTripEntry = result.currentUser.isAuthorized && !result.currentTrip;
         const activeTab = this.data.activeTab;
+        const currentPersonaId = (_a = result.currentUser.homePersonaAssetId) !== null && _a !== void 0 ? _a : "";
+        const currentPersonaImageUrl = resolveHomePersonaImageUrl(result.currentUser);
         this.setData({
             showAuthGate,
             showTripContent: hasCurrentTrip,
             showTripEntry,
             hasCurrentTrip,
-            navTitle: (_b = (_a = result.currentTrip) === null || _a === void 0 ? void 0 : _a.tripMeta.tripName) !== null && _b !== void 0 ? _b : "巴士认座",
+            navTitle: (_c = (_b = result.currentTrip) === null || _b === void 0 ? void 0 : _b.tripMeta.tripName) !== null && _c !== void 0 ? _c : "巴士认座",
             navProgress: 0,
             isSeatsTab: activeTab === "seats",
             isMembersTab: activeTab === "members",
@@ -74,8 +91,16 @@ Page({
             authPresetNickname: result.currentUser.nickname,
             authPresetAvatarUrl: result.currentUser.avatarUrl,
             currentTrip: hasCurrentTrip ? result.currentTrip : null,
-            seatedMembers: ((_d = (_c = result.currentTrip) === null || _c === void 0 ? void 0 : _c.members) !== null && _d !== void 0 ? _d : []).filter((member) => Boolean(member.seatCode)),
-            viewerSeatText: (_f = (_e = result.currentTrip) === null || _e === void 0 ? void 0 : _e.tripMeta.viewerSeatCode) !== null && _f !== void 0 ? _f : "未入座",
+            seatedMembers: ((_e = (_d = result.currentTrip) === null || _d === void 0 ? void 0 : _d.members) !== null && _e !== void 0 ? _e : []).filter((member) => Boolean(member.seatCode)),
+            viewerSeatText: (_g = (_f = result.currentTrip) === null || _f === void 0 ? void 0 : _f.tripMeta.viewerSeatCode) !== null && _g !== void 0 ? _g : "未入座",
+            currentPersonaId,
+            currentPersonaImageUrl,
+            personaOptions: constants_1.HOME_PERSONA_OPTIONS.map((option) => (Object.assign(Object.assign({}, option), { className: option.id === (this.data.showPersonaSheet ? this.data.personaDraftId : currentPersonaId)
+                    ? "persona-option is-active"
+                    : "persona-option" }))),
+            showPersonaSheet: false,
+            personaSheetActive: false,
+            personaDraftId: currentPersonaId,
             sheetVisible: false,
             selectedSeat: null,
             selectedMember: null,
@@ -114,6 +139,60 @@ Page({
             membersTabClassName: nextTab === "members" ? "home-tab is-active" : "home-tab"
         });
     },
+    handleOpenPersonaSheet() {
+        const personaDraftId = this.data.currentPersonaId;
+        this.clearPersonaSheetCloseTimer();
+        this.setData({
+            showPersonaSheet: true,
+            personaDraftId,
+            personaOptions: constants_1.HOME_PERSONA_OPTIONS.map((option) => (Object.assign(Object.assign({}, option), { className: option.id === personaDraftId ? "persona-option is-active" : "persona-option" })))
+        });
+        wx.nextTick(() => {
+            this.setData({
+                personaSheetActive: true
+            });
+        });
+    },
+    handlePersonaSelect(event) {
+        const personaId = String(event.currentTarget.dataset.personaId || "");
+        this.setData({
+            personaDraftId: personaId,
+            personaOptions: constants_1.HOME_PERSONA_OPTIONS.map((option) => (Object.assign(Object.assign({}, option), { className: option.id === personaId ? "persona-option is-active" : "persona-option" })))
+        });
+    },
+    handlePersonaCancel() {
+        this.closePersonaSheet();
+    },
+    handlePersonaConfirm() {
+        try {
+            const result = trip_service_1.tripService.updateHomePersona(this.data.personaDraftId || null);
+            this.applyBootstrapResult(result);
+        }
+        catch (error) {
+            (0, feedback_1.showErrorToast)(error);
+        }
+    },
+    closePersonaSheet() {
+        this.clearPersonaSheetCloseTimer();
+        this.setData({
+            personaSheetActive: false
+        });
+        this.personaSheetCloseTimer = setTimeout(() => {
+            this.setData({
+                showPersonaSheet: false,
+                personaDraftId: this.data.currentPersonaId,
+                personaOptions: constants_1.HOME_PERSONA_OPTIONS.map((option) => (Object.assign(Object.assign({}, option), { className: option.id === this.data.currentPersonaId ? "persona-option is-active" : "persona-option" })))
+            });
+        }, 220);
+    },
+    clearPersonaSheetCloseTimer() {
+        if (!this.personaSheetCloseTimer) {
+            return;
+        }
+        clearTimeout(this.personaSheetCloseTimer);
+        this.personaSheetCloseTimer = 0;
+    },
+    noop() { },
     handleSeatTap(event) {
         var _a, _b, _c, _d, _e, _f, _g, _h;
         const seat = event.detail.seat;
@@ -222,5 +301,8 @@ Page({
         catch (error) {
             (0, feedback_1.showErrorToast)(error);
         }
+    },
+    onUnload() {
+        this.clearPersonaSheetCloseTimer();
     }
 });

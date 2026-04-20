@@ -1,7 +1,9 @@
 import { tripService } from "../../services/trip-service";
+import { HOME_PERSONA_OPTIONS } from "../../shared/constants";
 import type {
   BootstrapResult,
   CurrentTripViewModel,
+  HomePersonaOption,
   MemberView,
   SeatCellView,
   User
@@ -9,6 +11,10 @@ import type {
 import { showErrorToast, showSuccessToast } from "../../utils/feedback";
 
 type SheetMode = "claim" | "switch" | "self" | "detail";
+
+interface HomePersonaOptionData extends HomePersonaOption {
+  className: string;
+}
 
 interface HomePageData {
   showAuthGate: boolean;
@@ -28,6 +34,12 @@ interface HomePageData {
   currentTrip: CurrentTripViewModel | null;
   seatedMembers: MemberView[];
   viewerSeatText: string;
+  currentPersonaId: string;
+  currentPersonaImageUrl: string;
+  personaOptions: HomePersonaOptionData[];
+  showPersonaSheet: boolean;
+  personaSheetActive: boolean;
+  personaDraftId: string;
   activeTab: "seats" | "members";
   sheetVisible: boolean;
   sheetMode: SheetMode;
@@ -56,6 +68,15 @@ const initialData: HomePageData = {
   currentTrip: null,
   seatedMembers: [],
   viewerSeatText: "未入座",
+  currentPersonaId: "",
+  currentPersonaImageUrl: "",
+  personaOptions: HOME_PERSONA_OPTIONS.map((option) => ({
+    ...option,
+    className: "persona-option"
+  })),
+  showPersonaSheet: false,
+  personaSheetActive: false,
+  personaDraftId: "",
   activeTab: "seats",
   sheetVisible: false,
   sheetMode: "detail",
@@ -66,8 +87,16 @@ const initialData: HomePageData = {
   sheetCanAdminRelease: false
 };
 
+function resolveHomePersonaImageUrl(user: User): string {
+  if (!user.homePersonaAssetId) {
+    return "";
+  }
+  return HOME_PERSONA_OPTIONS.find((option) => option.id === user.homePersonaAssetId)?.imageUrl ?? "";
+}
+
 Page({
   data: initialData,
+  personaSheetCloseTimer: 0,
 
   onShow() {
     this.refreshPage();
@@ -97,6 +126,8 @@ Page({
     const hasCurrentTrip = result.currentUser.isAuthorized && Boolean(result.currentTrip);
     const showTripEntry = result.currentUser.isAuthorized && !result.currentTrip;
     const activeTab = this.data.activeTab;
+    const currentPersonaId = result.currentUser.homePersonaAssetId ?? "";
+    const currentPersonaImageUrl = resolveHomePersonaImageUrl(result.currentUser);
 
     this.setData({
       showAuthGate,
@@ -116,6 +147,18 @@ Page({
       currentTrip: hasCurrentTrip ? result.currentTrip : null,
       seatedMembers: (result.currentTrip?.members ?? []).filter((member) => Boolean(member.seatCode)),
       viewerSeatText: result.currentTrip?.tripMeta.viewerSeatCode ?? "未入座",
+      currentPersonaId,
+      currentPersonaImageUrl,
+      personaOptions: HOME_PERSONA_OPTIONS.map((option) => ({
+        ...option,
+        className:
+          option.id === (this.data.showPersonaSheet ? this.data.personaDraftId : currentPersonaId)
+            ? "persona-option is-active"
+            : "persona-option"
+      })),
+      showPersonaSheet: false,
+      personaSheetActive: false,
+      personaDraftId: currentPersonaId,
       sheetVisible: false,
       selectedSeat: null,
       selectedMember: null,
@@ -159,6 +202,76 @@ Page({
       membersTabClassName: nextTab === "members" ? "home-tab is-active" : "home-tab"
     });
   },
+
+  handleOpenPersonaSheet() {
+    const personaDraftId = this.data.currentPersonaId;
+    this.clearPersonaSheetCloseTimer();
+    this.setData({
+      showPersonaSheet: true,
+      personaDraftId,
+      personaOptions: HOME_PERSONA_OPTIONS.map((option) => ({
+        ...option,
+        className: option.id === personaDraftId ? "persona-option is-active" : "persona-option"
+      }))
+    });
+    wx.nextTick(() => {
+      this.setData({
+        personaSheetActive: true
+      });
+    });
+  },
+
+  handlePersonaSelect(event: WechatMiniprogram.CustomEvent) {
+    const personaId = String(event.currentTarget.dataset.personaId || "");
+    this.setData({
+      personaDraftId: personaId,
+      personaOptions: HOME_PERSONA_OPTIONS.map((option) => ({
+        ...option,
+        className: option.id === personaId ? "persona-option is-active" : "persona-option"
+      }))
+    });
+  },
+
+  handlePersonaCancel() {
+    this.closePersonaSheet();
+  },
+
+  handlePersonaConfirm() {
+    try {
+      const result = tripService.updateHomePersona(this.data.personaDraftId || null);
+      this.applyBootstrapResult(result);
+    } catch (error) {
+      showErrorToast(error);
+    }
+  },
+
+  closePersonaSheet() {
+    this.clearPersonaSheetCloseTimer();
+    this.setData({
+      personaSheetActive: false
+    });
+    this.personaSheetCloseTimer = setTimeout(() => {
+      this.setData({
+        showPersonaSheet: false,
+        personaDraftId: this.data.currentPersonaId,
+        personaOptions: HOME_PERSONA_OPTIONS.map((option) => ({
+          ...option,
+          className:
+            option.id === this.data.currentPersonaId ? "persona-option is-active" : "persona-option"
+        }))
+      });
+    }, 220) as unknown as number;
+  },
+
+  clearPersonaSheetCloseTimer() {
+    if (!this.personaSheetCloseTimer) {
+      return;
+    }
+    clearTimeout(this.personaSheetCloseTimer);
+    this.personaSheetCloseTimer = 0;
+  },
+
+  noop() {},
 
   handleSeatTap(event: WechatMiniprogram.CustomEvent<{ seat: SeatCellView }>) {
     const seat = event.detail.seat;
@@ -279,5 +392,9 @@ Page({
     } catch (error) {
       showErrorToast(error);
     }
+  },
+
+  onUnload() {
+    this.clearPersonaSheetCloseTimer();
   }
 });

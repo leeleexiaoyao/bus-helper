@@ -1,5 +1,6 @@
 <view class="page-shell home-page">
-  <page-navbar title="{{navTitle}}" progress="{{navProgress}}" />
+  <view class="home-page-bg"></view>
+  <page-navbar title="{{navTitle}}" progress="{{navProgress}}" theme="light" leftPadding="{{12}}" titleFontSize="{{18}}" />
 
   <block wx:if="{{showAuthGate}}">
     <auth-gate
@@ -14,22 +15,31 @@
   <block wx:if="{{showTripContent}}">
     <view class="home-hero">
       <view class="viewer-row">
-        <image
-          wx:if="{{currentUser.avatarUrl}}"
-          class="viewer-avatar"
-          src="{{currentUser.avatarUrl}}"
-          mode="aspectFill"
-        />
-        <view wx:else class="viewer-avatar viewer-avatar--fallback">{{currentUserInitial}}</view>
+        <view class="viewer-meta">
+          <view class="viewer-profile">
+            <image
+              wx:if="{{currentUser.avatarUrl}}"
+              class="viewer-avatar"
+              src="{{currentUser.avatarUrl}}"
+              mode="aspectFill"
+            />
+            <view wx:else class="viewer-avatar viewer-avatar--fallback avatar-fallback">{{currentUserInitial}}</view>
 
-        <view class="viewer-copy">
-          <view class="viewer-name">{{currentUser.nickname}}</view>
-          <view class="viewer-seat">座位号:{{viewerSeatText}}</view>
+            <view class="viewer-copy">
+              <view class="viewer-name">{{currentUser.nickname}}</view>
+              <view class="viewer-seat">座位号:{{viewerSeatText}}</view>
+            </view>
+          </view>
+        </view>
+
+        <view class="viewer-persona-action" bindtap="handleOpenPersonaSheet">
+          <image wx:if="{{currentPersonaImageUrl}}" class="viewer-persona-image" src="{{currentPersonaImageUrl}}" mode="aspectFit" />
+          <view wx:else class="viewer-persona-button">添加形象</view>
         </view>
       </view>
     </view>
 
-    <view class="trip-panel" style="border-radius: 40rpx; overflow: hidden; background: #ffffff;">
+    <view class="trip-panel">
       <view class="trip-tabs">
         <view class="tabs-left">
           <view class="{{seatsTabClassName}}" data-tab="seats" bindtap="handleTabChange">座位图</view>
@@ -56,6 +66,35 @@
       </view>
     </view>
   </block>
+</view>
+
+<view wx:if="{{showPersonaSheet}}" class="persona-sheet-layer {{personaSheetActive ? 'is-active' : ''}}">
+  <view class="persona-sheet-mask" bindtap="handlePersonaCancel"></view>
+  <view class="persona-sheet-panel" catchtap="noop">
+    <view class="persona-sheet-title">选择形象</view>
+    <view class="persona-grid">
+      <view
+        wx:for="{{personaOptions}}"
+        wx:key="id"
+        wx:for-item="option"
+        class="{{option.className}}"
+        data-persona-id="{{option.id}}"
+        bindtap="handlePersonaSelect"
+      >
+        <image class="persona-option-image" src="{{option.imageUrl}}" mode="aspectFill" />
+      </view>
+    </view>
+    <view class="persona-sheet-actions">
+      <button class="persona-sheet-btn persona-sheet-btn--cancel" bindtap="handlePersonaCancel">取消</button>
+      <button
+        class="persona-sheet-btn persona-sheet-btn--confirm {{personaDraftId ? '' : 'is-disabled'}}"
+        bindtap="handlePersonaConfirm"
+        disabled="{{!personaDraftId}}"
+      >
+        确定
+      </button>
+    </view>
+  </view>
 </view>
 
 <seat-sheet

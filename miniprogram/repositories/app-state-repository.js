@@ -174,15 +174,27 @@ function normalizeTrip(trip) {
     });
     return Object.assign(Object.assign({}, trip), { tools: nextTools });
 }
+function normalizeUser(user) {
+    var _a;
+    const nextHomePersonaAssetId = typeof user.homePersonaAssetId === "string" &&
+        ((_a = user.homePersonaAssetId) === null || _a === void 0 ? void 0 : _a.trim())
+        ? user.homePersonaAssetId.trim()
+        : null;
+    return Object.assign(Object.assign({}, user), { tags: normalizeStringArray(user.tags), homePersonaAssetId: nextHomePersonaAssetId });
+}
 function normalizeState(state) {
     if (!state) {
         return (0, constants_1.createInitialAppState)();
     }
+    const normalizedUsers = Object.entries(state.users).reduce((accumulator, [userId, user]) => {
+        accumulator[userId] = normalizeUser(user);
+        return accumulator;
+    }, {});
     const nextState = Object.assign(Object.assign({}, state), { version: constants_1.APP_STATE_VERSION, users: constants_1.DEMO_USERS.reduce((accumulator, demoUser) => {
             var _a;
             accumulator[demoUser.id] = (_a = accumulator[demoUser.id]) !== null && _a !== void 0 ? _a : Object.assign({}, demoUser);
             return accumulator;
-        }, Object.assign({}, state.users)), trips: Object.values(state.trips).reduce((accumulator, trip) => {
+        }, normalizedUsers), trips: Object.values(state.trips).reduce((accumulator, trip) => {
             accumulator[trip.id] = normalizeTrip(trip);
             return accumulator;
         }, {}) });

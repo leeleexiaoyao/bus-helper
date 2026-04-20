@@ -2,7 +2,7 @@
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
-var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17, _18, _19, _20, _21, _22, _23, _24, _25, _26, _27, _28, _29, _30, _31, _32, _33, _34, _35, _36, _37, _38, _39, _40, _41, _42, _43, _44, _45, _46, _47, _48, _49, _50, _51, _52, _53, _54, _55, _56, _57, _58, _59, _60, _61, _62, _63, _64, _65, _66, _67, _68, _69, _70, _71, _72, _73, _74, _75, _76, _77, _78, _79, _80, _81, _82, _83, _84, _85, _86, _87, _88, _89, _90, _91, _92, _93, _94, _95, _96, _97, _98, _99, _100, _101, _102, _103, _104, _105, _106, _107, _108, _109, _110, _111, _112, _113, _114, _115, _116, _117, _118, _119, _120, _121, _122, _123, _124, _125, _126, _127, _128, _129, _130, _131, _132, _133, _134, _135, _136, _137, _138, _139, _140, _141, _142, _143, _144, _145, _146, _147, _148, _149, _150, _151, _152, _153, _154, _155, _156, _157, _158, _159, _160, _161, _162, _163, _164, _165;
+var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17, _18, _19, _20, _21, _22, _23, _24, _25, _26, _27, _28, _29, _30, _31, _32, _33, _34, _35, _36, _37, _38, _39, _40, _41, _42, _43, _44, _45, _46, _47, _48, _49, _50, _51, _52, _53, _54, _55, _56, _57, _58, _59, _60, _61, _62, _63, _64, _65, _66, _67, _68, _69, _70, _71, _72, _73, _74, _75, _76, _77, _78, _79, _80, _81, _82, _83, _84, _85, _86, _87, _88, _89, _90, _91, _92, _93, _94, _95, _96, _97, _98, _99, _100, _101, _102, _103, _104, _105, _106, _107, _108, _109, _110, _111, _112, _113, _114, _115, _116, _117, _118, _119, _120, _121, _122, _123, _124, _125, _126, _127, _128, _129, _130, _131, _132, _133, _134, _135, _136, _137, _138, _139, _140, _141, _142, _143, _144, _145, _146, _147, _148, _149, _150, _151, _152, _153, _154, _155, _156, _157, _158, _159, _160, _161, _162, _163, _164, _165, _166, _167, _168, _169, _170, _171, _172, _173, _174, _175, _176, _177, _178, _179, _180, _181, _182, _183;
 Object.defineProperty(exports, "__esModule", { value: true });
 const strict_1 = __importDefault(require("node:assert/strict"));
 const constants_1 = require("../miniprogram/shared/constants");
@@ -25,6 +25,7 @@ function createServiceWithUserCount(userCount) {
             id: `user-${index}`,
             nickname: `成员${index}`,
             avatarUrl: `https://example.com/user-${index}.png`,
+            homePersonaAssetId: null,
             tags: [],
             currentTripId: null,
             isAuthorized: false
@@ -45,6 +46,7 @@ function createServiceWithUsers(userCount) {
             id: userId,
             nickname: `成员${String(index).padStart(2, "0")}`,
             avatarUrl: `https://example.com/${userId}.png`,
+            homePersonaAssetId: null,
             tags: [`模拟${index}`],
             currentTripId: null,
             isAuthorized: false
@@ -220,7 +222,38 @@ function setupTripWith49Members() {
     strict_1.default.equal(toolsPage.isAuthorized, false);
     strict_1.default.equal(toolsPage.hasCurrentTrip, false);
     strict_1.default.equal(toolsPage.toolCards.length, 4);
-    strict_1.default.deepEqual(toolsPage.toolCards.map((card) => card.type), constants_1.TOOL_TYPES);
+    strict_1.default.deepEqual(toolsPage.toolCards.map((card) => card.type), ["vote", "seat-draw", "lottery", "wheel"]);
+    strict_1.default.deepEqual(toolsPage.toolCards.map((card) => ({
+        type: card.type,
+        displayTitle: card.displayTitle,
+        displayDescription: card.displayDescription,
+        ctaLabel: card.ctaLabel
+    })), [
+        {
+            type: "vote",
+            displayTitle: "投票",
+            displayDescription: "选出你喜欢的",
+            ctaLabel: "玩这个>"
+        },
+        {
+            type: "seat-draw",
+            displayTitle: "随机选号",
+            displayDescription: "看看谁运气好",
+            ctaLabel: "玩这个>"
+        },
+        {
+            type: "lottery",
+            displayTitle: "抽签",
+            displayDescription: "谁是天选之人",
+            ctaLabel: "玩这个>"
+        },
+        {
+            type: "wheel",
+            displayTitle: "幸运大转盘",
+            displayDescription: "幸运转转转",
+            ctaLabel: "玩这个>"
+        }
+    ]);
     strict_1.default.equal(toolsPage.toolCards.every((card) => card.stateLabel === "未开启"), true);
     strict_1.default.equal(toolsPage.toolCards.every((card) => !card.isStarted), true);
     strict_1.default.equal(toolsPage.toolCards.every((card) => !card.canEnter), true);
@@ -305,7 +338,7 @@ function setupTripWith49Members() {
         excludeAdmin: false
     }), "INVALID_SEAT_DRAW_TOPIC");
     expectBusinessError(() => service.publishSeatDrawTool({
-        topic: "这是一个超过十个字的抽号主题",
+        topic: "123456789012345678901",
         drawCount: 1,
         excludePreviouslyDrawn: false,
         excludeAdmin: false
@@ -589,24 +622,62 @@ function setupTripWith49Members() {
     strict_1.default.equal(detail.isStarted, true);
     strict_1.default.equal((_80 = detail.wheelDetail) === null || _80 === void 0 ? void 0 : _80.phase, "draft");
     strict_1.default.equal((_81 = detail.wheelDetail) === null || _81 === void 0 ? void 0 : _81.items.length, 3);
-    strict_1.default.equal((_82 = detail.wheelDetail) === null || _82 === void 0 ? void 0 : _82.resultIndex, null);
-    strict_1.default.equal((_83 = detail.wheelDetail) === null || _83 === void 0 ? void 0 : _83.resultLabel, null);
-    strict_1.default.deepEqual((_84 = detail.wheelDetail) === null || _84 === void 0 ? void 0 : _84.resultHistoryLabels, []);
+    strict_1.default.equal((_82 = detail.wheelDetail) === null || _82 === void 0 ? void 0 : _82.viewerCanSpin, true);
+    strict_1.default.equal((_83 = detail.wheelDetail) === null || _83 === void 0 ? void 0 : _83.allowAssignedUser, false);
+    strict_1.default.equal((_84 = detail.wheelDetail) === null || _84 === void 0 ? void 0 : _84.resultIndex, null);
+    strict_1.default.equal((_85 = detail.wheelDetail) === null || _85 === void 0 ? void 0 : _85.resultLabel, null);
+    strict_1.default.deepEqual((_86 = detail.wheelDetail) === null || _86 === void 0 ? void 0 : _86.resultHistoryLabels, []);
     detail = withMockedRandom(0, () => service.spinWheel());
-    strict_1.default.equal((_85 = detail.wheelDetail) === null || _85 === void 0 ? void 0 : _85.phase, "result");
-    strict_1.default.equal((_86 = detail.wheelDetail) === null || _86 === void 0 ? void 0 : _86.resultIndex, 0);
-    strict_1.default.equal((_87 = detail.wheelDetail) === null || _87 === void 0 ? void 0 : _87.resultLabel, "唱歌");
-    strict_1.default.deepEqual((_88 = detail.wheelDetail) === null || _88 === void 0 ? void 0 : _88.resultHistoryLabels, ["唱歌"]);
+    strict_1.default.equal((_87 = detail.wheelDetail) === null || _87 === void 0 ? void 0 : _87.phase, "result");
+    strict_1.default.equal((_88 = detail.wheelDetail) === null || _88 === void 0 ? void 0 : _88.resultIndex, 0);
+    strict_1.default.equal((_89 = detail.wheelDetail) === null || _89 === void 0 ? void 0 : _89.resultLabel, "唱歌");
+    strict_1.default.deepEqual((_90 = detail.wheelDetail) === null || _90 === void 0 ? void 0 : _90.resultHistoryLabels, ["唱歌"]);
     detail = service.resetWheel();
     strict_1.default.equal(detail.isStarted, true);
-    strict_1.default.equal((_89 = detail.wheelDetail) === null || _89 === void 0 ? void 0 : _89.phase, "draft");
-    strict_1.default.equal((_90 = detail.wheelDetail) === null || _90 === void 0 ? void 0 : _90.resultIndex, null);
-    strict_1.default.equal((_91 = detail.wheelDetail) === null || _91 === void 0 ? void 0 : _91.resultLabel, null);
-    strict_1.default.deepEqual((_92 = detail.wheelDetail) === null || _92 === void 0 ? void 0 : _92.resultHistoryLabels, []);
+    strict_1.default.equal((_91 = detail.wheelDetail) === null || _91 === void 0 ? void 0 : _91.phase, "draft");
+    strict_1.default.equal((_92 = detail.wheelDetail) === null || _92 === void 0 ? void 0 : _92.resultIndex, null);
+    strict_1.default.equal((_93 = detail.wheelDetail) === null || _93 === void 0 ? void 0 : _93.resultLabel, null);
+    strict_1.default.deepEqual((_94 = detail.wheelDetail) === null || _94 === void 0 ? void 0 : _94.resultHistoryLabels, []);
     detail = service.closeWheel();
     strict_1.default.equal(detail.isStarted, false);
-    strict_1.default.equal(detail.wheelDetail, null);
+    strict_1.default.equal((_95 = detail.wheelDetail) === null || _95 === void 0 ? void 0 : _95.items.length, 0);
+    strict_1.default.equal((_96 = detail.wheelDetail) === null || _96 === void 0 ? void 0 : _96.viewerCanSpin, false);
+    strict_1.default.equal((_97 = detail.wheelDetail) === null || _97 === void 0 ? void 0 : _97.eligibleUsers.length, 4);
     strict_1.default.equal(getToolCard(service, "wheel").isStarted, false);
+}
+{
+    const { service } = setupTripWithMembers();
+    service.publishWheelTool({
+        items: ["免单", "再来一次", "零食礼包"],
+        allowAssignedUser: true,
+        assignedUserId: "user-2"
+    });
+    let detail = service.getToolDetailPageData("wheel");
+    strict_1.default.equal((_98 = detail.wheelDetail) === null || _98 === void 0 ? void 0 : _98.viewerCanSpin, false);
+    strict_1.default.equal((_99 = detail.wheelDetail) === null || _99 === void 0 ? void 0 : _99.allowAssignedUser, true);
+    strict_1.default.equal((_100 = detail.wheelDetail) === null || _100 === void 0 ? void 0 : _100.assignedUserId, "user-2");
+    strict_1.default.equal((_101 = detail.wheelDetail) === null || _101 === void 0 ? void 0 : _101.assignedUserLabel, "阿山");
+    strict_1.default.equal((_102 = detail.wheelDetail) === null || _102 === void 0 ? void 0 : _102.eligibleUsers.length, 4);
+    expectBusinessError(() => service.spinWheel(), "WHEEL_FORBIDDEN");
+    service.switchActiveUser("user-2");
+    detail = service.getToolDetailPageData("wheel");
+    strict_1.default.equal((_103 = detail.wheelDetail) === null || _103 === void 0 ? void 0 : _103.viewerCanSpin, true);
+    detail = withMockedRandom(0.5, () => service.spinWheel());
+    strict_1.default.equal((_104 = detail.wheelDetail) === null || _104 === void 0 ? void 0 : _104.phase, "result");
+    strict_1.default.equal((_105 = detail.wheelDetail) === null || _105 === void 0 ? void 0 : _105.resultLabel, "再来一次");
+    service.switchActiveUser("user-1");
+    detail = service.recreateWheelTool({
+        items: ["唱歌", "真心话"],
+        allowAssignedUser: true,
+        assignedUserId: "user-1"
+    });
+    strict_1.default.equal((_106 = detail.wheelDetail) === null || _106 === void 0 ? void 0 : _106.assignedUserId, "user-1");
+    strict_1.default.equal((_107 = detail.wheelDetail) === null || _107 === void 0 ? void 0 : _107.assignedUserLabel, "小雨");
+    strict_1.default.equal((_108 = detail.wheelDetail) === null || _108 === void 0 ? void 0 : _108.viewerCanSpin, true);
+    service.switchActiveUser("user-3");
+    detail = service.getToolDetailPageData("wheel");
+    strict_1.default.equal((_109 = detail.wheelDetail) === null || _109 === void 0 ? void 0 : _109.viewerCanSpin, false);
+    expectBusinessError(() => service.spinWheel(), "WHEEL_FORBIDDEN");
 }
 {
     const { service } = setupTripWithMembers();
@@ -616,32 +687,32 @@ function setupTripWith49Members() {
     });
     let detail = service.getToolDetailPageData("lottery");
     strict_1.default.equal(detail.isStarted, true);
-    strict_1.default.equal((_93 = detail.lotteryDetail) === null || _93 === void 0 ? void 0 : _93.phase, "active");
-    strict_1.default.equal((_94 = detail.lotteryDetail) === null || _94 === void 0 ? void 0 : _94.excludeAdmin, true);
-    strict_1.default.equal((_95 = detail.lotteryDetail) === null || _95 === void 0 ? void 0 : _95.participantCount, 3);
-    strict_1.default.equal((_96 = detail.lotteryDetail) === null || _96 === void 0 ? void 0 : _96.viewerEligible, false);
+    strict_1.default.equal((_110 = detail.lotteryDetail) === null || _110 === void 0 ? void 0 : _110.phase, "active");
+    strict_1.default.equal((_111 = detail.lotteryDetail) === null || _111 === void 0 ? void 0 : _111.excludeAdmin, true);
+    strict_1.default.equal((_112 = detail.lotteryDetail) === null || _112 === void 0 ? void 0 : _112.participantCount, 3);
+    strict_1.default.equal((_113 = detail.lotteryDetail) === null || _113 === void 0 ? void 0 : _113.viewerEligible, false);
     expectBusinessError(() => service.claimLottery(), "LOTTERY_NOT_ALLOWED");
     service.switchActiveUser("user-2");
     detail = service.claimLottery();
-    strict_1.default.equal((_97 = detail.lotteryDetail) === null || _97 === void 0 ? void 0 : _97.viewerHasClaimed, true);
-    strict_1.default.equal((_98 = detail.lotteryDetail) === null || _98 === void 0 ? void 0 : _98.claimedCount, 1);
-    strict_1.default.equal(typeof ((_99 = detail.lotteryDetail) === null || _99 === void 0 ? void 0 : _99.viewerIsWinner), "boolean");
+    strict_1.default.equal((_114 = detail.lotteryDetail) === null || _114 === void 0 ? void 0 : _114.viewerHasClaimed, true);
+    strict_1.default.equal((_115 = detail.lotteryDetail) === null || _115 === void 0 ? void 0 : _115.claimedCount, 1);
+    strict_1.default.equal(typeof ((_116 = detail.lotteryDetail) === null || _116 === void 0 ? void 0 : _116.viewerIsWinner), "boolean");
     expectBusinessError(() => service.claimLottery(), "LOTTERY_ALREADY_CLAIMED");
     service.switchActiveUser("user-3");
     detail = service.claimLottery();
-    strict_1.default.equal((_100 = detail.lotteryDetail) === null || _100 === void 0 ? void 0 : _100.claimedCount, 2);
-    strict_1.default.equal((_101 = detail.lotteryDetail) === null || _101 === void 0 ? void 0 : _101.participants.filter((participant) => participant.claimed).length, 2);
+    strict_1.default.equal((_117 = detail.lotteryDetail) === null || _117 === void 0 ? void 0 : _117.claimedCount, 2);
+    strict_1.default.equal((_118 = detail.lotteryDetail) === null || _118 === void 0 ? void 0 : _118.participants.filter((participant) => participant.claimed).length, 2);
     service.switchActiveUser("user-4");
     detail = service.claimLottery();
-    strict_1.default.equal((_102 = detail.lotteryDetail) === null || _102 === void 0 ? void 0 : _102.claimedCount, 3);
-    strict_1.default.equal((_103 = detail.lotteryDetail) === null || _103 === void 0 ? void 0 : _103.participants.every((participant) => participant.claimed), true);
+    strict_1.default.equal((_119 = detail.lotteryDetail) === null || _119 === void 0 ? void 0 : _119.claimedCount, 3);
+    strict_1.default.equal((_120 = detail.lotteryDetail) === null || _120 === void 0 ? void 0 : _120.participants.every((participant) => participant.claimed), true);
     service.switchActiveUser("user-1");
     detail = service.resetLottery();
     strict_1.default.equal(detail.isStarted, true);
-    strict_1.default.equal((_104 = detail.lotteryDetail) === null || _104 === void 0 ? void 0 : _104.phase, "active");
-    strict_1.default.equal((_105 = detail.lotteryDetail) === null || _105 === void 0 ? void 0 : _105.participantCount, 3);
-    strict_1.default.equal((_106 = detail.lotteryDetail) === null || _106 === void 0 ? void 0 : _106.claimedCount, 0);
-    strict_1.default.equal((_107 = detail.lotteryDetail) === null || _107 === void 0 ? void 0 : _107.participants.length, 3);
+    strict_1.default.equal((_121 = detail.lotteryDetail) === null || _121 === void 0 ? void 0 : _121.phase, "active");
+    strict_1.default.equal((_122 = detail.lotteryDetail) === null || _122 === void 0 ? void 0 : _122.participantCount, 3);
+    strict_1.default.equal((_123 = detail.lotteryDetail) === null || _123 === void 0 ? void 0 : _123.claimedCount, 0);
+    strict_1.default.equal((_124 = detail.lotteryDetail) === null || _124 === void 0 ? void 0 : _124.participants.length, 3);
     detail = service.closeLottery();
     strict_1.default.equal(detail.isStarted, false);
     strict_1.default.equal(detail.lotteryDetail, null);
@@ -693,7 +764,7 @@ function setupTripWith49Members() {
     service.dissolveCurrentTrip();
     const dissolvedState = storage.getState();
     strict_1.default.equal(dissolvedState === null || dissolvedState === void 0 ? void 0 : dissolvedState.trips[tripId].status, "dissolved");
-    strict_1.default.equal(Object.values((_108 = dissolvedState === null || dissolvedState === void 0 ? void 0 : dissolvedState.trips[tripId].tools) !== null && _108 !== void 0 ? _108 : {}).every((tool) => tool === null), true);
+    strict_1.default.equal(Object.values((_125 = dissolvedState === null || dissolvedState === void 0 ? void 0 : dissolvedState.trips[tripId].tools) !== null && _125 !== void 0 ? _125 : {}).every((tool) => tool === null), true);
     strict_1.default.equal(service.bootstrapApp().homeMode, "landing");
 }
 {
@@ -710,7 +781,7 @@ function setupTripWith49Members() {
     const bootstrap = service.bootstrapApp();
     strict_1.default.equal(bootstrap.demoUsers.length, 4);
     const normalizedState = storage.getState();
-    strict_1.default.equal(Object.keys((_109 = normalizedState === null || normalizedState === void 0 ? void 0 : normalizedState.users) !== null && _109 !== void 0 ? _109 : {}).length, 4);
+    strict_1.default.equal(Object.keys((_126 = normalizedState === null || normalizedState === void 0 ? void 0 : normalizedState.users) !== null && _126 !== void 0 ? _126 : {}).length, 4);
 }
 {
     const { service } = setupTripWith49Members();
@@ -728,18 +799,18 @@ function setupTripWith49Members() {
     }), "TOOL_ALREADY_STARTED");
     let detail = service.getToolDetailPageData("seat-draw");
     strict_1.default.equal(detail.isStarted, true);
-    strict_1.default.equal((_110 = detail.seatDrawDetail) === null || _110 === void 0 ? void 0 : _110.eligibleMembers.length, 49);
-    strict_1.default.equal((_111 = detail.seatDrawDetail) === null || _111 === void 0 ? void 0 : _111.remainingCount, 49);
+    strict_1.default.equal((_127 = detail.seatDrawDetail) === null || _127 === void 0 ? void 0 : _127.eligibleMembers.length, 49);
+    strict_1.default.equal((_128 = detail.seatDrawDetail) === null || _128 === void 0 ? void 0 : _128.remainingCount, 49);
     detail = withMockedRandom(0, () => service.drawSeat());
-    strict_1.default.equal((_112 = detail.seatDrawDetail) === null || _112 === void 0 ? void 0 : _112.lastResult.length, 5);
-    strict_1.default.equal((_113 = detail.seatDrawDetail) === null || _113 === void 0 ? void 0 : _113.resultRounds.length, 1);
-    strict_1.default.equal((_114 = detail.seatDrawDetail) === null || _114 === void 0 ? void 0 : _114.remainingCount, 44);
-    strict_1.default.equal(new Set((_115 = detail.seatDrawDetail) === null || _115 === void 0 ? void 0 : _115.lastResult.map((member) => member.userId)).size, 5);
+    strict_1.default.equal((_129 = detail.seatDrawDetail) === null || _129 === void 0 ? void 0 : _129.lastResult.length, 5);
+    strict_1.default.equal((_130 = detail.seatDrawDetail) === null || _130 === void 0 ? void 0 : _130.resultRounds.length, 1);
+    strict_1.default.equal((_131 = detail.seatDrawDetail) === null || _131 === void 0 ? void 0 : _131.remainingCount, 44);
+    strict_1.default.equal(new Set((_132 = detail.seatDrawDetail) === null || _132 === void 0 ? void 0 : _132.lastResult.map((member) => member.userId)).size, 5);
     detail = service.resetSeatDraw();
-    strict_1.default.equal((_116 = detail.seatDrawDetail) === null || _116 === void 0 ? void 0 : _116.phase, "ready");
-    strict_1.default.equal((_117 = detail.seatDrawDetail) === null || _117 === void 0 ? void 0 : _117.lastResult.length, 0);
-    strict_1.default.equal((_118 = detail.seatDrawDetail) === null || _118 === void 0 ? void 0 : _118.resultRounds.length, 0);
-    strict_1.default.equal((_119 = detail.seatDrawDetail) === null || _119 === void 0 ? void 0 : _119.remainingCount, 49);
+    strict_1.default.equal((_133 = detail.seatDrawDetail) === null || _133 === void 0 ? void 0 : _133.phase, "ready");
+    strict_1.default.equal((_134 = detail.seatDrawDetail) === null || _134 === void 0 ? void 0 : _134.lastResult.length, 0);
+    strict_1.default.equal((_135 = detail.seatDrawDetail) === null || _135 === void 0 ? void 0 : _135.resultRounds.length, 0);
+    strict_1.default.equal((_136 = detail.seatDrawDetail) === null || _136 === void 0 ? void 0 : _136.remainingCount, 49);
 }
 {
     const { service } = setupTripWith49Members();
@@ -757,34 +828,35 @@ function setupTripWith49Members() {
         options: optionLabels
     }), "TOOL_ALREADY_STARTED");
     let detail = getVoteDetail(service);
-    strict_1.default.equal((_120 = detail.voteDetail) === null || _120 === void 0 ? void 0 : _120.participantCount, 49);
-    strict_1.default.equal((_121 = detail.voteDetail) === null || _121 === void 0 ? void 0 : _121.options.length, 49);
-    strict_1.default.equal((_122 = detail.voteDetail) === null || _122 === void 0 ? void 0 : _122.viewerEligible, true);
-    const optionIds = (_124 = (_123 = detail.voteDetail) === null || _123 === void 0 ? void 0 : _123.options.map((option) => option.id)) !== null && _124 !== void 0 ? _124 : [];
+    strict_1.default.equal((_137 = detail.voteDetail) === null || _137 === void 0 ? void 0 : _137.participantCount, 49);
+    strict_1.default.equal((_138 = detail.voteDetail) === null || _138 === void 0 ? void 0 : _138.options.length, 49);
+    strict_1.default.equal((_139 = detail.voteDetail) === null || _139 === void 0 ? void 0 : _139.viewerEligible, true);
+    const optionIds = (_141 = (_140 = detail.voteDetail) === null || _140 === void 0 ? void 0 : _140.options.map((option) => option.id)) !== null && _141 !== void 0 ? _141 : [];
     for (let index = 1; index <= 49; index += 1) {
         service.switchActiveUser(`user-${index}`);
         detail = submitVoteChoice(service, "approve", optionIds);
-        strict_1.default.equal((_125 = detail.voteDetail) === null || _125 === void 0 ? void 0 : _125.submittedCount, index);
+        strict_1.default.equal((_142 = detail.voteDetail) === null || _142 === void 0 ? void 0 : _142.submittedCount, index);
     }
     service.switchActiveUser("user-1");
     detail = getVoteDetail(service);
-    strict_1.default.equal((_126 = detail.voteDetail) === null || _126 === void 0 ? void 0 : _126.submittedCount, 49);
-    strict_1.default.equal((_127 = detail.voteDetail) === null || _127 === void 0 ? void 0 : _127.approveCount, 49);
-    strict_1.default.equal((_128 = detail.voteDetail) === null || _128 === void 0 ? void 0 : _128.rejectCount, 0);
-    strict_1.default.equal((_129 = detail.voteDetail) === null || _129 === void 0 ? void 0 : _129.abstainCount, 0);
-    strict_1.default.equal((_130 = detail.voteDetail) === null || _130 === void 0 ? void 0 : _130.options.every((option) => option.supportCount === 49), true);
-    strict_1.default.equal((_131 = detail.voteDetail) === null || _131 === void 0 ? void 0 : _131.viewerHasSubmitted, true);
-    strict_1.default.equal((_132 = detail.voteDetail) === null || _132 === void 0 ? void 0 : _132.viewerSelectedOptionIds.length, 49);
+    strict_1.default.equal((_143 = detail.voteDetail) === null || _143 === void 0 ? void 0 : _143.submittedCount, 49);
+    strict_1.default.equal((_144 = detail.voteDetail) === null || _144 === void 0 ? void 0 : _144.approveCount, 49);
+    strict_1.default.equal((_145 = detail.voteDetail) === null || _145 === void 0 ? void 0 : _145.rejectCount, 0);
+    strict_1.default.equal((_146 = detail.voteDetail) === null || _146 === void 0 ? void 0 : _146.abstainCount, 0);
+    strict_1.default.equal((_147 = detail.voteDetail) === null || _147 === void 0 ? void 0 : _147.options.every((option) => option.supportCount === 49), true);
+    strict_1.default.equal((_148 = detail.voteDetail) === null || _148 === void 0 ? void 0 : _148.viewerHasSubmitted, true);
+    strict_1.default.equal((_149 = detail.voteDetail) === null || _149 === void 0 ? void 0 : _149.viewerSelectedOptionIds.length, 49);
     detail = service.resetVote();
     strict_1.default.equal(detail.isStarted, true);
-    strict_1.default.equal((_133 = detail.voteDetail) === null || _133 === void 0 ? void 0 : _133.phase, "active");
-    strict_1.default.equal((_134 = detail.voteDetail) === null || _134 === void 0 ? void 0 : _134.participantCount, 49);
-    strict_1.default.equal((_135 = detail.voteDetail) === null || _135 === void 0 ? void 0 : _135.submittedCount, 0);
-    strict_1.default.equal((_136 = detail.voteDetail) === null || _136 === void 0 ? void 0 : _136.viewerHasSubmitted, false);
+    strict_1.default.equal((_150 = detail.voteDetail) === null || _150 === void 0 ? void 0 : _150.phase, "active");
+    strict_1.default.equal((_151 = detail.voteDetail) === null || _151 === void 0 ? void 0 : _151.participantCount, 49);
+    strict_1.default.equal((_152 = detail.voteDetail) === null || _152 === void 0 ? void 0 : _152.submittedCount, 0);
+    strict_1.default.equal((_153 = detail.voteDetail) === null || _153 === void 0 ? void 0 : _153.viewerHasSubmitted, false);
 }
 {
     const { service } = setupTripWith49Members();
-    const wheelItems = buildSequentialLabels("玩法", 49);
+    const wheelItems = buildSequentialLabels("奖品", 10);
+    const overflowWheelItems = buildSequentialLabels("奖品", 11);
     service.publishWheelTool({
         items: wheelItems
     });
@@ -793,21 +865,25 @@ function setupTripWith49Members() {
     }), "TOOL_ALREADY_STARTED");
     let detail = service.getToolDetailPageData("wheel");
     strict_1.default.equal(detail.isStarted, true);
-    strict_1.default.equal((_137 = detail.wheelDetail) === null || _137 === void 0 ? void 0 : _137.items.length, 49);
-    strict_1.default.equal((_138 = detail.wheelDetail) === null || _138 === void 0 ? void 0 : _138.resultIndex, null);
-    strict_1.default.equal((_139 = detail.wheelDetail) === null || _139 === void 0 ? void 0 : _139.resultLabel, null);
-    strict_1.default.deepEqual((_140 = detail.wheelDetail) === null || _140 === void 0 ? void 0 : _140.resultHistoryLabels, []);
+    strict_1.default.equal((_154 = detail.wheelDetail) === null || _154 === void 0 ? void 0 : _154.items.length, 10);
+    strict_1.default.equal((_155 = detail.wheelDetail) === null || _155 === void 0 ? void 0 : _155.eligibleUsers.length, 49);
+    strict_1.default.equal((_156 = detail.wheelDetail) === null || _156 === void 0 ? void 0 : _156.resultIndex, null);
+    strict_1.default.equal((_157 = detail.wheelDetail) === null || _157 === void 0 ? void 0 : _157.resultLabel, null);
+    strict_1.default.deepEqual((_158 = detail.wheelDetail) === null || _158 === void 0 ? void 0 : _158.resultHistoryLabels, []);
     detail = withMockedRandom(0.99, () => service.spinWheel());
-    strict_1.default.equal((_141 = detail.wheelDetail) === null || _141 === void 0 ? void 0 : _141.phase, "result");
-    strict_1.default.equal((_142 = detail.wheelDetail) === null || _142 === void 0 ? void 0 : _142.resultIndex, 48);
-    strict_1.default.equal((_143 = detail.wheelDetail) === null || _143 === void 0 ? void 0 : _143.resultLabel, (_144 = detail.wheelDetail) === null || _144 === void 0 ? void 0 : _144.items[48]);
-    strict_1.default.deepEqual((_145 = detail.wheelDetail) === null || _145 === void 0 ? void 0 : _145.resultHistoryLabels, [(_147 = (_146 = detail.wheelDetail) === null || _146 === void 0 ? void 0 : _146.items[48]) !== null && _147 !== void 0 ? _147 : ""]);
+    strict_1.default.equal((_159 = detail.wheelDetail) === null || _159 === void 0 ? void 0 : _159.phase, "result");
+    strict_1.default.equal((_160 = detail.wheelDetail) === null || _160 === void 0 ? void 0 : _160.resultIndex, 9);
+    strict_1.default.equal((_161 = detail.wheelDetail) === null || _161 === void 0 ? void 0 : _161.resultLabel, (_162 = detail.wheelDetail) === null || _162 === void 0 ? void 0 : _162.items[9]);
+    strict_1.default.deepEqual((_163 = detail.wheelDetail) === null || _163 === void 0 ? void 0 : _163.resultHistoryLabels, [(_165 = (_164 = detail.wheelDetail) === null || _164 === void 0 ? void 0 : _164.items[9]) !== null && _165 !== void 0 ? _165 : ""]);
     detail = service.resetWheel();
     strict_1.default.equal(detail.isStarted, true);
-    strict_1.default.equal((_148 = detail.wheelDetail) === null || _148 === void 0 ? void 0 : _148.phase, "draft");
-    strict_1.default.equal((_149 = detail.wheelDetail) === null || _149 === void 0 ? void 0 : _149.resultIndex, null);
-    strict_1.default.equal((_150 = detail.wheelDetail) === null || _150 === void 0 ? void 0 : _150.resultLabel, null);
-    strict_1.default.deepEqual((_151 = detail.wheelDetail) === null || _151 === void 0 ? void 0 : _151.resultHistoryLabels, []);
+    strict_1.default.equal((_166 = detail.wheelDetail) === null || _166 === void 0 ? void 0 : _166.phase, "draft");
+    strict_1.default.equal((_167 = detail.wheelDetail) === null || _167 === void 0 ? void 0 : _167.resultIndex, null);
+    strict_1.default.equal((_168 = detail.wheelDetail) === null || _168 === void 0 ? void 0 : _168.resultLabel, null);
+    strict_1.default.deepEqual((_169 = detail.wheelDetail) === null || _169 === void 0 ? void 0 : _169.resultHistoryLabels, []);
+    expectBusinessError(() => service.recreateWheelTool({
+        items: overflowWheelItems
+    }), "WHEEL_ITEMS_LIMIT_EXCEEDED");
 }
 {
     const { service } = setupTripWith49Members();
@@ -821,27 +897,27 @@ function setupTripWith49Members() {
     }), "TOOL_ALREADY_STARTED");
     let detail = service.getToolDetailPageData("lottery");
     strict_1.default.equal(detail.isStarted, true);
-    strict_1.default.equal((_152 = detail.lotteryDetail) === null || _152 === void 0 ? void 0 : _152.participantCount, 49);
-    strict_1.default.equal((_153 = detail.lotteryDetail) === null || _153 === void 0 ? void 0 : _153.winnerCount, 49);
-    strict_1.default.equal((_154 = detail.lotteryDetail) === null || _154 === void 0 ? void 0 : _154.viewerEligible, true);
-    strict_1.default.equal((_155 = detail.lotteryDetail) === null || _155 === void 0 ? void 0 : _155.claimedCount, 0);
+    strict_1.default.equal((_170 = detail.lotteryDetail) === null || _170 === void 0 ? void 0 : _170.participantCount, 49);
+    strict_1.default.equal((_171 = detail.lotteryDetail) === null || _171 === void 0 ? void 0 : _171.winnerCount, 49);
+    strict_1.default.equal((_172 = detail.lotteryDetail) === null || _172 === void 0 ? void 0 : _172.viewerEligible, true);
+    strict_1.default.equal((_173 = detail.lotteryDetail) === null || _173 === void 0 ? void 0 : _173.claimedCount, 0);
     for (let index = 1; index <= 49; index += 1) {
         service.switchActiveUser(`user-${index}`);
         detail = service.claimLottery();
-        strict_1.default.equal((_156 = detail.lotteryDetail) === null || _156 === void 0 ? void 0 : _156.claimedCount, index);
-        strict_1.default.equal((_157 = detail.lotteryDetail) === null || _157 === void 0 ? void 0 : _157.viewerHasClaimed, true);
-        strict_1.default.equal((_158 = detail.lotteryDetail) === null || _158 === void 0 ? void 0 : _158.viewerIsWinner, true);
+        strict_1.default.equal((_174 = detail.lotteryDetail) === null || _174 === void 0 ? void 0 : _174.claimedCount, index);
+        strict_1.default.equal((_175 = detail.lotteryDetail) === null || _175 === void 0 ? void 0 : _175.viewerHasClaimed, true);
+        strict_1.default.equal((_176 = detail.lotteryDetail) === null || _176 === void 0 ? void 0 : _176.viewerIsWinner, true);
     }
     service.switchActiveUser("user-1");
     detail = service.getToolDetailPageData("lottery");
-    strict_1.default.equal((_159 = detail.lotteryDetail) === null || _159 === void 0 ? void 0 : _159.claimedCount, 49);
-    strict_1.default.equal((_160 = detail.lotteryDetail) === null || _160 === void 0 ? void 0 : _160.participants.every((participant) => participant.claimed), true);
-    strict_1.default.equal((_161 = detail.lotteryDetail) === null || _161 === void 0 ? void 0 : _161.participants.every((participant) => participant.statusText === "已抽中"), true);
+    strict_1.default.equal((_177 = detail.lotteryDetail) === null || _177 === void 0 ? void 0 : _177.claimedCount, 49);
+    strict_1.default.equal((_178 = detail.lotteryDetail) === null || _178 === void 0 ? void 0 : _178.participants.every((participant) => participant.claimed), true);
+    strict_1.default.equal((_179 = detail.lotteryDetail) === null || _179 === void 0 ? void 0 : _179.participants.every((participant) => participant.statusText === "已抽中"), true);
     detail = service.resetLottery();
     strict_1.default.equal(detail.isStarted, true);
-    strict_1.default.equal((_162 = detail.lotteryDetail) === null || _162 === void 0 ? void 0 : _162.phase, "active");
-    strict_1.default.equal((_163 = detail.lotteryDetail) === null || _163 === void 0 ? void 0 : _163.participantCount, 49);
-    strict_1.default.equal((_164 = detail.lotteryDetail) === null || _164 === void 0 ? void 0 : _164.claimedCount, 0);
-    strict_1.default.equal((_165 = detail.lotteryDetail) === null || _165 === void 0 ? void 0 : _165.viewerHasClaimed, false);
+    strict_1.default.equal((_180 = detail.lotteryDetail) === null || _180 === void 0 ? void 0 : _180.phase, "active");
+    strict_1.default.equal((_181 = detail.lotteryDetail) === null || _181 === void 0 ? void 0 : _181.participantCount, 49);
+    strict_1.default.equal((_182 = detail.lotteryDetail) === null || _182 === void 0 ? void 0 : _182.claimedCount, 0);
+    strict_1.default.equal((_183 = detail.lotteryDetail) === null || _183 === void 0 ? void 0 : _183.viewerHasClaimed, false);
 }
 console.log("trip-service tests passed");

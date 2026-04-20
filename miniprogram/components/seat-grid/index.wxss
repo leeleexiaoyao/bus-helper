@@ -1,5 +1,7 @@
 .seat-grid {
-  padding: 12rpx 0 0;
+  width: 100%;
+  padding: 24rpx 24rpx 0;
+  box-sizing: border-box;
 }
 
 .seat-rows {
@@ -19,37 +21,19 @@
 }
 
 .seat-card {
-  min-height: 188rpx;
-  padding: 18rpx 10rpx 16rpx;
+  min-height: 206rpx;
+  padding: 26rpx 8rpx 18rpx;
   border-radius: 24rpx;
-  background: #f7f7f7;
-  border: 1rpx solid transparent;
+  background: #ffffff;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
   position: relative;
   box-sizing: border-box;
 }
 
 .seat-card.is-empty {
-  background: #f7f7f7;
-  border-color: transparent;
-}
-
-.seat-card.is-occupied {
-  background: #f7f7f7;
-}
-
-.seat-card.is-mine {
-  border-color: transparent;
-  box-shadow: inset 0 0 0 3rpx #f5bc11;
-  background: #ffffff;
-}
-
-.seat-card.is-admin {
-  border-color: transparent;
-  box-shadow: inset 0 0 0 3rpx #21c980;
   background: #ffffff;
 }
 
@@ -60,8 +44,8 @@
 }
 
 .seat-avatar {
-  width: 56rpx;
-  height: 56rpx;
+  width: 72rpx;
+  height: 72rpx;
   border-radius: 50%;
 }
 
@@ -69,28 +53,46 @@
   width: 72rpx;
   height: 72rpx;
   border-radius: 50%;
-  background: #d78871;
+  background: #d9d9d9;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
+.seat-avatar-shell--empty {
+  margin-top: 2rpx;
+}
+
 .seat-avatar--fallback {
-  display: flex;
+  display: block;
+  background: transparent;
+  box-shadow: none;
+}
+
+.seat-badge {
+  position: absolute;
+  top: 84rpx;
+  left: 16rpx;
+  min-width: 58rpx;
+  height: 26rpx;
+  padding: 0 10rpx;
+  border-radius: 16rpx;
+  background: #f4c433;
+  color: #ffffff;
+  font-size: 16rpx;
+  font-weight: 500;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: transparent;
-  color: #fff8f2;
-  font-size: 22rpx;
-  font-weight: 700;
+  box-sizing: border-box;
 }
 
 .seat-name {
   margin-top: 14rpx;
   max-width: 100%;
-  font-size: 24rpx;
+  font-size: 22rpx;
   font-weight: 400;
-  color: var(--text-primary);
+  color: #000000;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -98,11 +100,23 @@
 }
 
 .seat-code {
-  margin-top: 10rpx;
-  font-size: 20rpx;
-  color: #c6c8cb;
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: #a8a8a8;
+}
+
+.seat-code--empty {
+  margin-top: 12rpx;
+}
+
+.seat-empty-placeholder {
+  width: 68rpx;
+  height: 18rpx;
+  margin-top: 18rpx;
+  border-radius: 999rpx;
+  background: rgba(217, 217, 217, 0.34);
 }
 
 .aisle {
-  min-height: 188rpx;
+  min-height: 206rpx;
 }

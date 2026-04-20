@@ -12,30 +12,20 @@
   </block>
 
   <block wx:if="{{showToolsContent}}">
-    <view class="tools-hero">
-      <view class="hero-eyebrow">当前车次</view>
-      <view class="hero-title">{{pageData.tripName}}</view>
-      <view class="hero-meta">你的角色：{{pageData.viewerRoleLabel}}</view>
-      <button wx:if="{{showGoHomeAction}}" class="secondary-btn tools-btn hero-btn" bindtap="goHome">
-        去首页创建或加入
-      </button>
-    </view>
-
     <view class="tool-grid">
       <view
-        class="card tool-card {{item.canEnter ? 'is-clickable' : ''}}"
+        class="tool-card tool-card--{{item.themeKey}} {{item.canEnter ? 'is-clickable' : ''}}"
         wx:for="{{pageData.toolCards}}"
         wx:key="type"
         data-tool-type="{{item.type}}"
         bindtap="handleEnterTool"
       >
-        <view class="tool-card-top">
-          <view class="{{item.iconClassName}}">{{item.iconGlyph}}</view>
-        </view>
         <view class="tool-card-body">
-          <view class="tool-title">{{item.title}}</view>
-          <view class="tool-description">{{item.description}}</view>
+          <view class="tool-title">{{item.displayTitle}}</view>
+          <view class="tool-description">{{item.displayDescription}}</view>
+          <view class="tool-cta">{{item.ctaLabel}}</view>
         </view>
+        <image class="tool-image" src="{{item.imageUrl}}" mode="widthFix" />
       </view>
     </view>
   </block>

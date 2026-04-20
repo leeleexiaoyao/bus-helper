@@ -15,6 +15,9 @@ type WheelSliceView = {
   label: string;
   style: string;
   innerStyle: string;
+  dividerStyle: string;
+  sliceClassName: string;
+  labelStyle: string;
 };
 
 type VoteOptionCardView = {
@@ -48,22 +51,69 @@ function parseVoteOptions(input: string): string[] {
 }
 
 function buildWheelSlices(items: string[]): WheelSliceView[] {
-  const safeItems = items.slice(0, 49);
+  const safeItems = items.slice(0, 10);
   const step = safeItems.length ? 360 / safeItems.length : 360;
-  const radius = 176;
+  const radius = safeItems.length > 8 ? 142 : safeItems.length > 6 ? 152 : 160;
+  const densityClassName = safeItems.length > 8 ? "wheel-slice is-tight" : "wheel-slice";
+  const labelWidth = safeItems.length > 8 ? 122 : safeItems.length > 6 ? 132 : 142;
   return safeItems.map((item, index) => {
-    const angle = index * step + step / 2;
-    const radians = (angle * Math.PI) / 180;
-    const offsetX = (Math.sin(radians) * radius).toFixed(2);
-    const offsetY = (-Math.cos(radians) * radius).toFixed(2);
-    const labelRotation = (angle + 180).toFixed(2);
+    const angle = Number((index * step + step / 2).toFixed(2));
     return {
       id: `slice-${index}`,
       label: item,
-      style: `transform: translate(-50%, -50%) translate(${offsetX}rpx, ${offsetY}rpx) rotate(${labelRotation}deg);`,
-      innerStyle: ""
+      style: `transform: translate(-50%, -50%) rotate(${angle}deg) translateY(-${radius}rpx);`,
+      innerStyle: "transform: rotate(180deg);",
+      dividerStyle: `transform: translate(-50%, -100%) rotate(${Number((index * step).toFixed(2))}deg);`,
+      sliceClassName: densityClassName,
+      labelStyle: `width: ${labelWidth}rpx;`
     };
   });
+}
+
+function buildWheelBackgroundStyle(items: string[]): string {
+  void items;
+  return "background: radial-gradient(circle at center, #fffdf8 0%, #fff6ec 58%, #ffe7cf 100%);";
+}
+
+function buildWheelLights(count = 14): string[] {
+  const radius = 286;
+  const step = 360 / count;
+  return Array.from({ length: count }, (_, index) => {
+    const angle = index * step;
+    const radians = (angle * Math.PI) / 180;
+    const offsetX = (Math.sin(radians) * radius).toFixed(2);
+    const offsetY = (-Math.cos(radians) * radius).toFixed(2);
+    return `transform: translate(-50%, -50%) translate(${offsetX}rpx, ${offsetY}rpx); animation-delay: ${index * 120}ms;`;
+  });
+}
+
+function getWheelTargetRotation(itemCount: number, resultIndex: number): number {
+  if (!itemCount) {
+    return 0;
+  }
+
+  const step = 360 / itemCount;
+  const targetAngle = resultIndex * step + step / 2;
+  return 360 - targetAngle;
+}
+
+async function pickSecureRandomIndex(itemCount: number): Promise<number> {
+  if (itemCount <= 1) {
+    return 0;
+  }
+
+  const maxUint32 = 0x100000000;
+  const limit = maxUint32 - (maxUint32 % itemCount);
+
+  while (true) {
+    const result = await wx.getRandomValues({
+      length: 4
+    });
+    const value = new DataView(result.randomValues).getUint32(0);
+    if (value < limit) {
+      return value % itemCount;
+    }
+  }
 }
 
 function buildVoteInteractionState(
@@ -198,7 +248,14 @@ Page({
     wheelRotation: 0,
     wheelTransitionMs: 0,
     wheelSlices: [] as WheelSliceView[],
+    wheelBackgroundStyle: "",
+    wheelLights: buildWheelLights(),
     wheelSpinning: false,
+    wheelAllowAssignedUser: false,
+    wheelAssignedUserId: "",
+    wheelAssignedUserIndex: 0,
+    wheelEligibleUserLabels: [] as string[],
+    wheelShowResult: false,
     lotteryWinnerCountInput: "1",
     lotteryExcludeAdmin: false,
     lotteryRolling: false,
@@ -272,6 +329,16 @@ Page({
       1,
       Math.min(5, pageData.seatDrawDetail?.drawCount ?? 1)
     );
+    const wheelEligibleUsers = pageData.wheelDetail?.eligibleUsers ?? [];
+    const wheelAssignedUserId =
+      pageData.wheelDetail?.assignedUserId ??
+      wheelEligibleUsers.find((member) => member.isSelf)?.userId ??
+      wheelEligibleUsers[0]?.userId ??
+      "";
+    const wheelAssignedUserIndex = Math.max(
+      0,
+      wheelEligibleUsers.findIndex((member) => member.userId === wheelAssignedUserId)
+    );
     this.setData({
       pageData,
       toolTitle: pageData.toolTitle,
@@ -299,11 +366,19 @@ Page({
       wheelItemsInput: pageData.wheelDetail?.items.join("\n") ?? "",
       wheelRotation:
         pageData.wheelDetail?.resultIndex != null && pageData.wheelDetail.items.length
-          ? 360 - (360 / pageData.wheelDetail.items.length) * pageData.wheelDetail.resultIndex
+          ? getWheelTargetRotation(pageData.wheelDetail.items.length, pageData.wheelDetail.resultIndex)
           : 0,
       wheelTransitionMs: 0,
       wheelSlices: buildWheelSlices(pageData.wheelDetail?.items ?? []),
+      wheelBackgroundStyle: buildWheelBackgroundStyle(pageData.wheelDetail?.items ?? []),
       wheelSpinning: false,
+      wheelAllowAssignedUser: pageData.wheelDetail?.allowAssignedUser ?? false,
+      wheelAssignedUserId,
+      wheelAssignedUserIndex,
+      wheelEligibleUserLabels: wheelEligibleUsers.map(
+        (member) => `${member.nickname} / ${member.seatLabel}`
+      ),
+      wheelShowResult: Boolean(pageData.wheelDetail?.resultLabel),
       lotteryWinnerCountInput: String(pageData.lotteryDetail?.winnerCount ?? 1),
       lotteryExcludeAdmin: pageData.lotteryDetail?.excludeAdmin ?? false,
       lotteryRolling: false,
@@ -384,6 +459,25 @@ Page({
         seatDrawCountLabel: "1人",
         seatDrawExcludePreviouslyDrawn: false,
         seatDrawExcludeAdmin: false
+      });
+      return;
+    }
+
+    if (this.data.toolType === "wheel") {
+      const eligibleUsers = this.data.pageData?.wheelDetail?.eligibleUsers ?? [];
+      const defaultAssignedUserId =
+        eligibleUsers.find((member) => member.isSelf)?.userId ?? eligibleUsers[0]?.userId ?? "";
+      const defaultAssignedUserIndex = Math.max(
+        0,
+        eligibleUsers.findIndex((member) => member.userId === defaultAssignedUserId)
+      );
+      this.setData({
+        isDraftEditing: true,
+        isRecreateMode: false,
+        wheelItemsInput: "",
+        wheelAllowAssignedUser: false,
+        wheelAssignedUserId: defaultAssignedUserId,
+        wheelAssignedUserIndex: defaultAssignedUserIndex
       });
       return;
     }
@@ -612,15 +706,35 @@ Page({
     });
   },
 
+  handleWheelAllowAssignedUserChange(event: WechatMiniprogram.CustomEvent<{ value: boolean }>) {
+    this.setData({
+      wheelAllowAssignedUser: Boolean(event.detail.value)
+    });
+  },
+
+  handleWheelAssignedUserChange(event: WechatMiniprogram.CustomEvent<{ value: number }>) {
+    const index = Number(event.detail.value ?? 0);
+    const eligibleUsers = this.data.pageData?.wheelDetail?.eligibleUsers ?? [];
+    const targetUser = eligibleUsers[index] ?? eligibleUsers[0] ?? null;
+    this.setData({
+      wheelAssignedUserIndex: index,
+      wheelAssignedUserId: targetUser?.userId ?? ""
+    });
+  },
+
   handleWheelPublish() {
     try {
       const isRecreateMode = this.data.isRecreateMode;
       const pageData = this.data.isRecreateMode
         ? tripService.recreateWheelTool({
-            items: parseWheelItems(this.data.wheelItemsInput)
+            items: parseWheelItems(this.data.wheelItemsInput),
+            allowAssignedUser: this.data.wheelAllowAssignedUser,
+            assignedUserId: this.data.wheelAllowAssignedUser ? this.data.wheelAssignedUserId : null
           })
         : tripService.publishWheelTool({
-            items: parseWheelItems(this.data.wheelItemsInput)
+            items: parseWheelItems(this.data.wheelItemsInput),
+            allowAssignedUser: this.data.wheelAllowAssignedUser,
+            assignedUserId: this.data.wheelAllowAssignedUser ? this.data.wheelAssignedUserId : null
           });
       this.applyPageData(pageData);
       showSuccessToast(isRecreateMode ? "转盘已重新创建" : "转盘内容已确定");
@@ -629,37 +743,49 @@ Page({
     }
   },
 
-  handleWheelSpin() {
-    if (this.data.wheelSpinning) {
+  async handleWheelSpin() {
+    if (this.data.wheelSpinning || !this.data.pageData?.wheelDetail?.viewerCanSpin) {
       return;
     }
 
     try {
-      const pageData = tripService.spinWheel();
-      const items = pageData.wheelDetail?.items ?? [];
+      const currentItems = this.data.pageData?.wheelDetail?.items ?? [];
+      const selectedIndex = await pickSecureRandomIndex(currentItems.length);
+      const pageData = tripService.spinWheel(selectedIndex);
+      const nextItems = pageData.wheelDetail?.items ?? [];
       const resultIndex = pageData.wheelDetail?.resultIndex ?? 0;
-      const step = items.length ? 360 / items.length : 0;
-      const targetRotation = this.data.wheelRotation + 2160 + (360 - resultIndex * step);
+      const targetRotation = this.data.wheelRotation + 2160 + getWheelTargetRotation(nextItems.length, resultIndex);
 
       this.setData({
         pageData,
         toolTitle: pageData.toolTitle,
-        wheelSlices: buildWheelSlices(items),
+        wheelSlices: buildWheelSlices(nextItems),
+        wheelBackgroundStyle: buildWheelBackgroundStyle(nextItems),
         wheelSpinning: true,
-        wheelTransitionMs: 3200,
+        wheelShowResult: false,
+        wheelTransitionMs: 4800,
         wheelRotation: targetRotation,
         isDraftEditing: false
       });
 
       setTimeout(() => {
         this.setData({
-          wheelSpinning: false
+          wheelSpinning: false,
+          wheelShowResult: true
         });
-      }, 3200);
+      }, 4800);
       showSuccessToast("大转盘已启动");
     } catch (error) {
       this.handleActionError(error);
     }
+  },
+
+  handleWheelCenterTap() {
+    if (!this.data.pageData?.isStarted || this.data.isDraftEditing) {
+      return;
+    }
+
+    this.handleWheelSpin();
   },
 
   handleLotteryWinnerCountInput(event: WechatMiniprogram.CustomEvent<{ value: string }>) {

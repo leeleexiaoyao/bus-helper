@@ -1,5 +1,6 @@
 import type {
   AppState,
+  HomePersonaOption,
   TemplateId,
   ToolType,
   Trip,
@@ -8,12 +9,19 @@ import type {
   User
 } from "./types";
 
-export const APP_STATE_VERSION = 6;
+export const APP_STATE_VERSION = 7;
 export const APP_STATE_STORAGE_KEY = "bus-seat-buddy-state";
 
 export const DEFAULT_TRIP_NAME = "未命名车次";
 export const DEFAULT_DEPARTURE_TIME = "待定";
 export const DEFAULT_AVATAR_URL = "";
+export const HOME_PERSONA_IMAGE_URL = "/assets/personas/home-persona.png";
+export const WHEEL_MAX_ITEMS = 10;
+export const DEFAULT_WHEEL_ITEMS = ["免单", "零食礼包", "饮料一杯", "神秘福袋", "再来一次", "感谢参与"];
+export const HOME_PERSONA_OPTIONS: HomePersonaOption[] = Array.from({ length: 9 }, (_, index) => ({
+  id: `home-persona-${index + 1}`,
+  imageUrl: HOME_PERSONA_IMAGE_URL
+}));
 
 export const TRIP_TEMPLATES: Array<{
   id: TemplateId;
@@ -46,6 +54,7 @@ export const DEMO_USERS: User[] = [
     id: "user-1",
     nickname: "小雨",
     avatarUrl: DEFAULT_AVATAR_URL,
+    homePersonaAssetId: null,
     tags: ["摄影", "靠窗党"],
     currentTripId: null,
     isAuthorized: false
@@ -54,6 +63,7 @@ export const DEMO_USERS: User[] = [
     id: "user-2",
     nickname: "阿山",
     avatarUrl: DEFAULT_AVATAR_URL,
+    homePersonaAssetId: null,
     tags: ["徒步", "社牛"],
     currentTripId: null,
     isAuthorized: false
@@ -62,6 +72,7 @@ export const DEMO_USERS: User[] = [
     id: "user-3",
     nickname: "Miya",
     avatarUrl: DEFAULT_AVATAR_URL,
+    homePersonaAssetId: null,
     tags: ["轻装", "周末玩家"],
     currentTripId: null,
     isAuthorized: false
@@ -70,6 +81,7 @@ export const DEMO_USERS: User[] = [
     id: "user-4",
     nickname: "老周",
     avatarUrl: DEFAULT_AVATAR_URL,
+    homePersonaAssetId: null,
     tags: ["老司机"],
     currentTripId: null,
     isAuthorized: false
@@ -172,6 +184,7 @@ function buildSeedPassengerUsers(tripId: string): User[] {
       id: `user-${userNumber}`,
       nickname: `成员${String(userNumber).padStart(2, "0")}`,
       avatarUrl: DEFAULT_AVATAR_URL,
+      homePersonaAssetId: null,
       tags: [`乘客${String(userNumber).padStart(2, "0")}`],
       currentTripId: tripId,
       isAuthorized: false
@@ -212,7 +225,7 @@ function buildSeedTrip(users: User[], seatCodes: string[]): Trip {
 
 function buildSeedTripTools(occupiedUsers: User[]): TripToolsState {
   const participantUserIds = occupiedUsers.map((user) => user.id);
-  const wheelItems = occupiedUsers.slice(0, 12).map((user, index) => `选项${index + 1}-${user.nickname}`);
+  const wheelItems = DEFAULT_WHEEL_ITEMS;
 
   return {
     "seat-draw": {
@@ -257,6 +270,8 @@ function buildSeedTripTools(occupiedUsers: User[]): TripToolsState {
       publishedByUserId: "user-1",
       phase: "draft",
       items: wheelItems,
+      allowAssignedUser: false,
+      assignedUserId: null,
       resultIndex: null,
       resultHistoryLabels: [],
       spunAt: null

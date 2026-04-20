@@ -14,9 +14,15 @@ export interface User {
   id: string;
   nickname: string;
   avatarUrl: string;
+  homePersonaAssetId: string | null;
   tags: string[];
   currentTripId: string | null;
   isAuthorized: boolean;
+}
+
+export interface HomePersonaOption {
+  id: string;
+  imageUrl: string;
 }
 
 export interface PublishedToolBaseState {
@@ -63,6 +69,8 @@ export interface PublishedWheelToolState extends PublishedToolBaseState {
   type: "wheel";
   phase: WheelPhase;
   items: string[];
+  allowAssignedUser: boolean;
+  assignedUserId: string | null;
   resultIndex: number | null;
   resultHistoryLabels: string[];
   spunAt: number | null;
@@ -256,6 +264,12 @@ export interface ToolCardView {
   description: string;
   iconGlyph: string;
   iconClassName: string;
+  displayTitle: string;
+  displayDescription: string;
+  imageUrl: string;
+  themeKey: ToolType;
+  ctaLabel: string;
+  sortOrder: number;
   stateLabel: string;
   stateClassName: string;
   helperText: string;
@@ -336,6 +350,11 @@ export interface VoteDetailView {
 export interface WheelDetailView {
   phase: WheelPhase;
   items: string[];
+  viewerCanSpin: boolean;
+  allowAssignedUser: boolean;
+  assignedUserId: string | null;
+  assignedUserLabel: string | null;
+  eligibleUsers: ToolResultMemberView[];
   resultIndex: number | null;
   resultLabel: string | null;
   resultHistoryLabels: string[];
@@ -397,6 +416,8 @@ export interface VoteSubmitInput {
 
 export interface WheelPublishInput {
   items: string[];
+  allowAssignedUser?: boolean;
+  assignedUserId?: string | null;
 }
 
 export interface LotteryPublishInput {

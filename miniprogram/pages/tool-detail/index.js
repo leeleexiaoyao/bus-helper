@@ -23,22 +23,62 @@ function parseVoteOptions(input) {
         .filter(Boolean);
 }
 function buildWheelSlices(items) {
-    const safeItems = items.slice(0, 49);
+    const safeItems = items.slice(0, 10);
     const step = safeItems.length ? 360 / safeItems.length : 360;
-    const radius = 176;
+    const radius = safeItems.length > 8 ? 142 : safeItems.length > 6 ? 152 : 160;
+    const densityClassName = safeItems.length > 8 ? "wheel-slice is-tight" : "wheel-slice";
+    const labelWidth = safeItems.length > 8 ? 122 : safeItems.length > 6 ? 132 : 142;
     return safeItems.map((item, index) => {
-        const angle = index * step + step / 2;
-        const radians = (angle * Math.PI) / 180;
-        const offsetX = (Math.sin(radians) * radius).toFixed(2);
-        const offsetY = (-Math.cos(radians) * radius).toFixed(2);
-        const labelRotation = (angle + 180).toFixed(2);
+        const angle = Number((index * step + step / 2).toFixed(2));
         return {
             id: `slice-${index}`,
             label: item,
-            style: `transform: translate(-50%, -50%) translate(${offsetX}rpx, ${offsetY}rpx) rotate(${labelRotation}deg);`,
-            innerStyle: ""
+            style: `transform: translate(-50%, -50%) rotate(${angle}deg) translateY(-${radius}rpx);`,
+            innerStyle: "transform: rotate(180deg);",
+            dividerStyle: `transform: translate(-50%, -100%) rotate(${Number((index * step).toFixed(2))}deg);`,
+            sliceClassName: densityClassName,
+            labelStyle: `width: ${labelWidth}rpx;`
         };
     });
+}
+function buildWheelBackgroundStyle(items) {
+    void items;
+    return "background: radial-gradient(circle at center, #fffdf8 0%, #fff6ec 58%, #ffe7cf 100%);";
+}
+function buildWheelLights(count = 14) {
+    const radius = 286;
+    const step = 360 / count;
+    return Array.from({ length: count }, (_, index) => {
+        const angle = index * step;
+        const radians = (angle * Math.PI) / 180;
+        const offsetX = (Math.sin(radians) * radius).toFixed(2);
+        const offsetY = (-Math.cos(radians) * radius).toFixed(2);
+        return `transform: translate(-50%, -50%) translate(${offsetX}rpx, ${offsetY}rpx); animation-delay: ${index * 120}ms;`;
+    });
+}
+function getWheelTargetRotation(itemCount, resultIndex) {
+    if (!itemCount) {
+        return 0;
+    }
+    const step = 360 / itemCount;
+    const targetAngle = resultIndex * step + step / 2;
+    return 360 - targetAngle;
+}
+async function pickSecureRandomIndex(itemCount) {
+    if (itemCount <= 1) {
+        return 0;
+    }
+    const maxUint32 = 0x100000000;
+    const limit = maxUint32 - (maxUint32 % itemCount);
+    while (true) {
+        const result = await wx.getRandomValues({
+            length: 4
+        });
+        const value = new DataView(result.randomValues).getUint32(0);
+        if (value < limit) {
+            return value % itemCount;
+        }
+    }
 }
 function buildVoteInteractionState(pageData, selectedIds) {
     const detail = pageData === null || pageData === void 0 ? void 0 : pageData.voteDetail;
@@ -154,7 +194,14 @@ Page({
         wheelRotation: 0,
         wheelTransitionMs: 0,
         wheelSlices: [],
+        wheelBackgroundStyle: "",
+        wheelLights: buildWheelLights(),
         wheelSpinning: false,
+        wheelAllowAssignedUser: false,
+        wheelAssignedUserId: "",
+        wheelAssignedUserIndex: 0,
+        wheelEligibleUserLabels: [],
+        wheelShowResult: false,
         lotteryWinnerCountInput: "1",
         lotteryExcludeAdmin: false,
         lotteryRolling: false,
@@ -213,44 +260,53 @@ Page({
         }
     },
     applyPageData(pageData) {
-        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0, _1, _2, _3;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16;
         const voteSelectionMode = (_b = (_a = pageData.voteDetail) === null || _a === void 0 ? void 0 : _a.selectionMode) !== null && _b !== void 0 ? _b : "single";
         const voteSelectedOptionIds = (_d = (_c = pageData.voteDetail) === null || _c === void 0 ? void 0 : _c.viewerSelectedOptionIds) !== null && _d !== void 0 ? _d : [];
         const voteInteraction = buildVoteInteractionState(pageData, voteSelectedOptionIds);
         const seatDrawCount = Math.max(1, Math.min(5, (_f = (_e = pageData.seatDrawDetail) === null || _e === void 0 ? void 0 : _e.drawCount) !== null && _f !== void 0 ? _f : 1));
+        const wheelEligibleUsers = (_h = (_g = pageData.wheelDetail) === null || _g === void 0 ? void 0 : _g.eligibleUsers) !== null && _h !== void 0 ? _h : [];
+        const wheelAssignedUserId = (_p = (_m = (_k = (_j = pageData.wheelDetail) === null || _j === void 0 ? void 0 : _j.assignedUserId) !== null && _k !== void 0 ? _k : (_l = wheelEligibleUsers.find((member) => member.isSelf)) === null || _l === void 0 ? void 0 : _l.userId) !== null && _m !== void 0 ? _m : (_o = wheelEligibleUsers[0]) === null || _o === void 0 ? void 0 : _o.userId) !== null && _p !== void 0 ? _p : "";
+        const wheelAssignedUserIndex = Math.max(0, wheelEligibleUsers.findIndex((member) => member.userId === wheelAssignedUserId));
         this.setData({
             pageData,
             toolTitle: pageData.toolTitle,
             isDraftEditing: false,
             isRecreateMode: false,
             showActionSheet: false,
-            seatDrawTopicInput: (_h = (_g = pageData.seatDrawDetail) === null || _g === void 0 ? void 0 : _g.topic) !== null && _h !== void 0 ? _h : "",
+            seatDrawTopicInput: (_r = (_q = pageData.seatDrawDetail) === null || _q === void 0 ? void 0 : _q.topic) !== null && _r !== void 0 ? _r : "",
             drawCountPickerValue: seatDrawCount - 1,
             seatDrawCountLabel: `${seatDrawCount}人`,
-            seatDrawExcludePreviouslyDrawn: (_k = (_j = pageData.seatDrawDetail) === null || _j === void 0 ? void 0 : _j.excludePreviouslyDrawn) !== null && _k !== void 0 ? _k : false,
-            seatDrawExcludeAdmin: (_m = (_l = pageData.seatDrawDetail) === null || _l === void 0 ? void 0 : _l.excludeAdmin) !== null && _m !== void 0 ? _m : false,
-            voteTopicInput: (_p = (_o = pageData.voteDetail) === null || _o === void 0 ? void 0 : _o.topic) !== null && _p !== void 0 ? _p : "",
-            voteOptionsInput: (_r = (_q = pageData.voteDetail) === null || _q === void 0 ? void 0 : _q.options.map((option) => option.label).join("\n")) !== null && _r !== void 0 ? _r : "",
+            seatDrawExcludePreviouslyDrawn: (_t = (_s = pageData.seatDrawDetail) === null || _s === void 0 ? void 0 : _s.excludePreviouslyDrawn) !== null && _t !== void 0 ? _t : false,
+            seatDrawExcludeAdmin: (_v = (_u = pageData.seatDrawDetail) === null || _u === void 0 ? void 0 : _u.excludeAdmin) !== null && _v !== void 0 ? _v : false,
+            voteTopicInput: (_x = (_w = pageData.voteDetail) === null || _w === void 0 ? void 0 : _w.topic) !== null && _x !== void 0 ? _x : "",
+            voteOptionsInput: (_z = (_y = pageData.voteDetail) === null || _y === void 0 ? void 0 : _y.options.map((option) => option.label).join("\n")) !== null && _z !== void 0 ? _z : "",
             voteSelectionMode,
-            voteExcludeAdmin: (_t = (_s = pageData.voteDetail) === null || _s === void 0 ? void 0 : _s.excludeAdmin) !== null && _t !== void 0 ? _t : false,
+            voteExcludeAdmin: (_1 = (_0 = pageData.voteDetail) === null || _0 === void 0 ? void 0 : _0.excludeAdmin) !== null && _1 !== void 0 ? _1 : false,
             voteSelectedOptionIds,
             voteOptionCards: buildVoteOptionCards(pageData, voteSelectedOptionIds),
-            votePhaseActive: ((_u = pageData.voteDetail) === null || _u === void 0 ? void 0 : _u.phase) === "active",
+            votePhaseActive: ((_2 = pageData.voteDetail) === null || _2 === void 0 ? void 0 : _2.phase) === "active",
             voteModeLabel: voteSelectionMode === "single" ? "单选" : "多选",
             voteModeSingleClass: voteSelectionMode === "single" ? "mode-chip is-active" : "mode-chip",
             voteModeMultipleClass: voteSelectionMode === "multiple" ? "mode-chip is-active" : "mode-chip",
             voteViewerResultLabel: voteInteraction.viewerResultLabel,
             voteApproveDisabled: voteInteraction.approveDisabled,
             voteAbstainDisabled: voteInteraction.abstainDisabled,
-            wheelItemsInput: (_w = (_v = pageData.wheelDetail) === null || _v === void 0 ? void 0 : _v.items.join("\n")) !== null && _w !== void 0 ? _w : "",
-            wheelRotation: ((_x = pageData.wheelDetail) === null || _x === void 0 ? void 0 : _x.resultIndex) != null && pageData.wheelDetail.items.length
-                ? 360 - (360 / pageData.wheelDetail.items.length) * pageData.wheelDetail.resultIndex
+            wheelItemsInput: (_4 = (_3 = pageData.wheelDetail) === null || _3 === void 0 ? void 0 : _3.items.join("\n")) !== null && _4 !== void 0 ? _4 : "",
+            wheelRotation: ((_5 = pageData.wheelDetail) === null || _5 === void 0 ? void 0 : _5.resultIndex) != null && pageData.wheelDetail.items.length
+                ? getWheelTargetRotation(pageData.wheelDetail.items.length, pageData.wheelDetail.resultIndex)
                 : 0,
             wheelTransitionMs: 0,
-            wheelSlices: buildWheelSlices((_z = (_y = pageData.wheelDetail) === null || _y === void 0 ? void 0 : _y.items) !== null && _z !== void 0 ? _z : []),
+            wheelSlices: buildWheelSlices((_7 = (_6 = pageData.wheelDetail) === null || _6 === void 0 ? void 0 : _6.items) !== null && _7 !== void 0 ? _7 : []),
+            wheelBackgroundStyle: buildWheelBackgroundStyle((_9 = (_8 = pageData.wheelDetail) === null || _8 === void 0 ? void 0 : _8.items) !== null && _9 !== void 0 ? _9 : []),
             wheelSpinning: false,
-            lotteryWinnerCountInput: String((_1 = (_0 = pageData.lotteryDetail) === null || _0 === void 0 ? void 0 : _0.winnerCount) !== null && _1 !== void 0 ? _1 : 1),
-            lotteryExcludeAdmin: (_3 = (_2 = pageData.lotteryDetail) === null || _2 === void 0 ? void 0 : _2.excludeAdmin) !== null && _3 !== void 0 ? _3 : false,
+            wheelAllowAssignedUser: (_11 = (_10 = pageData.wheelDetail) === null || _10 === void 0 ? void 0 : _10.allowAssignedUser) !== null && _11 !== void 0 ? _11 : false,
+            wheelAssignedUserId,
+            wheelAssignedUserIndex,
+            wheelEligibleUserLabels: wheelEligibleUsers.map((member) => `${member.nickname} / ${member.seatLabel}`),
+            wheelShowResult: Boolean((_12 = pageData.wheelDetail) === null || _12 === void 0 ? void 0 : _12.resultLabel),
+            lotteryWinnerCountInput: String((_14 = (_13 = pageData.lotteryDetail) === null || _13 === void 0 ? void 0 : _13.winnerCount) !== null && _14 !== void 0 ? _14 : 1),
+            lotteryExcludeAdmin: (_16 = (_15 = pageData.lotteryDetail) === null || _15 === void 0 ? void 0 : _15.excludeAdmin) !== null && _16 !== void 0 ? _16 : false,
             lotteryRolling: false,
             lotteryRollingText: ""
         });
@@ -304,6 +360,7 @@ Page({
         });
     },
     handleCreateDraft() {
+        var _a, _b, _c, _d, _e, _f, _g;
         if (this.data.toolType === "seat-draw") {
             this.setData({
                 isDraftEditing: true,
@@ -313,6 +370,20 @@ Page({
                 seatDrawCountLabel: "1人",
                 seatDrawExcludePreviouslyDrawn: false,
                 seatDrawExcludeAdmin: false
+            });
+            return;
+        }
+        if (this.data.toolType === "wheel") {
+            const eligibleUsers = (_c = (_b = (_a = this.data.pageData) === null || _a === void 0 ? void 0 : _a.wheelDetail) === null || _b === void 0 ? void 0 : _b.eligibleUsers) !== null && _c !== void 0 ? _c : [];
+            const defaultAssignedUserId = (_g = (_e = (_d = eligibleUsers.find((member) => member.isSelf)) === null || _d === void 0 ? void 0 : _d.userId) !== null && _e !== void 0 ? _e : (_f = eligibleUsers[0]) === null || _f === void 0 ? void 0 : _f.userId) !== null && _g !== void 0 ? _g : "";
+            const defaultAssignedUserIndex = Math.max(0, eligibleUsers.findIndex((member) => member.userId === defaultAssignedUserId));
+            this.setData({
+                isDraftEditing: true,
+                isRecreateMode: false,
+                wheelItemsInput: "",
+                wheelAllowAssignedUser: false,
+                wheelAssignedUserId: defaultAssignedUserId,
+                wheelAssignedUserIndex: defaultAssignedUserIndex
             });
             return;
         }
@@ -523,15 +594,34 @@ Page({
             wheelItemsInput: event.detail.value
         });
     },
+    handleWheelAllowAssignedUserChange(event) {
+        this.setData({
+            wheelAllowAssignedUser: Boolean(event.detail.value)
+        });
+    },
+    handleWheelAssignedUserChange(event) {
+        var _a, _b, _c, _d, _e, _f, _g;
+        const index = Number((_a = event.detail.value) !== null && _a !== void 0 ? _a : 0);
+        const eligibleUsers = (_d = (_c = (_b = this.data.pageData) === null || _b === void 0 ? void 0 : _b.wheelDetail) === null || _c === void 0 ? void 0 : _c.eligibleUsers) !== null && _d !== void 0 ? _d : [];
+        const targetUser = (_f = (_e = eligibleUsers[index]) !== null && _e !== void 0 ? _e : eligibleUsers[0]) !== null && _f !== void 0 ? _f : null;
+        this.setData({
+            wheelAssignedUserIndex: index,
+            wheelAssignedUserId: (_g = targetUser === null || targetUser === void 0 ? void 0 : targetUser.userId) !== null && _g !== void 0 ? _g : ""
+        });
+    },
     handleWheelPublish() {
         try {
             const isRecreateMode = this.data.isRecreateMode;
             const pageData = this.data.isRecreateMode
                 ? trip_service_1.tripService.recreateWheelTool({
-                    items: parseWheelItems(this.data.wheelItemsInput)
+                    items: parseWheelItems(this.data.wheelItemsInput),
+                    allowAssignedUser: this.data.wheelAllowAssignedUser,
+                    assignedUserId: this.data.wheelAllowAssignedUser ? this.data.wheelAssignedUserId : null
                 })
                 : trip_service_1.tripService.publishWheelTool({
-                    items: parseWheelItems(this.data.wheelItemsInput)
+                    items: parseWheelItems(this.data.wheelItemsInput),
+                    allowAssignedUser: this.data.wheelAllowAssignedUser,
+                    assignedUserId: this.data.wheelAllowAssignedUser ? this.data.wheelAssignedUserId : null
                 });
             this.applyPageData(pageData);
             (0, feedback_1.showSuccessToast)(isRecreateMode ? "转盘已重新创建" : "转盘内容已确定");
@@ -540,36 +630,47 @@ Page({
             this.handleActionError(error);
         }
     },
-    handleWheelSpin() {
-        var _a, _b, _c, _d;
-        if (this.data.wheelSpinning) {
+    async handleWheelSpin() {
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j;
+        if (this.data.wheelSpinning || !((_b = (_a = this.data.pageData) === null || _a === void 0 ? void 0 : _a.wheelDetail) === null || _b === void 0 ? void 0 : _b.viewerCanSpin)) {
             return;
         }
         try {
-            const pageData = trip_service_1.tripService.spinWheel();
-            const items = (_b = (_a = pageData.wheelDetail) === null || _a === void 0 ? void 0 : _a.items) !== null && _b !== void 0 ? _b : [];
-            const resultIndex = (_d = (_c = pageData.wheelDetail) === null || _c === void 0 ? void 0 : _c.resultIndex) !== null && _d !== void 0 ? _d : 0;
-            const step = items.length ? 360 / items.length : 0;
-            const targetRotation = this.data.wheelRotation + 2160 + (360 - resultIndex * step);
+            const currentItems = (_e = (_d = (_c = this.data.pageData) === null || _c === void 0 ? void 0 : _c.wheelDetail) === null || _d === void 0 ? void 0 : _d.items) !== null && _e !== void 0 ? _e : [];
+            const selectedIndex = await pickSecureRandomIndex(currentItems.length);
+            const pageData = trip_service_1.tripService.spinWheel(selectedIndex);
+            const nextItems = (_g = (_f = pageData.wheelDetail) === null || _f === void 0 ? void 0 : _f.items) !== null && _g !== void 0 ? _g : [];
+            const resultIndex = (_j = (_h = pageData.wheelDetail) === null || _h === void 0 ? void 0 : _h.resultIndex) !== null && _j !== void 0 ? _j : 0;
+            const targetRotation = this.data.wheelRotation + 2160 + getWheelTargetRotation(nextItems.length, resultIndex);
             this.setData({
                 pageData,
                 toolTitle: pageData.toolTitle,
-                wheelSlices: buildWheelSlices(items),
+                wheelSlices: buildWheelSlices(nextItems),
+                wheelBackgroundStyle: buildWheelBackgroundStyle(nextItems),
                 wheelSpinning: true,
-                wheelTransitionMs: 3200,
+                wheelShowResult: false,
+                wheelTransitionMs: 4800,
                 wheelRotation: targetRotation,
                 isDraftEditing: false
             });
             setTimeout(() => {
                 this.setData({
-                    wheelSpinning: false
+                    wheelSpinning: false,
+                    wheelShowResult: true
                 });
-            }, 3200);
+            }, 4800);
             (0, feedback_1.showSuccessToast)("大转盘已启动");
         }
         catch (error) {
             this.handleActionError(error);
         }
+    },
+    handleWheelCenterTap() {
+        var _a;
+        if (!((_a = this.data.pageData) === null || _a === void 0 ? void 0 : _a.isStarted) || this.data.isDraftEditing) {
+            return;
+        }
+        this.handleWheelSpin();
     },
     handleLotteryWinnerCountInput(event) {
         this.setData({

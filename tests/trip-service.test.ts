@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
-import { TOOL_TYPES, createInitialAppState } from "../miniprogram/shared/constants";
+import { createInitialAppState } from "../miniprogram/shared/constants";
 import { BusinessError } from "../miniprogram/shared/errors";
 import { MemoryStorageAdapter } from "../miniprogram/repositories/storage-adapter";
 import { generateSeatCodes } from "../miniprogram/shared/seat";
 import { TripService } from "../miniprogram/services/trip-service";
-import type { VoteChoice, VoteSubmitInput } from "../miniprogram/shared/types";
+import type { ToolType, VoteChoice, VoteSubmitInput } from "../miniprogram/shared/types";
 
 function createService() {
   const storage = new MemoryStorageAdapter(createInitialAppState());
@@ -22,6 +22,7 @@ function createServiceWithUserCount(userCount: number) {
       id: `user-${index}`,
       nickname: `成员${index}`,
       avatarUrl: `https://example.com/user-${index}.png`,
+      homePersonaAssetId: null,
       tags: [],
       currentTripId: null,
       isAuthorized: false
@@ -44,6 +45,7 @@ function createServiceWithUsers(userCount: number) {
       id: userId,
       nickname: `成员${String(index).padStart(2, "0")}`,
       avatarUrl: `https://example.com/${userId}.png`,
+      homePersonaAssetId: null,
       tags: [`模拟${index}`],
       currentTripId: null,
       isAuthorized: false
@@ -157,7 +159,7 @@ function setupTripWithMemberCount(memberCount: number) {
   };
 }
 
-function getToolCard(service: TripService, toolType: (typeof TOOL_TYPES)[number]) {
+function getToolCard(service: TripService, toolType: ToolType) {
   const card = service.getToolsPageData().toolCards.find((entry) => entry.type === toolType);
   assert.ok(card, `Expected tool card ${toolType}`);
   return card;
@@ -260,7 +262,41 @@ function setupTripWith49Members() {
   assert.equal(toolsPage.toolCards.length, 4);
   assert.deepEqual(
     toolsPage.toolCards.map((card) => card.type),
-    TOOL_TYPES
+    ["vote", "seat-draw", "lottery", "wheel"]
+  );
+  assert.deepEqual(
+    toolsPage.toolCards.map((card) => ({
+      type: card.type,
+      displayTitle: card.displayTitle,
+      displayDescription: card.displayDescription,
+      ctaLabel: card.ctaLabel
+    })),
+    [
+      {
+        type: "vote",
+        displayTitle: "投票",
+        displayDescription: "选出你喜欢的",
+        ctaLabel: "玩这个>"
+      },
+      {
+        type: "seat-draw",
+        displayTitle: "随机选号",
+        displayDescription: "看看谁运气好",
+        ctaLabel: "玩这个>"
+      },
+      {
+        type: "lottery",
+        displayTitle: "抽签",
+        displayDescription: "谁是天选之人",
+        ctaLabel: "玩这个>"
+      },
+      {
+        type: "wheel",
+        displayTitle: "幸运大转盘",
+        displayDescription: "幸运转转转",
+        ctaLabel: "玩这个>"
+      }
+    ]
   );
   assert.equal(toolsPage.toolCards.every((card) => card.stateLabel === "未开启"), true);
   assert.equal(toolsPage.toolCards.every((card) => !card.isStarted), true);
@@ -368,7 +404,7 @@ function setupTripWith49Members() {
   expectBusinessError(
     () =>
       service.publishSeatDrawTool({
-        topic: "这是一个超过十个字的抽号主题",
+        topic: "123456789012345678901",
         drawCount: 1,
         excludePreviouslyDrawn: false,
         excludeAdmin: false
@@ -725,6 +761,8 @@ function setupTripWith49Members() {
   assert.equal(detail.isStarted, true);
   assert.equal(detail.wheelDetail?.phase, "draft");
   assert.equal(detail.wheelDetail?.items.length, 3);
+  assert.equal(detail.wheelDetail?.viewerCanSpin, true);
+  assert.equal(detail.wheelDetail?.allowAssignedUser, false);
   assert.equal(detail.wheelDetail?.resultIndex, null);
   assert.equal(detail.wheelDetail?.resultLabel, null);
   assert.deepEqual(detail.wheelDetail?.resultHistoryLabels, []);
@@ -744,8 +782,51 @@ function setupTripWith49Members() {
 
   detail = service.closeWheel();
   assert.equal(detail.isStarted, false);
-  assert.equal(detail.wheelDetail, null);
+  assert.equal(detail.wheelDetail?.items.length, 0);
+  assert.equal(detail.wheelDetail?.viewerCanSpin, false);
+  assert.equal(detail.wheelDetail?.eligibleUsers.length, 4);
   assert.equal(getToolCard(service, "wheel").isStarted, false);
+}
+
+{
+  const { service } = setupTripWithMembers();
+
+  service.publishWheelTool({
+    items: ["免单", "再来一次", "零食礼包"],
+    allowAssignedUser: true,
+    assignedUserId: "user-2"
+  });
+
+  let detail = service.getToolDetailPageData("wheel");
+  assert.equal(detail.wheelDetail?.viewerCanSpin, false);
+  assert.equal(detail.wheelDetail?.allowAssignedUser, true);
+  assert.equal(detail.wheelDetail?.assignedUserId, "user-2");
+  assert.equal(detail.wheelDetail?.assignedUserLabel, "阿山");
+  assert.equal(detail.wheelDetail?.eligibleUsers.length, 4);
+
+  expectBusinessError(() => service.spinWheel(), "WHEEL_FORBIDDEN");
+
+  service.switchActiveUser("user-2");
+  detail = service.getToolDetailPageData("wheel");
+  assert.equal(detail.wheelDetail?.viewerCanSpin, true);
+  detail = withMockedRandom(0.5, () => service.spinWheel());
+  assert.equal(detail.wheelDetail?.phase, "result");
+  assert.equal(detail.wheelDetail?.resultLabel, "再来一次");
+
+  service.switchActiveUser("user-1");
+  detail = service.recreateWheelTool({
+    items: ["唱歌", "真心话"],
+    allowAssignedUser: true,
+    assignedUserId: "user-1"
+  });
+  assert.equal(detail.wheelDetail?.assignedUserId, "user-1");
+  assert.equal(detail.wheelDetail?.assignedUserLabel, "小雨");
+  assert.equal(detail.wheelDetail?.viewerCanSpin, true);
+
+  service.switchActiveUser("user-3");
+  detail = service.getToolDetailPageData("wheel");
+  assert.equal(detail.wheelDetail?.viewerCanSpin, false);
+  expectBusinessError(() => service.spinWheel(), "WHEEL_FORBIDDEN");
 }
 
 {
@@ -969,7 +1050,8 @@ function setupTripWith49Members() {
 
 {
   const { service } = setupTripWith49Members();
-  const wheelItems = buildSequentialLabels("玩法", 49);
+  const wheelItems = buildSequentialLabels("奖品", 10);
+  const overflowWheelItems = buildSequentialLabels("奖品", 11);
 
   service.publishWheelTool({
     items: wheelItems
@@ -985,16 +1067,17 @@ function setupTripWith49Members() {
 
   let detail = service.getToolDetailPageData("wheel");
   assert.equal(detail.isStarted, true);
-  assert.equal(detail.wheelDetail?.items.length, 49);
+  assert.equal(detail.wheelDetail?.items.length, 10);
+  assert.equal(detail.wheelDetail?.eligibleUsers.length, 49);
   assert.equal(detail.wheelDetail?.resultIndex, null);
   assert.equal(detail.wheelDetail?.resultLabel, null);
   assert.deepEqual(detail.wheelDetail?.resultHistoryLabels, []);
 
   detail = withMockedRandom(0.99, () => service.spinWheel());
   assert.equal(detail.wheelDetail?.phase, "result");
-  assert.equal(detail.wheelDetail?.resultIndex, 48);
-  assert.equal(detail.wheelDetail?.resultLabel, detail.wheelDetail?.items[48]);
-  assert.deepEqual(detail.wheelDetail?.resultHistoryLabels, [detail.wheelDetail?.items[48] ?? ""]);
+  assert.equal(detail.wheelDetail?.resultIndex, 9);
+  assert.equal(detail.wheelDetail?.resultLabel, detail.wheelDetail?.items[9]);
+  assert.deepEqual(detail.wheelDetail?.resultHistoryLabels, [detail.wheelDetail?.items[9] ?? ""]);
 
   detail = service.resetWheel();
   assert.equal(detail.isStarted, true);
@@ -1002,6 +1085,14 @@ function setupTripWith49Members() {
   assert.equal(detail.wheelDetail?.resultIndex, null);
   assert.equal(detail.wheelDetail?.resultLabel, null);
   assert.deepEqual(detail.wheelDetail?.resultHistoryLabels, []);
+
+  expectBusinessError(
+    () =>
+      service.recreateWheelTool({
+        items: overflowWheelItems
+      }),
+    "WHEEL_ITEMS_LIMIT_EXCEEDED"
+  );
 }
 
 {

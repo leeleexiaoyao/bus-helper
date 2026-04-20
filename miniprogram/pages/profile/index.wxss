@@ -25,13 +25,7 @@
 
 .profile-avatar--fallback,
 .demo-avatar--fallback {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #ff9d7b 0%, #ff7648 100%);
-  color: #fff8f2;
-  font-size: 32rpx;
-  font-weight: 700;
+  display: block;
 }
 
 .profile-copy {

@@ -19,7 +19,7 @@
         src="{{pageData.currentUser.avatarUrl}}"
         mode="aspectFill"
       />
-      <view wx:else class="profile-avatar profile-avatar--fallback">{{pageData.currentUserInitial}}</view>
+      <view wx:else class="profile-avatar profile-avatar--fallback avatar-fallback">{{pageData.currentUserInitial}}</view>
 
       <view class="profile-copy">
         <view class="profile-name">{{pageData.currentUser.nickname}}</view>
@@ -81,7 +81,7 @@
       <view class="demo-item" wx:for="{{pageData.demoUsers}}" wx:key="id">
         <view class="demo-main">
           <image wx:if="{{item.avatarUrl}}" class="demo-avatar" src="{{item.avatarUrl}}" mode="aspectFill" />
-          <view wx:else class="demo-avatar demo-avatar--fallback">{{item.initial}}</view>
+          <view wx:else class="demo-avatar demo-avatar--fallback avatar-fallback">{{item.initial}}</view>
 
           <view class="demo-copy">
             <view class="demo-name">

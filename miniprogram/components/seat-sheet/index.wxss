@@ -60,13 +60,7 @@
 
 .claim-avatar--fallback,
 .detail-avatar--fallback {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #d78871 0%, #dd9d86 100%);
-  color: #fff8f2;
-  font-size: 30rpx;
-  font-weight: 700;
+  display: block;
 }
 
 .claim-copy {

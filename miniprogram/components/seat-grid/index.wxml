@@ -11,7 +11,11 @@
             data-slot="{{slotIndex}}"
             bindtap="handleSeatTap"
           >
-            <view wx:if="{{slot.isEmpty}}" class="seat-empty">{{slot.label}}</view>
+            <block wx:if="{{slot.isEmpty}}">
+              <view class="seat-avatar-shell seat-avatar-shell--empty"></view>
+              <view class="seat-empty-placeholder"></view>
+              <view class="seat-code seat-code--empty">{{slot.label}}</view>
+            </block>
             <block wx:else>
               <view class="seat-avatar-shell">
                 <image
@@ -20,11 +24,12 @@
                   src="{{slot.occupant.avatarUrl}}"
                   mode="aspectFill"
                 />
-                <view wx:else class="seat-avatar seat-avatar--fallback">{{slot.occupant.initial}}</view>
+                <view wx:else class="seat-avatar seat-avatar--fallback avatar-fallback">{{slot.occupant.initial}}</view>
               </view>
-              <view class="seat-name">
-                {{slot.occupant.isSelf ? "我" : (slot.occupant.role === "admin" ? "管理员" : slot.occupant.nickname)}}
+              <view wx:if="{{slot.showAdminBadge || slot.showMineBadge}}" class="seat-badge {{slot.showAdminBadge ? 'is-admin' : 'is-self'}}">
+                {{slot.showAdminBadge ? "管理" : "我"}}
               </view>
+              <view class="seat-name">{{slot.occupant.nickname}}</view>
               <view class="seat-code">{{slot.label}}</view>
             </block>
           </view>
