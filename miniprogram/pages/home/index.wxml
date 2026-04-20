@@ -33,7 +33,7 @@
         </view>
 
         <view class="viewer-persona-action" bindtap="handleOpenPersonaSheet">
-          <image wx:if="{{currentPersonaImageUrl}}" class="viewer-persona-image" src="{{currentPersonaImageUrl}}" mode="aspectFit" />
+          <image wx:if="{{currentPersonaImageUrl}}" class="viewer-persona-image" src="{{currentPersonaImageUrl}}" mode="widthFix" />
           <view wx:else class="viewer-persona-button">添加形象</view>
         </view>
       </view>

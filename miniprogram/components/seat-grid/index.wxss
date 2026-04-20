@@ -72,7 +72,7 @@
 .seat-badge {
   position: absolute;
   top: 84rpx;
-  left: 16rpx;
+  left: 50%;
   min-width: 58rpx;
   height: 26rpx;
   padding: 0 10rpx;
@@ -85,6 +85,8 @@
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
+  transform: translateX(-50%);
+  white-space: nowrap;
 }
 
 .seat-name {
