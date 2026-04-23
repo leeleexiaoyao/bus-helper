@@ -1,6 +1,5 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const format_1 = require("../../utils/format");
 Component({
     properties: {
         visible: {
@@ -9,57 +8,74 @@ Component({
         },
         mode: {
             type: String,
-            value: "detail"
+            value: "member-detail"
         },
         seat: {
             type: Object
         },
         member: {
             type: Object
-        },
-        claimNickname: {
-            type: String,
-            value: ""
-        },
-        claimAvatarUrl: {
-            type: String,
-            value: ""
-        },
-        canAdminRelease: {
-            type: Boolean,
-            value: false
         }
     },
     data: {
-        localInitial: "座",
-        isClaimMode: false,
-        isSwitchMode: false,
-        isSelfMode: false,
-        isDetailMode: true,
+        isEmptyConfirmMode: false,
+        isSelfDetailMode: false,
+        isMemberDetailMode: false,
+        isAdminMemberDetailMode: false,
+        showDetailCard: false,
         detailSeatLabel: "未入座",
-        showAdminBadge: false,
-        showAdminReleaseButton: false
+        detailBioText: "暂无签名",
+        detailLivingLocationDisplay: {
+            primary: "未填写",
+            secondary: "",
+            full: "",
+            isPlaceholder: true
+        },
+        detailHometownLocationDisplay: {
+            primary: "未填写",
+            secondary: "",
+            full: "",
+            isPlaceholder: true
+        },
+        detailAgeText: "未填写",
+        detailPersonaImageUrl: "",
+        showAdminBadge: false
     },
     observers: {
-        "visible, mode, claimNickname, member, canAdminRelease": function (visible, mode, claimNickname, member, canAdminRelease) {
-            var _a;
+        "visible, mode, member": function (visible, mode, member) {
+            var _a, _b, _c, _d, _e, _f;
             if (!visible) {
                 return;
             }
             this.setData({
-                localInitial: (0, format_1.getInitial)(claimNickname || "座"),
-                isClaimMode: mode === "claim",
-                isSwitchMode: mode === "switch",
-                isSelfMode: mode === "self",
-                isDetailMode: mode === "detail",
+                isEmptyConfirmMode: mode === "empty-confirm",
+                isSelfDetailMode: mode === "self-detail",
+                isMemberDetailMode: mode === "member-detail",
+                isAdminMemberDetailMode: mode === "admin-member-detail",
+                showDetailCard: mode === "self-detail" || mode === "member-detail" || mode === "admin-member-detail",
                 detailSeatLabel: (_a = member === null || member === void 0 ? void 0 : member.seatLabel) !== null && _a !== void 0 ? _a : "未入座",
-                showAdminBadge: Boolean(member === null || member === void 0 ? void 0 : member.isAdmin),
-                showAdminReleaseButton: Boolean(canAdminRelease && (member === null || member === void 0 ? void 0 : member.seatCode))
+                detailBioText: ((_b = member === null || member === void 0 ? void 0 : member.bio) === null || _b === void 0 ? void 0 : _b.trim()) || "暂无签名",
+                detailLivingLocationDisplay: (_c = member === null || member === void 0 ? void 0 : member.livingLocationDisplay) !== null && _c !== void 0 ? _c : {
+                    primary: "未填写",
+                    secondary: "",
+                    full: "",
+                    isPlaceholder: true
+                },
+                detailHometownLocationDisplay: (_d = member === null || member === void 0 ? void 0 : member.hometownLocationDisplay) !== null && _d !== void 0 ? _d : {
+                    primary: "未填写",
+                    secondary: "",
+                    full: "",
+                    isPlaceholder: true
+                },
+                detailAgeText: ((_e = member === null || member === void 0 ? void 0 : member.age) === null || _e === void 0 ? void 0 : _e.trim()) || "未填写",
+                detailPersonaImageUrl: (_f = member === null || member === void 0 ? void 0 : member.homePersonaImageUrl) !== null && _f !== void 0 ? _f : "",
+                showAdminBadge: Boolean(member === null || member === void 0 ? void 0 : member.isAdmin)
             });
         }
     },
     methods: {
         stopPropagation() { },
+        stopTouchMove() { },
         handleMaskTap() {
             this.triggerEvent("close");
         },

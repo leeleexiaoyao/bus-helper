@@ -2,7 +2,6 @@ import { TOOL_META } from "../../shared/constants";
 import { BusinessError } from "../../shared/errors";
 import type {
   ToolDetailViewModel,
-  ToolResultMemberView,
   ToolType,
   VoteChoice,
   VoteSelectionMode
@@ -29,8 +28,9 @@ type VoteOptionCardView = {
 };
 
 let seatDrawRollingSyncTimer: number | null = null;
-let lotteryRollingInterval: number | null = null;
-let lotteryRollingTimeout: number | null = null;
+let voteRefreshTimer: number | null = null;
+
+const VOTE_REFRESH_INTERVAL_MS = 10000;
 
 function isToolType(value: string): value is ToolType {
   return ["seat-draw", "vote", "wheel", "lottery"].includes(value);
@@ -46,6 +46,13 @@ function parseWheelItems(input: string): string[] {
 function parseVoteOptions(input: string): string[] {
   return input
     .split(/\n|,|，|;|；/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function parseLotteryAnswers(input: string): string[] {
+  return input
+    .split(/\r?\n/)
     .map((item) => item.trim())
     .filter(Boolean);
 }
@@ -97,6 +104,11 @@ function getWheelTargetRotation(itemCount: number, resultIndex: number): number 
   return 360 - targetAngle;
 }
 
+function normalizeRotation(rotation: number): number {
+  const normalized = rotation % 360;
+  return normalized < 0 ? normalized + 360 : normalized;
+}
+
 async function pickSecureRandomIndex(itemCount: number): Promise<number> {
   if (itemCount <= 1) {
     return 0;
@@ -140,6 +152,13 @@ function buildVoteInteractionState(
       viewerResultLabel: ""
     };
   }
+  if (detail.phase !== "active") {
+    return {
+      approveDisabled: true,
+      abstainDisabled: true,
+      viewerResultLabel: detail.phase === "ended" ? "本轮投票已结束。" : ""
+    };
+  }
 
   const validOptionIds = new Set(detail.options.map((option) => option.id));
   const currentSelectedIds = Array.from(new Set(selectedIds)).filter((optionId) =>
@@ -149,17 +168,17 @@ function buildVoteInteractionState(
   const pendingOptionCount = currentSelectedIds.filter((optionId) => !persistedOptionIds.has(optionId)).length;
   const allOptionsSelected =
     detail.selectionMode === "multiple" &&
-    detail.options.length > 0 &&
-    detail.viewerSelectedOptionIds.length >= detail.options.length;
+    detail.maxSelections > 0 &&
+    detail.viewerSelectedOptionIds.length >= detail.maxSelections;
 
   let viewerResultLabel = "";
   if (detail.viewerChoice === "approve") {
     if (
       detail.selectionMode === "multiple" &&
       detail.viewerSelectedOptionIds.length > 0 &&
-      detail.viewerSelectedOptionIds.length < detail.options.length
+      detail.viewerSelectedOptionIds.length < detail.maxSelections
     ) {
-      viewerResultLabel = `你已投 ${detail.viewerSelectedOptionIds.length} 项，还可继续投票。`;
+      viewerResultLabel = `你已投 ${detail.viewerSelectedOptionIds.length} / ${detail.maxSelections} 项，还可继续投票。`;
     } else {
       viewerResultLabel = "你已完成投票。";
     }
@@ -177,10 +196,6 @@ function buildVoteInteractionState(
     abstainDisabled: detail.viewerHasSubmitted,
     viewerResultLabel
   };
-}
-
-function pickRollingLabel(entry: ToolResultMemberView): string {
-  return `${entry.nickname} / ${entry.seatLabel}`;
 }
 
 function buildVoteOptionCards(pageData: ToolDetailViewModel | null, selectedIds: string[]): VoteOptionCardView[] {
@@ -201,14 +216,10 @@ function clearSeatDrawRollingTimer(): void {
   }
 }
 
-function clearLotteryRollingTimer(): void {
-  if (lotteryRollingInterval !== null) {
-    clearInterval(lotteryRollingInterval);
-    lotteryRollingInterval = null;
-  }
-  if (lotteryRollingTimeout !== null) {
-    clearTimeout(lotteryRollingTimeout);
-    lotteryRollingTimeout = null;
+function clearVoteRefreshTimer(): void {
+  if (voteRefreshTimer !== null) {
+    clearInterval(voteRefreshTimer);
+    voteRefreshTimer = null;
   }
 }
 
@@ -234,6 +245,7 @@ Page({
     voteTopicInput: "",
     voteOptionsInput: "",
     voteSelectionMode: "single" as VoteSelectionMode,
+    voteMaxSelectionsInput: "1",
     voteExcludeAdmin: false,
     voteSelectedOptionIds: [] as string[],
     voteOptionCards: [] as VoteOptionCardView[],
@@ -251,15 +263,19 @@ Page({
     wheelBackgroundStyle: "",
     wheelLights: buildWheelLights(),
     wheelSpinning: false,
+    wheelVisibleHistoryLabels: [] as string[],
     wheelAllowAssignedUser: false,
     wheelAssignedUserId: "",
     wheelAssignedUserIndex: 0,
     wheelEligibleUserLabels: [] as string[],
     wheelShowResult: false,
-    lotteryWinnerCountInput: "1",
-    lotteryExcludeAdmin: false,
-    lotteryRolling: false,
-    lotteryRollingText: ""
+    lotteryAnswersInput: "",
+    lotteryDrawLimitInput: "1",
+    lotteryAllowAssignedUser: false,
+    lotteryAssignedUserId: "",
+    lotteryAssignedUserIndex: 0,
+    lotteryEligibleUserLabels: [] as string[],
+    lotteryFlippingCardId: ""
   },
 
   onLoad(query: Record<string, string | undefined>) {
@@ -295,12 +311,12 @@ Page({
 
   onHide() {
     clearSeatDrawRollingTimer();
-    clearLotteryRollingTimer();
+    clearVoteRefreshTimer();
   },
 
   onUnload() {
     clearSeatDrawRollingTimer();
-    clearLotteryRollingTimer();
+    clearVoteRefreshTimer();
   },
 
   refreshPage() {
@@ -323,7 +339,19 @@ Page({
 
   applyPageData(pageData: ToolDetailViewModel) {
     const voteSelectionMode = pageData.voteDetail?.selectionMode ?? "single";
-    const voteSelectedOptionIds = pageData.voteDetail?.viewerSelectedOptionIds ?? [];
+    const voteValidOptionIds = new Set(pageData.voteDetail?.options.map((option) => option.id) ?? []);
+    const localVoteSelectedOptionIds = this.data.voteSelectedOptionIds.filter((optionId) =>
+      voteValidOptionIds.has(optionId)
+    );
+    const voteSelectedOptionIds =
+      pageData.toolType === "vote" && pageData.voteDetail?.phase === "active"
+        ? Array.from(
+            new Set([
+              ...(pageData.voteDetail?.viewerSelectedOptionIds ?? []),
+              ...localVoteSelectedOptionIds
+            ])
+          )
+        : pageData.voteDetail?.viewerSelectedOptionIds ?? [];
     const voteInteraction = buildVoteInteractionState(pageData, voteSelectedOptionIds);
     const seatDrawCount = Math.max(
       1,
@@ -339,6 +367,16 @@ Page({
       0,
       wheelEligibleUsers.findIndex((member) => member.userId === wheelAssignedUserId)
     );
+    const lotteryEligibleUsers = pageData.lotteryDetail?.eligibleUsers ?? [];
+    const lotteryAssignedUserId =
+      pageData.lotteryDetail?.assignedUserId ??
+      lotteryEligibleUsers.find((member) => member.isSelf)?.userId ??
+      lotteryEligibleUsers[0]?.userId ??
+      "";
+    const lotteryAssignedUserIndex = Math.max(
+      0,
+      lotteryEligibleUsers.findIndex((member) => member.userId === lotteryAssignedUserId)
+    );
     this.setData({
       pageData,
       toolTitle: pageData.toolTitle,
@@ -353,6 +391,9 @@ Page({
       voteTopicInput: pageData.voteDetail?.topic ?? "",
       voteOptionsInput: pageData.voteDetail?.options.map((option) => option.label).join("\n") ?? "",
       voteSelectionMode,
+      voteMaxSelectionsInput: String(
+        pageData.voteDetail?.maxSelections ?? (voteSelectionMode === "multiple" ? 2 : 1)
+      ),
       voteExcludeAdmin: pageData.voteDetail?.excludeAdmin ?? false,
       voteSelectedOptionIds,
       voteOptionCards: buildVoteOptionCards(pageData, voteSelectedOptionIds),
@@ -372,19 +413,28 @@ Page({
       wheelSlices: buildWheelSlices(pageData.wheelDetail?.items ?? []),
       wheelBackgroundStyle: buildWheelBackgroundStyle(pageData.wheelDetail?.items ?? []),
       wheelSpinning: false,
+      wheelVisibleHistoryLabels: pageData.wheelDetail?.resultHistoryLabels ?? [],
       wheelAllowAssignedUser: pageData.wheelDetail?.allowAssignedUser ?? false,
       wheelAssignedUserId,
       wheelAssignedUserIndex,
       wheelEligibleUserLabels: wheelEligibleUsers.map(
         (member) => `${member.nickname} / ${member.seatLabel}`
       ),
-      wheelShowResult: Boolean(pageData.wheelDetail?.resultLabel),
-      lotteryWinnerCountInput: String(pageData.lotteryDetail?.winnerCount ?? 1),
-      lotteryExcludeAdmin: pageData.lotteryDetail?.excludeAdmin ?? false,
-      lotteryRolling: false,
-      lotteryRollingText: ""
+      wheelShowResult: Boolean(
+        pageData.wheelDetail?.resultLabel || pageData.wheelDetail?.resultHistoryLabels.length
+      ),
+      lotteryAnswersInput: pageData.lotteryDetail?.answers.join("\n") ?? "",
+      lotteryDrawLimitInput: String(pageData.lotteryDetail?.drawLimitPerUser ?? 1),
+      lotteryAllowAssignedUser: pageData.lotteryDetail?.allowAssignedUser ?? false,
+      lotteryAssignedUserId,
+      lotteryAssignedUserIndex,
+      lotteryEligibleUserLabels: lotteryEligibleUsers.map(
+        (member) => `${member.nickname} / ${member.seatLabel}`
+      ),
+      lotteryFlippingCardId: ""
     });
     this.syncSeatDrawRollingTimer(pageData);
+    this.syncVoteRefreshTimer(pageData);
   },
 
   syncSeatDrawRollingTimer(pageData: ToolDetailViewModel) {
@@ -403,6 +453,28 @@ Page({
     seatDrawRollingSyncTimer = setInterval(() => {
       this.refreshPage();
     }, 120) as unknown as number;
+  },
+
+  syncVoteRefreshTimer(pageData: ToolDetailViewModel) {
+    const shouldSync =
+      pageData.toolType === "vote" &&
+      pageData.isStarted &&
+      pageData.voteDetail?.phase === "active" &&
+      pageData.voteDetail.viewerHasSubmitted &&
+      !this.data.isDraftEditing;
+
+    if (!shouldSync) {
+      clearVoteRefreshTimer();
+      return;
+    }
+
+    if (voteRefreshTimer !== null) {
+      return;
+    }
+
+    voteRefreshTimer = setInterval(() => {
+      this.refreshPage();
+    }, VOTE_REFRESH_INTERVAL_MS) as unknown as number;
   },
 
   handlePageError(error: unknown) {
@@ -482,6 +554,30 @@ Page({
       return;
     }
 
+    if (this.data.toolType === "lottery") {
+      const eligibleUsers = this.data.pageData?.lotteryDetail?.eligibleUsers ?? [];
+      const defaultAssignedUserId =
+        eligibleUsers.find((member) => member.isSelf)?.userId ?? eligibleUsers[0]?.userId ?? "";
+      const defaultAssignedUserIndex = Math.max(
+        0,
+        eligibleUsers.findIndex((member) => member.userId === defaultAssignedUserId)
+      );
+      this.setData({
+        isDraftEditing: true,
+        isRecreateMode: false,
+        lotteryAnswersInput: "",
+        lotteryDrawLimitInput: "1",
+        lotteryAllowAssignedUser: false,
+        lotteryAssignedUserId: defaultAssignedUserId,
+        lotteryAssignedUserIndex: defaultAssignedUserIndex
+      });
+      return;
+    }
+
+    if (this.data.toolType === "vote") {
+      clearVoteRefreshTimer();
+    }
+
     this.setData({
       isDraftEditing: true,
       isRecreateMode: false
@@ -510,6 +606,34 @@ Page({
       return;
     }
 
+    if (this.data.toolType === "lottery") {
+      const eligibleUsers = this.data.pageData?.lotteryDetail?.eligibleUsers ?? [];
+      const assignedUserId =
+        this.data.pageData?.lotteryDetail?.assignedUserId ??
+        eligibleUsers.find((member) => member.isSelf)?.userId ??
+        eligibleUsers[0]?.userId ??
+        "";
+      const assignedUserIndex = Math.max(
+        0,
+        eligibleUsers.findIndex((member) => member.userId === assignedUserId)
+      );
+      this.setData({
+        isDraftEditing: true,
+        isRecreateMode: true,
+        showActionSheet: false,
+        lotteryAnswersInput: this.data.pageData?.lotteryDetail?.answers.join("\n") ?? "",
+        lotteryDrawLimitInput: String(this.data.pageData?.lotteryDetail?.drawLimitPerUser ?? 1),
+        lotteryAllowAssignedUser: this.data.pageData?.lotteryDetail?.allowAssignedUser ?? false,
+        lotteryAssignedUserId: assignedUserId,
+        lotteryAssignedUserIndex: assignedUserIndex
+      });
+      return;
+    }
+
+    if (this.data.toolType === "vote") {
+      clearVoteRefreshTimer();
+    }
+
     this.setData({
       isDraftEditing: true,
       isRecreateMode: true,
@@ -518,6 +642,9 @@ Page({
   },
 
   handleOpenActionSheet() {
+    if (this.data.toolType === "vote") {
+      clearVoteRefreshTimer();
+    }
     this.setData({
       showActionSheet: true
     });
@@ -527,6 +654,9 @@ Page({
     this.setData({
       showActionSheet: false
     });
+    if (this.data.toolType === "vote" && this.data.pageData) {
+      this.syncVoteRefreshTimer(this.data.pageData);
+    }
   },
 
   handleSheetPanelTap() {},
@@ -579,7 +709,6 @@ Page({
     try {
       const nextPageData = tripService.startSeatDrawRound();
       this.applyPageData(nextPageData);
-      showSuccessToast("抽号已开始");
     } catch (error) {
       this.handleActionError(error);
     }
@@ -604,9 +733,21 @@ Page({
     }
     this.setData({
       voteSelectionMode: mode,
+      voteMaxSelectionsInput:
+        mode === "single"
+          ? "1"
+          : Number(this.data.voteMaxSelectionsInput) > 1
+            ? this.data.voteMaxSelectionsInput
+            : "2",
       voteModeLabel: mode === "single" ? "单选" : "多选",
       voteModeSingleClass: mode === "single" ? "mode-chip is-active" : "mode-chip",
       voteModeMultipleClass: mode === "multiple" ? "mode-chip is-active" : "mode-chip"
+    });
+  },
+
+  handleVoteMaxSelectionsInput(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    this.setData({
+      voteMaxSelectionsInput: event.detail.value
     });
   },
 
@@ -624,12 +765,20 @@ Page({
             topic: this.data.voteTopicInput,
             options: parseVoteOptions(this.data.voteOptionsInput),
             selectionMode: this.data.voteSelectionMode,
+            maxSelections:
+              this.data.voteSelectionMode === "multiple"
+                ? Number(this.data.voteMaxSelectionsInput)
+                : 1,
             excludeAdmin: this.data.voteExcludeAdmin
           })
         : tripService.publishVoteTool({
             topic: this.data.voteTopicInput,
             options: parseVoteOptions(this.data.voteOptionsInput),
             selectionMode: this.data.voteSelectionMode,
+            maxSelections:
+              this.data.voteSelectionMode === "multiple"
+                ? Number(this.data.voteMaxSelectionsInput)
+                : 1,
             excludeAdmin: this.data.voteExcludeAdmin
           });
       this.applyPageData(pageData);
@@ -644,6 +793,9 @@ Page({
     const pageData = this.data.pageData;
     const detail = pageData?.voteDetail;
     if (!optionId || !detail?.viewerEligible) {
+      return;
+    }
+    if (detail.phase !== "active") {
       return;
     }
     if (detail.selectionMode === "single" && detail.viewerHasSubmitted) {
@@ -667,6 +819,15 @@ Page({
     } else if (exists) {
       nextIds = currentIds.filter((id) => id !== optionId);
     } else {
+      if (currentIds.length >= detail.maxSelections) {
+        showErrorToast(
+          new BusinessError(
+            "VOTE_SELECTION_LIMIT_EXCEEDED",
+            `当前投票最多可选择 ${detail.maxSelections} 项。`
+          )
+        );
+        return;
+      }
       nextIds = [...currentIds, optionId];
     }
 
@@ -695,6 +856,16 @@ Page({
       });
       this.applyPageData(pageData);
       showSuccessToast("已完成投票");
+    } catch (error) {
+      this.handleActionError(error);
+    }
+  },
+
+  handleVoteEnd() {
+    try {
+      const pageData = tripService.endVote();
+      this.applyPageData(pageData);
+      showSuccessToast("投票已结束");
     } catch (error) {
       this.handleActionError(error);
     }
@@ -750,11 +921,15 @@ Page({
 
     try {
       const currentItems = this.data.pageData?.wheelDetail?.items ?? [];
+      const previousHistoryLabels = this.data.wheelVisibleHistoryLabels.slice();
       const selectedIndex = await pickSecureRandomIndex(currentItems.length);
       const pageData = tripService.spinWheel(selectedIndex);
       const nextItems = pageData.wheelDetail?.items ?? [];
       const resultIndex = pageData.wheelDetail?.resultIndex ?? 0;
-      const targetRotation = this.data.wheelRotation + 2160 + getWheelTargetRotation(nextItems.length, resultIndex);
+      const targetRotationBase = getWheelTargetRotation(nextItems.length, resultIndex);
+      const currentRotationBase = normalizeRotation(this.data.wheelRotation);
+      const rotationDelta = normalizeRotation(targetRotationBase - currentRotationBase);
+      const targetRotation = this.data.wheelRotation + 2160 + rotationDelta;
 
       this.setData({
         pageData,
@@ -763,6 +938,7 @@ Page({
         wheelBackgroundStyle: buildWheelBackgroundStyle(nextItems),
         wheelSpinning: true,
         wheelShowResult: false,
+        wheelVisibleHistoryLabels: previousHistoryLabels,
         wheelTransitionMs: 4800,
         wheelRotation: targetRotation,
         isDraftEditing: false
@@ -771,7 +947,8 @@ Page({
       setTimeout(() => {
         this.setData({
           wheelSpinning: false,
-          wheelShowResult: true
+          wheelShowResult: true,
+          wheelVisibleHistoryLabels: pageData.wheelDetail?.resultHistoryLabels ?? []
         });
       }, 4800);
       showSuccessToast("大转盘已启动");
@@ -788,15 +965,31 @@ Page({
     this.handleWheelSpin();
   },
 
-  handleLotteryWinnerCountInput(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+  handleLotteryAnswersInput(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
     this.setData({
-      lotteryWinnerCountInput: event.detail.value
+      lotteryAnswersInput: event.detail.value
     });
   },
 
-  handleLotteryExcludeAdminChange(event: WechatMiniprogram.CustomEvent<{ value: boolean }>) {
+  handleLotteryDrawLimitInput(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
     this.setData({
-      lotteryExcludeAdmin: Boolean(event.detail.value)
+      lotteryDrawLimitInput: event.detail.value
+    });
+  },
+
+  handleLotteryAllowAssignedUserChange(event: WechatMiniprogram.CustomEvent<{ value: boolean }>) {
+    this.setData({
+      lotteryAllowAssignedUser: Boolean(event.detail.value)
+    });
+  },
+
+  handleLotteryAssignedUserChange(event: WechatMiniprogram.CustomEvent<{ value: number }>) {
+    const index = Number(event.detail.value ?? 0);
+    const eligibleUsers = this.data.pageData?.lotteryDetail?.eligibleUsers ?? [];
+    const targetUser = eligibleUsers[index] ?? eligibleUsers[0] ?? null;
+    this.setData({
+      lotteryAssignedUserIndex: index,
+      lotteryAssignedUserId: targetUser?.userId ?? ""
     });
   },
 
@@ -805,12 +998,16 @@ Page({
       const isRecreateMode = this.data.isRecreateMode;
       const pageData = this.data.isRecreateMode
         ? tripService.recreateLotteryTool({
-            winnerCount: Number(this.data.lotteryWinnerCountInput),
-            excludeAdmin: this.data.lotteryExcludeAdmin
+            answers: parseLotteryAnswers(this.data.lotteryAnswersInput),
+            drawLimitPerUser: Number(this.data.lotteryDrawLimitInput),
+            allowAssignedUser: this.data.lotteryAllowAssignedUser,
+            assignedUserId: this.data.lotteryAllowAssignedUser ? this.data.lotteryAssignedUserId : null
           })
         : tripService.publishLotteryTool({
-            winnerCount: Number(this.data.lotteryWinnerCountInput),
-            excludeAdmin: this.data.lotteryExcludeAdmin
+            answers: parseLotteryAnswers(this.data.lotteryAnswersInput),
+            drawLimitPerUser: Number(this.data.lotteryDrawLimitInput),
+            allowAssignedUser: this.data.lotteryAllowAssignedUser,
+            assignedUserId: this.data.lotteryAllowAssignedUser ? this.data.lotteryAssignedUserId : null
           });
       this.applyPageData(pageData);
       showSuccessToast(isRecreateMode ? "抓阄已重新创建" : "抓阄已发布");
@@ -819,40 +1016,24 @@ Page({
     }
   },
 
-  handleLotteryClaim() {
-    const pageData = this.data.pageData;
-    const participants = pageData?.lotteryDetail?.participants ?? [];
-    if (!participants.length || this.data.lotteryRolling) {
+  handleLotteryCardTap(event: WechatMiniprogram.CustomEvent) {
+    const cardId = String(event.currentTarget.dataset.cardId || "");
+    const cards = this.data.pageData?.lotteryDetail?.cards ?? [];
+    const card = cards.find((entry) => entry.id === cardId);
+    if (!cardId || !card?.canClaim) {
       return;
     }
 
-    clearLotteryRollingTimer();
-    let index = 0;
-    this.setData({
-      lotteryRolling: true,
-      lotteryRollingText: pickRollingLabel(participants[0])
-    });
-
-    lotteryRollingInterval = setInterval(() => {
-      index = (index + 1) % participants.length;
+    try {
+      const nextPageData = tripService.claimLottery(cardId);
+      this.applyPageData(nextPageData);
       this.setData({
-        lotteryRollingText: pickRollingLabel(participants[index])
+        lotteryFlippingCardId: cardId
       });
-    }, 90) as unknown as number;
-
-    lotteryRollingTimeout = setTimeout(() => {
-      clearLotteryRollingTimer();
-      try {
-        const nextPageData = tripService.claimLottery();
-        this.applyPageData(nextPageData);
-        showSuccessToast("结果已揭晓");
-      } catch (error) {
-        this.setData({
-          lotteryRolling: false
-        });
-        this.handleActionError(error);
-      }
-    }, 1200) as unknown as number;
+      showSuccessToast("结果已揭晓");
+    } catch (error) {
+      this.handleActionError(error);
+    }
   },
 
   handleReset() {

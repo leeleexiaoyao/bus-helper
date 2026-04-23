@@ -5,6 +5,10 @@ import { MemoryStorageAdapter } from "../miniprogram/repositories/storage-adapte
 import { generateSeatCodes } from "../miniprogram/shared/seat";
 import { TripService } from "../miniprogram/services/trip-service";
 import type { ToolType, VoteChoice, VoteSubmitInput } from "../miniprogram/shared/types";
+import {
+  formatHometownLocationDisplay,
+  formatLivingLocationDisplay
+} from "../miniprogram/utils/format";
 
 function createService() {
   const storage = new MemoryStorageAdapter(createInitialAppState());
@@ -23,6 +27,10 @@ function createServiceWithUserCount(userCount: number) {
       nickname: `成员${index}`,
       avatarUrl: `https://example.com/user-${index}.png`,
       homePersonaAssetId: null,
+      bio: "",
+      livingCity: "",
+      hometown: "",
+      age: "",
       tags: [],
       currentTripId: null,
       isAuthorized: false
@@ -46,6 +54,10 @@ function createServiceWithUsers(userCount: number) {
       nickname: `成员${String(index).padStart(2, "0")}`,
       avatarUrl: `https://example.com/${userId}.png`,
       homePersonaAssetId: null,
+      bio: "",
+      livingCity: "",
+      hometown: "",
+      age: "",
       tags: [`模拟${index}`],
       currentTripId: null,
       isAuthorized: false
@@ -169,6 +181,19 @@ function getVoteDetail(service: TripService) {
   const detail = service.getToolDetailPageData("vote");
   assert.ok(detail.voteDetail, "Expected vote detail");
   return detail;
+}
+
+function getLotteryDetail(service: TripService) {
+  const detail = service.getToolDetailPageData("lottery");
+  assert.ok(detail.lotteryDetail, "Expected lottery detail");
+  return detail;
+}
+
+function claimFirstAvailableLotteryCard(service: TripService) {
+  const detail = getLotteryDetail(service);
+  const cardId = detail.lotteryDetail?.cards.find((card) => card.canClaim)?.id;
+  assert.ok(cardId, "Expected available lottery card");
+  return service.claimLottery(cardId);
 }
 
 function submitVoteChoice(
@@ -348,7 +373,7 @@ function setupTripWith49Members() {
 }
 
 {
-  const { service } = setupTripWithMembers();
+  const { service, storage, tripId } = setupTripWithMembers();
 
   service.publishSeatDrawTool({
     topic: "上台表演",
@@ -366,8 +391,8 @@ function setupTripWith49Members() {
     items: ["唱歌", "真心话", "讲冷笑话"]
   });
   service.publishLotteryTool({
-    winnerCount: 2,
-    excludeAdmin: false
+    answers: ["A签", "B签", "C签"],
+    drawLimitPerUser: 1
   });
 
   const toolsPage = service.getToolsPageData();
@@ -388,7 +413,7 @@ function setupTripWith49Members() {
 }
 
 {
-  const { service } = setupTripWithMembers();
+  const { service, storage, tripId } = setupTripWithMembers();
 
   expectBusinessError(
     () =>
@@ -468,7 +493,7 @@ function setupTripWith49Members() {
 }
 
 {
-  const { service } = setupTripWithMembers();
+  const { service, storage, tripId } = setupTripWithMembers();
 
   service.publishVoteTool({
     topic: "今晚是否提前十分钟集合",
@@ -483,6 +508,7 @@ function setupTripWith49Members() {
   assert.equal(detail.voteDetail?.participantCount, 3);
   assert.equal(detail.voteDetail?.excludeAdmin, true);
   assert.equal(detail.voteDetail?.selectionMode, "multiple");
+  assert.equal(detail.voteDetail?.maxSelections, 3);
   assert.equal(detail.voteDetail?.options.length, 3);
   assert.deepEqual(
     detail.voteDetail?.options.map((option) => option.label),
@@ -646,6 +672,7 @@ function setupTripWith49Members() {
 
   assert.equal(detail.voteDetail?.topic, "重新创建投票 v2");
   assert.equal(detail.voteDetail?.selectionMode, "single");
+  assert.equal(detail.voteDetail?.maxSelections, 1);
   assert.equal(detail.voteDetail?.options.length, 2);
   assert.equal(detail.voteDetail?.approveCount, 1);
 
@@ -660,6 +687,92 @@ function setupTripWith49Members() {
   const { service } = setupTripWithMembers();
 
   service.publishVoteTool({
+    topic: "多选上限测试",
+    excludeAdmin: false,
+    selectionMode: "multiple",
+    maxSelections: 2,
+    options: ["方案A", "方案B", "方案C"]
+  });
+
+  service.switchActiveUser("user-2");
+  let detail = getVoteDetail(service);
+  const optionIds = detail.voteDetail?.options.map((option) => option.id) ?? [];
+  detail = submitVoteChoice(service, "approve", [optionIds[0] ?? ""]);
+  assert.deepEqual(detail.voteDetail?.viewerSelectedOptionIds, [optionIds[0]]);
+  assert.equal(detail.voteDetail?.maxSelections, 2);
+
+  detail = submitVoteChoice(service, "approve", [optionIds[1] ?? ""]);
+  assert.deepEqual(detail.voteDetail?.viewerSelectedOptionIds, [optionIds[0], optionIds[1]]);
+
+  expectBusinessError(
+    () => submitVoteChoice(service, "approve", [optionIds[2] ?? ""]),
+    "VOTE_ALREADY_SUBMITTED"
+  );
+
+  service.switchActiveUser("user-1");
+  service.closeVote();
+  expectBusinessError(
+    () =>
+      service.publishVoteTool({
+        topic: "非法多选上限",
+        excludeAdmin: false,
+        selectionMode: "multiple",
+        maxSelections: 4,
+        options: ["方案A", "方案B", "方案C"]
+      }),
+    "VOTE_MAX_SELECTIONS_TOO_LARGE"
+  );
+}
+
+{
+  const { service } = setupTripWithMembers();
+
+  service.publishVoteTool({
+    topic: "结束投票测试",
+    excludeAdmin: false,
+    selectionMode: "multiple",
+    maxSelections: 2,
+    options: ["方案A", "方案B", "方案C"]
+  });
+
+  service.switchActiveUser("user-2");
+  let detail = getVoteDetail(service);
+  const optionIds = detail.voteDetail?.options.map((option) => option.id) ?? [];
+  submitVoteChoice(service, "approve", [optionIds[1] ?? ""]);
+
+  service.switchActiveUser("user-3");
+  submitVoteChoice(service, "approve", [optionIds[0] ?? "", optionIds[1] ?? ""]);
+
+  service.switchActiveUser("user-4");
+  submitVoteChoice(service, "approve", [optionIds[1] ?? ""]);
+
+  service.switchActiveUser("user-1");
+  detail = service.endVote();
+  assert.equal(detail.voteDetail?.phase, "ended");
+  assert.deepEqual(
+    detail.voteDetail?.resultOptions.map((option) => ({
+      label: option.label,
+      supportCount: option.supportCount
+    })),
+    [
+      { label: "方案B", supportCount: 3 },
+      { label: "方案A", supportCount: 1 },
+      { label: "方案C", supportCount: 0 }
+    ]
+  );
+  assert.equal(detail.phaseLabel, "已结束");
+
+  service.switchActiveUser("user-2");
+  expectBusinessError(
+    () => submitVoteChoice(service, "approve", [optionIds[2] ?? ""]),
+    "VOTE_ENDED"
+  );
+}
+
+{
+  const { service } = setupTripWithMembers();
+
+  service.publishVoteTool({
     topic: "单选投票测试",
     excludeAdmin: false,
     selectionMode: "single",
@@ -668,6 +781,7 @@ function setupTripWith49Members() {
 
   let detail = getVoteDetail(service);
   assert.equal(detail.voteDetail?.selectionMode, "single");
+  assert.equal(detail.voteDetail?.maxSelections, 1);
   assert.equal(detail.voteDetail?.options.length, 3);
 
   service.switchActiveUser("user-2");
@@ -740,10 +854,12 @@ function setupTripWith49Members() {
   const detail = migratedService.getToolDetailPageData("vote");
   assert.equal(detail.isStarted, true);
   assert.equal(detail.voteDetail?.selectionMode, "single");
+  assert.equal(detail.voteDetail?.maxSelections, 1);
   assert.deepEqual(
     detail.voteDetail?.options.map((option) => option.label),
     ["方案A", "方案B"]
   );
+  assert.equal(detail.voteDetail?.resultOptions.length, 2);
   assert.equal(detail.voteDetail?.viewerHasSubmitted, true);
   assert.deepEqual(detail.voteDetail?.viewerSelectedOptionIds, ["legacy-vote-option-1"]);
   assert.equal(detail.voteDetail?.options[0]?.selectedByViewer, true);
@@ -830,51 +946,97 @@ function setupTripWith49Members() {
 }
 
 {
-  const { service } = setupTripWithMembers();
+  const { service, storage, tripId } = setupTripWithMembers();
 
-  service.publishLotteryTool({
-    winnerCount: 2,
-    excludeAdmin: true
-  });
+  let detail = withMockedRandom(0, () =>
+    service.publishLotteryTool({
+      answers: ["苹果", "", "香蕉", "樱桃"],
+      drawLimitPerUser: 2
+    })
+  );
 
-  let detail = service.getToolDetailPageData("lottery");
   assert.equal(detail.isStarted, true);
   assert.equal(detail.lotteryDetail?.phase, "active");
-  assert.equal(detail.lotteryDetail?.excludeAdmin, true);
-  assert.equal(detail.lotteryDetail?.participantCount, 3);
-  assert.equal(detail.lotteryDetail?.viewerEligible, false);
+  assert.deepEqual(detail.lotteryDetail?.answers, ["苹果", "香蕉", "樱桃"]);
+  assert.equal(detail.lotteryDetail?.cardCount, 3);
+  assert.equal(detail.lotteryDetail?.remainingCardCount, 3);
+  assert.equal(detail.lotteryDetail?.viewerEligible, true);
+  assert.equal(detail.lotteryDetail?.viewerCanDraw, true);
+  assert.equal(detail.lotteryDetail?.cards.length, 3);
+  assert.equal(detail.lotteryDetail?.cards.every((card) => card.state === "available"), true);
+  assert.notDeepEqual(
+    (storage.getState()?.trips[tripId].tools.lottery as { cards: Array<{ answer: string }> } | null)?.cards.map(
+      (card: { answer: string }) => card.answer
+    ),
+    ["苹果", "香蕉", "樱桃"]
+  );
 
-  expectBusinessError(() => service.claimLottery(), "LOTTERY_NOT_ALLOWED");
+  detail = claimFirstAvailableLotteryCard(service);
+  assert.equal(detail.lotteryDetail?.viewerClaimedCount, 1);
+  assert.equal(detail.lotteryDetail?.viewerRemainingDrawCount, 1);
+  assert.equal(detail.lotteryDetail?.claimedCardCount, 1);
+  assert.equal(detail.lotteryDetail?.viewerClaimRecords.length, 1);
+  assert.equal(detail.lotteryDetail?.cards.filter((card) => card.state === "viewer").length, 1);
+
+  detail = claimFirstAvailableLotteryCard(service);
+  assert.equal(detail.lotteryDetail?.viewerClaimedCount, 2);
+  assert.equal(detail.lotteryDetail?.viewerRemainingDrawCount, 0);
+  assert.equal(detail.lotteryDetail?.viewerCanDraw, false);
+  assert.equal(detail.lotteryDetail?.viewerClaimRecords.length, 2);
+  assert.equal(detail.lotteryDetail?.viewerClaimRecords[0].claimedAt >= detail.lotteryDetail!.viewerClaimRecords[1].claimedAt, true);
+  expectBusinessError(
+    () => service.claimLottery(detail.lotteryDetail?.cards.find((card) => card.state === "available")?.id ?? ""),
+    "LOTTERY_DRAW_LIMIT_REACHED"
+  );
 
   service.switchActiveUser("user-2");
-  detail = service.claimLottery();
-  assert.equal(detail.lotteryDetail?.viewerHasClaimed, true);
-  assert.equal(detail.lotteryDetail?.claimedCount, 1);
-  assert.equal(typeof detail.lotteryDetail?.viewerIsWinner, "boolean");
-  expectBusinessError(() => service.claimLottery(), "LOTTERY_ALREADY_CLAIMED");
-
-  service.switchActiveUser("user-3");
-  detail = service.claimLottery();
-  assert.equal(detail.lotteryDetail?.claimedCount, 2);
-  assert.equal(detail.lotteryDetail?.participants.filter((participant) => participant.claimed).length, 2);
-
-  service.switchActiveUser("user-4");
-  detail = service.claimLottery();
-  assert.equal(detail.lotteryDetail?.claimedCount, 3);
-  assert.equal(detail.lotteryDetail?.participants.every((participant) => participant.claimed), true);
+  detail = getLotteryDetail(service);
+  assert.equal(detail.lotteryDetail?.viewerEligible, false);
+  assert.equal(detail.lotteryDetail?.viewerCanDraw, false);
+  assert.equal(detail.lotteryDetail?.cards.filter((card) => card.state === "claimed").length, 2);
+  expectBusinessError(
+    () => service.claimLottery(detail.lotteryDetail?.cards[0].id ?? ""),
+    "LOTTERY_FORBIDDEN"
+  );
 
   service.switchActiveUser("user-1");
   detail = service.resetLottery();
   assert.equal(detail.isStarted, true);
-  assert.equal(detail.lotteryDetail?.phase, "active");
-  assert.equal(detail.lotteryDetail?.participantCount, 3);
-  assert.equal(detail.lotteryDetail?.claimedCount, 0);
-  assert.equal(detail.lotteryDetail?.participants.length, 3);
+  assert.equal(detail.lotteryDetail?.claimedCardCount, 0);
+  assert.equal(detail.lotteryDetail?.remainingCardCount, 3);
+  assert.equal(detail.lotteryDetail?.viewerClaimRecords.length, 0);
+  assert.equal(detail.lotteryDetail?.cards.every((card) => card.state === "available"), true);
 
   detail = service.closeLottery();
   assert.equal(detail.isStarted, false);
-  assert.equal(detail.lotteryDetail, null);
+  assert.equal(detail.lotteryDetail?.cardCount, 0);
   assert.equal(getToolCard(service, "lottery").isStarted, false);
+}
+
+{
+  const { service } = setupTripWithMembers();
+
+  service.publishLotteryTool({
+    answers: ["一号签", "二号签"],
+    drawLimitPerUser: 1,
+    allowAssignedUser: true,
+    assignedUserId: "user-2"
+  });
+
+  let detail = getLotteryDetail(service);
+  assert.equal(detail.lotteryDetail?.viewerEligible, false);
+  assert.equal(detail.lotteryDetail?.assignedUserId, "user-2");
+  assert.equal(detail.lotteryDetail?.assignedUserLabel, "阿山");
+  expectBusinessError(
+    () => service.claimLottery(detail.lotteryDetail?.cards[0].id ?? ""),
+    "LOTTERY_FORBIDDEN"
+  );
+
+  service.switchActiveUser("user-2");
+  detail = claimFirstAvailableLotteryCard(service);
+  assert.equal(detail.lotteryDetail?.viewerEligible, true);
+  assert.equal(detail.lotteryDetail?.viewerClaimedCount, 1);
+  assert.equal(detail.lotteryDetail?.viewerRemainingDrawCount, 0);
 }
 
 {
@@ -896,8 +1058,8 @@ function setupTripWith49Members() {
     items: ["唱歌", "真心话"]
   });
   service.publishLotteryTool({
-    winnerCount: 1,
-    excludeAdmin: false
+    answers: ["修复签"],
+    drawLimitPerUser: 1
   });
 
   const corruptedState = storage.getState();
@@ -1097,48 +1259,171 @@ function setupTripWith49Members() {
 
 {
   const { service } = setupTripWith49Members();
+  const answers = buildSequentialLabels("签文", 49);
 
   service.publishLotteryTool({
-    winnerCount: 49,
-    excludeAdmin: false
+    answers,
+    drawLimitPerUser: 49
   });
 
   expectBusinessError(
     () =>
       service.publishLotteryTool({
-        winnerCount: 49,
-        excludeAdmin: false
+        answers,
+        drawLimitPerUser: 49
       }),
     "TOOL_ALREADY_STARTED"
   );
 
   let detail = service.getToolDetailPageData("lottery");
   assert.equal(detail.isStarted, true);
-  assert.equal(detail.lotteryDetail?.participantCount, 49);
-  assert.equal(detail.lotteryDetail?.winnerCount, 49);
+  assert.equal(detail.lotteryDetail?.cardCount, 49);
   assert.equal(detail.lotteryDetail?.viewerEligible, true);
-  assert.equal(detail.lotteryDetail?.claimedCount, 0);
+  assert.equal(detail.lotteryDetail?.claimedCardCount, 0);
+  assert.equal(detail.lotteryDetail?.viewerRemainingDrawCount, 49);
 
   for (let index = 1; index <= 49; index += 1) {
-    service.switchActiveUser(`user-${index}`);
-    detail = service.claimLottery();
-    assert.equal(detail.lotteryDetail?.claimedCount, index);
-    assert.equal(detail.lotteryDetail?.viewerHasClaimed, true);
-    assert.equal(detail.lotteryDetail?.viewerIsWinner, true);
+    detail = claimFirstAvailableLotteryCard(service);
+    assert.equal(detail.lotteryDetail?.claimedCardCount, index);
+    assert.equal(detail.lotteryDetail?.viewerClaimedCount, index);
   }
 
-  service.switchActiveUser("user-1");
   detail = service.getToolDetailPageData("lottery");
-  assert.equal(detail.lotteryDetail?.claimedCount, 49);
-  assert.equal(detail.lotteryDetail?.participants.every((participant) => participant.claimed), true);
-  assert.equal(detail.lotteryDetail?.participants.every((participant) => participant.statusText === "已抽中"), true);
+  assert.equal(detail.lotteryDetail?.claimedCardCount, 49);
+  assert.equal(detail.lotteryDetail?.remainingCardCount, 0);
+  assert.equal(detail.lotteryDetail?.cards.every((card) => card.state === "viewer"), true);
 
   detail = service.resetLottery();
   assert.equal(detail.isStarted, true);
   assert.equal(detail.lotteryDetail?.phase, "active");
-  assert.equal(detail.lotteryDetail?.participantCount, 49);
-  assert.equal(detail.lotteryDetail?.claimedCount, 0);
-  assert.equal(detail.lotteryDetail?.viewerHasClaimed, false);
+  assert.equal(detail.lotteryDetail?.cardCount, 49);
+  assert.equal(detail.lotteryDetail?.claimedCardCount, 0);
+  assert.equal(detail.lotteryDetail?.viewerClaimedCount, 0);
+}
+
+{
+  const legacyState = createInitialAppState();
+  legacyState.users["user-1"].isAuthorized = true;
+  legacyState.users["user-1"].currentTripId = "trip-legacy";
+  legacyState.trips["trip-legacy"] = {
+    id: "trip-legacy",
+    tripName: "旧抓阄车次",
+    departureTime: "4/20 07:30",
+    password: "123456",
+    templateId: "template-49",
+    creatorUserId: "user-1",
+    status: "active",
+    seatCodes: generateSeatCodes("template-49"),
+    seatMap: {},
+    tools: {
+      "seat-draw": null,
+      vote: null,
+      wheel: null,
+      lottery: {
+        type: "lottery",
+        publishedAt: Date.now(),
+        publishedByUserId: "user-1",
+        phase: "active",
+        winnerCount: 1,
+        excludeAdmin: false,
+        participantUserIds: ["user-1"],
+        winnerUserIds: ["user-1"],
+        claims: {}
+      } as unknown as ReturnType<typeof createInitialAppState>["trips"][string]["tools"]["lottery"]
+    },
+    createdAt: Date.now()
+  };
+  legacyState.tripMembers = [
+    {
+      tripId: "trip-legacy",
+      userId: "user-1",
+      role: "admin",
+      joinedAt: Date.now()
+    }
+  ];
+
+  const storage = new MemoryStorageAdapter(legacyState);
+  const service = new TripService(storage);
+  const detail = service.getToolDetailPageData("lottery");
+
+  assert.equal(detail.isStarted, false);
+  assert.equal(detail.lotteryDetail?.cardCount, 0);
+  assert.equal(storage.getState()?.trips["trip-legacy"].tools.lottery, null);
+}
+
+{
+  const legacyState = createInitialAppState();
+  const legacyUser = legacyState.users["user-1"] as unknown as Record<string, unknown>;
+  delete legacyUser.bio;
+  delete legacyUser.livingCity;
+  delete legacyUser.hometown;
+  delete legacyUser.age;
+
+  const storage = new MemoryStorageAdapter(legacyState);
+  const service = new TripService(storage);
+  const profilePage = service.getProfilePageData();
+
+  assert.equal(profilePage.currentUser.bio, "");
+  assert.equal(profilePage.currentUser.livingCity, "");
+  assert.equal(profilePage.currentUser.hometown, "");
+  assert.equal(profilePage.currentUser.age, "");
+}
+
+{
+  const { service } = setupTripWithMembers();
+
+  service.switchActiveUser("user-2");
+  service.updateHomePersona("home-persona-1");
+  const editorData = service.updateProfile({
+    bio: "土生土长本地人，带你打卡海边小岛",
+    livingCity: "广东省深圳市宝安区",
+    hometown: "广东省深圳市",
+    age: "25岁",
+    tagsInput: "师傅A\n师傅B\n热心向导"
+  });
+
+  assert.equal(editorData.bio, "土生土长本地人，带你打卡海边小岛");
+  assert.equal(editorData.livingCity, "广东省深圳市宝安区");
+  assert.deepEqual(editorData.livingRegion, ["广东省", "深圳市", "宝安区"]);
+  assert.equal(editorData.hometown, "广东省深圳市");
+  assert.deepEqual(editorData.hometownRegion, ["广东省", "深圳市"]);
+  assert.equal(editorData.age, "25");
+  assert.deepEqual(editorData.previewTags, ["师傅A", "师傅B", "热心向导"]);
+  assert.equal(editorData.currentPersonaId, "home-persona-1");
+  assert.equal(editorData.currentPersonaImageUrl.length > 0, true);
+
+  const profilePage = service.getProfilePageData();
+  assert.equal(profilePage.profileSummary, "土生土长本地人，带你打卡海边小岛");
+  assert.equal(profilePage.livingLocationDisplay.primary, "宝安区");
+  assert.equal(profilePage.livingLocationDisplay.secondary, "深圳市");
+  assert.equal(profilePage.hometownLocationDisplay.primary, "深圳市");
+  assert.equal(profilePage.hometownLocationDisplay.secondary, "广东省");
+
+  service.switchActiveUser("user-1");
+  const homeData = service.bootstrapApp().currentTrip;
+  const member = homeData?.members.find((entry) => entry.userId === "user-2");
+
+  assert.ok(member);
+  assert.equal(member?.bio, "土生土长本地人，带你打卡海边小岛");
+  assert.equal(member?.livingCity, "广东省深圳市宝安区");
+  assert.equal(member?.livingLocationDisplay.primary, "宝安区");
+  assert.equal(member?.livingLocationDisplay.secondary, "深圳市");
+  assert.equal(member?.hometown, "广东省深圳市");
+  assert.equal(member?.hometownLocationDisplay.primary, "深圳市");
+  assert.equal(member?.hometownLocationDisplay.secondary, "广东省");
+  assert.equal(member?.age, "25");
+  assert.equal(member?.homePersonaImageUrl.length ? true : false, true);
+  assert.deepEqual(member?.tags, ["师傅A", "师傅B", "热心向导"]);
+}
+
+{
+  const living = formatLivingLocationDisplay("广东省深圳市宝安区");
+  const hometown = formatHometownLocationDisplay("广东省深圳市");
+
+  assert.equal(living.primary, "宝安区");
+  assert.equal(living.secondary, "深圳市");
+  assert.equal(hometown.primary, "深圳市");
+  assert.equal(hometown.secondary, "广东省");
 }
 
 console.log("trip-service tests passed");

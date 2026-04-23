@@ -10,11 +10,11 @@ import type {
 } from "../../shared/types";
 import { showErrorToast, showSuccessToast } from "../../utils/feedback";
 
-type SheetMode = "claim" | "switch" | "self" | "detail";
-
-interface HomePersonaOptionData extends HomePersonaOption {
-  className: string;
-}
+type SheetMode =
+  | "empty-confirm"
+  | "self-detail"
+  | "member-detail"
+  | "admin-member-detail";
 
 interface HomePageData {
   showAuthGate: boolean;
@@ -36,7 +36,7 @@ interface HomePageData {
   viewerSeatText: string;
   currentPersonaId: string;
   currentPersonaImageUrl: string;
-  personaOptions: HomePersonaOptionData[];
+  personaOptions: HomePersonaOption[];
   showPersonaSheet: boolean;
   personaSheetActive: boolean;
   personaDraftId: string;
@@ -45,9 +45,6 @@ interface HomePageData {
   sheetMode: SheetMode;
   selectedSeat: SeatCellView | null;
   selectedMember: MemberView | null;
-  claimNickname: string;
-  claimAvatarUrl: string;
-  sheetCanAdminRelease: boolean;
 }
 
 const initialData: HomePageData = {
@@ -71,20 +68,16 @@ const initialData: HomePageData = {
   currentPersonaId: "",
   currentPersonaImageUrl: "",
   personaOptions: HOME_PERSONA_OPTIONS.map((option) => ({
-    ...option,
-    className: "persona-option"
+    ...option
   })),
   showPersonaSheet: false,
   personaSheetActive: false,
   personaDraftId: "",
   activeTab: "seats",
   sheetVisible: false,
-  sheetMode: "detail",
+  sheetMode: "member-detail",
   selectedSeat: null,
-  selectedMember: null,
-  claimNickname: "",
-  claimAvatarUrl: "",
-  sheetCanAdminRelease: false
+  selectedMember: null
 };
 
 function resolveHomePersonaImageUrl(user: User): string {
@@ -149,22 +142,13 @@ Page({
       viewerSeatText: result.currentTrip?.tripMeta.viewerSeatCode ?? "未入座",
       currentPersonaId,
       currentPersonaImageUrl,
-      personaOptions: HOME_PERSONA_OPTIONS.map((option) => ({
-        ...option,
-        className:
-          option.id === (this.data.showPersonaSheet ? this.data.personaDraftId : currentPersonaId)
-            ? "persona-option is-active"
-            : "persona-option"
-      })),
+      personaOptions: HOME_PERSONA_OPTIONS.map((option) => ({ ...option })),
       showPersonaSheet: false,
       personaSheetActive: false,
       personaDraftId: currentPersonaId,
       sheetVisible: false,
       selectedSeat: null,
-      selectedMember: null,
-      claimNickname: result.currentUser.nickname,
-      claimAvatarUrl: result.currentUser.avatarUrl,
-      sheetCanAdminRelease: false
+      selectedMember: null
     });
   },
 
@@ -208,11 +192,7 @@ Page({
     this.clearPersonaSheetCloseTimer();
     this.setData({
       showPersonaSheet: true,
-      personaDraftId,
-      personaOptions: HOME_PERSONA_OPTIONS.map((option) => ({
-        ...option,
-        className: option.id === personaDraftId ? "persona-option is-active" : "persona-option"
-      }))
+      personaDraftId
     });
     wx.nextTick(() => {
       this.setData({
@@ -222,13 +202,9 @@ Page({
   },
 
   handlePersonaSelect(event: WechatMiniprogram.CustomEvent) {
-    const personaId = String(event.currentTarget.dataset.personaId || "");
+    const personaId = String(event.detail.personaId || "");
     this.setData({
-      personaDraftId: personaId,
-      personaOptions: HOME_PERSONA_OPTIONS.map((option) => ({
-        ...option,
-        className: option.id === personaId ? "persona-option is-active" : "persona-option"
-      }))
+      personaDraftId: personaId
     });
   },
 
@@ -253,12 +229,7 @@ Page({
     this.personaSheetCloseTimer = setTimeout(() => {
       this.setData({
         showPersonaSheet: false,
-        personaDraftId: this.data.currentPersonaId,
-        personaOptions: HOME_PERSONA_OPTIONS.map((option) => ({
-          ...option,
-          className:
-            option.id === this.data.currentPersonaId ? "persona-option is-active" : "persona-option"
-        }))
+        personaDraftId: this.data.currentPersonaId
       });
     }, 220) as unknown as number;
   },
@@ -273,6 +244,38 @@ Page({
 
   noop() {},
 
+  getSelfMember(): MemberView | null {
+    return this.data.currentTrip?.members.find((member) => member.isSelf) ?? null;
+  },
+
+  findSeatByCode(seatCode: string | null): SeatCellView | null {
+    if (!seatCode) {
+      return null;
+    }
+
+    const rows = this.data.currentTrip?.seatRows ?? [];
+    for (const row of rows) {
+      for (const seat of row.slots) {
+        if (seat?.code === seatCode) {
+          return seat;
+        }
+      }
+    }
+    return null;
+  },
+
+  resolveMemberSheetMode(member: MemberView | null): SheetMode {
+    if (!member) {
+      return "member-detail";
+    }
+    if (member.isSelf) {
+      return "self-detail";
+    }
+    return this.data.currentTrip?.tripMeta.viewerRole === "admin"
+      ? "admin-member-detail"
+      : "member-detail";
+  },
+
   handleSeatTap(event: WechatMiniprogram.CustomEvent<{ seat: SeatCellView }>) {
     const seat = event.detail.seat;
     if (!seat) {
@@ -282,39 +285,31 @@ Page({
     if (seat.isEmpty) {
       this.setData({
         sheetVisible: true,
-        sheetMode: this.data.currentTrip?.tripMeta.viewerSeatCode ? "switch" : "claim",
+        sheetMode: "empty-confirm",
         selectedSeat: seat,
-        selectedMember: null,
-        claimNickname: this.data.currentUser?.nickname ?? "",
-        claimAvatarUrl: this.data.currentUser?.avatarUrl ?? "",
-        sheetCanAdminRelease: false
-      });
-      return;
-    }
-
-    if (seat.isMine) {
-      this.setData({
-        sheetVisible: true,
-        sheetMode: "self",
-        selectedSeat: seat,
-        selectedMember: null,
-        sheetCanAdminRelease: false
+        selectedMember: null
       });
       return;
     }
 
     const targetMember =
       this.data.currentTrip?.members.find((member) => member.userId === seat.occupant?.userId) ?? null;
+
+    if (seat.isMine) {
+      this.setData({
+        sheetVisible: true,
+        sheetMode: "self-detail",
+        selectedSeat: seat,
+        selectedMember: targetMember ?? this.getSelfMember()
+      });
+      return;
+    }
+
     this.setData({
       sheetVisible: true,
-      sheetMode: "detail",
+      sheetMode: this.resolveMemberSheetMode(targetMember),
       selectedSeat: seat,
-      selectedMember: targetMember,
-      sheetCanAdminRelease: Boolean(
-        this.data.currentTrip?.tripMeta.viewerRole === "admin" &&
-          targetMember?.seatCode &&
-          !targetMember?.isSelf
-      )
+      selectedMember: targetMember
     });
   },
 
@@ -322,14 +317,9 @@ Page({
     const member = event.detail.member;
     this.setData({
       sheetVisible: true,
-      sheetMode: "detail",
+      sheetMode: this.resolveMemberSheetMode(member),
       selectedMember: member,
-      selectedSeat: null,
-      sheetCanAdminRelease: Boolean(
-        this.data.currentTrip?.tripMeta.viewerRole === "admin" &&
-          member?.seatCode &&
-          !member?.isSelf
-      )
+      selectedSeat: this.findSeatByCode(member?.seatCode ?? null)
     });
   },
 
@@ -337,8 +327,7 @@ Page({
     this.setData({
       sheetVisible: false,
       selectedSeat: null,
-      selectedMember: null,
-      sheetCanAdminRelease: false
+      selectedMember: null
     });
   },
 
@@ -348,23 +337,11 @@ Page({
     }
 
     try {
-      const result = tripService.claimSeat(this.data.selectedSeat.code);
+      const result = this.data.currentTrip?.tripMeta.viewerSeatCode
+        ? tripService.switchSeat(this.data.selectedSeat.code)
+        : tripService.claimSeat(this.data.selectedSeat.code);
       this.applyBootstrapResult(result);
       showSuccessToast("入座成功");
-    } catch (error) {
-      showErrorToast(error);
-    }
-  },
-
-  handleSwitchConfirm() {
-    if (!this.data.selectedSeat) {
-      return;
-    }
-
-    try {
-      const result = tripService.switchSeat(this.data.selectedSeat.code);
-      this.applyBootstrapResult(result);
-      showSuccessToast("换座成功");
     } catch (error) {
       showErrorToast(error);
     }

@@ -4,7 +4,7 @@ exports.TOOL_META = exports.TOOL_TYPES = exports.DEMO_SWITCHABLE_USER_IDS = expo
 exports.createEmptyTripTools = createEmptyTripTools;
 exports.createInitialAppState = createInitialAppState;
 exports.createSeededDemoAppState = createSeededDemoAppState;
-exports.APP_STATE_VERSION = 7;
+exports.APP_STATE_VERSION = 9;
 exports.APP_STATE_STORAGE_KEY = "bus-seat-buddy-state";
 exports.DEFAULT_TRIP_NAME = "未命名车次";
 exports.DEFAULT_DEPARTURE_TIME = "待定";
@@ -42,6 +42,10 @@ exports.DEMO_USERS = [
         nickname: "小雨",
         avatarUrl: exports.DEFAULT_AVATAR_URL,
         homePersonaAssetId: null,
+        bio: "",
+        livingCity: "",
+        hometown: "",
+        age: "",
         tags: ["摄影", "靠窗党"],
         currentTripId: null,
         isAuthorized: false
@@ -51,6 +55,10 @@ exports.DEMO_USERS = [
         nickname: "阿山",
         avatarUrl: exports.DEFAULT_AVATAR_URL,
         homePersonaAssetId: null,
+        bio: "",
+        livingCity: "",
+        hometown: "",
+        age: "",
         tags: ["徒步", "社牛"],
         currentTripId: null,
         isAuthorized: false
@@ -60,6 +68,10 @@ exports.DEMO_USERS = [
         nickname: "Miya",
         avatarUrl: exports.DEFAULT_AVATAR_URL,
         homePersonaAssetId: null,
+        bio: "",
+        livingCity: "",
+        hometown: "",
+        age: "",
         tags: ["轻装", "周末玩家"],
         currentTripId: null,
         isAuthorized: false
@@ -69,6 +81,10 @@ exports.DEMO_USERS = [
         nickname: "老周",
         avatarUrl: exports.DEFAULT_AVATAR_URL,
         homePersonaAssetId: null,
+        bio: "",
+        livingCity: "",
+        hometown: "",
+        age: "",
         tags: ["老司机"],
         currentTripId: null,
         isAuthorized: false
@@ -152,6 +168,10 @@ function buildSeedPassengerUsers(tripId) {
             nickname: `成员${String(userNumber).padStart(2, "0")}`,
             avatarUrl: exports.DEFAULT_AVATAR_URL,
             homePersonaAssetId: null,
+            bio: "",
+            livingCity: "",
+            hometown: "",
+            age: "",
             tags: [`乘客${String(userNumber).padStart(2, "0")}`],
             currentTripId: tripId,
             isAuthorized: false
@@ -217,6 +237,7 @@ function buildSeedTripTools(occupiedUsers) {
             topic: "今晚晚餐吃什么",
             excludeAdmin: false,
             selectionMode: "multiple",
+            maxSelections: 4,
             options: [
                 { id: "seed-vote-option-1", label: "火锅" },
                 { id: "seed-vote-option-2", label: "烧烤" },
@@ -243,11 +264,18 @@ function buildSeedTripTools(occupiedUsers) {
             publishedAt: SEED_CREATED_AT,
             publishedByUserId: "user-1",
             phase: "active",
-            winnerCount: 3,
-            excludeAdmin: false,
-            participantUserIds,
-            winnerUserIds: [],
-            claims: {}
+            answers: ["去前排", "唱首歌", "请大家喝饮料"],
+            cards: ["请大家喝饮料", "去前排", "唱首歌"].map((answer, index) => ({
+                id: `seed-lottery-card-${index + 1}`,
+                order: index + 1,
+                answer,
+                claimedByUserId: null,
+                claimedAt: null
+            })),
+            allowAssignedUser: false,
+            assignedUserId: "user-1",
+            drawLimitPerUser: 1,
+            claimsByUserId: {}
         }
     };
 }

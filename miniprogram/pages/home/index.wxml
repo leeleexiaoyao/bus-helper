@@ -1,3 +1,4 @@
+<page-meta page-style="{{sheetVisible || showPersonaSheet ? 'height: 100vh; overflow: hidden;' : ''}}" />
 <view class="page-shell home-page">
   <view class="home-page-bg"></view>
   <page-navbar title="{{navTitle}}" progress="{{navProgress}}" theme="light" leftPadding="{{12}}" titleFontSize="{{18}}" />
@@ -68,46 +69,23 @@
   </block>
 </view>
 
-<view wx:if="{{showPersonaSheet}}" class="persona-sheet-layer {{personaSheetActive ? 'is-active' : ''}}">
-  <view class="persona-sheet-mask" bindtap="handlePersonaCancel"></view>
-  <view class="persona-sheet-panel" catchtap="noop">
-    <view class="persona-sheet-title">选择形象</view>
-    <view class="persona-grid">
-      <view
-        wx:for="{{personaOptions}}"
-        wx:key="id"
-        wx:for-item="option"
-        class="{{option.className}}"
-        data-persona-id="{{option.id}}"
-        bindtap="handlePersonaSelect"
-      >
-        <image class="persona-option-image" src="{{option.imageUrl}}" mode="aspectFill" />
-      </view>
-    </view>
-    <view class="persona-sheet-actions">
-      <button class="persona-sheet-btn persona-sheet-btn--cancel" bindtap="handlePersonaCancel">取消</button>
-      <button
-        class="persona-sheet-btn persona-sheet-btn--confirm {{personaDraftId ? '' : 'is-disabled'}}"
-        bindtap="handlePersonaConfirm"
-        disabled="{{!personaDraftId}}"
-      >
-        确定
-      </button>
-    </view>
-  </view>
-</view>
+<persona-sheet
+  visible="{{showPersonaSheet}}"
+  active="{{personaSheetActive}}"
+  options="{{personaOptions}}"
+  selectedId="{{personaDraftId}}"
+  bindselect="handlePersonaSelect"
+  bindcancel="handlePersonaCancel"
+  bindconfirm="handlePersonaConfirm"
+/>
 
 <seat-sheet
   visible="{{sheetVisible}}"
   mode="{{sheetMode}}"
   seat="{{selectedSeat}}"
   member="{{selectedMember}}"
-  claimNickname="{{claimNickname}}"
-  claimAvatarUrl="{{claimAvatarUrl}}"
-  canAdminRelease="{{sheetCanAdminRelease}}"
   bindclose="handleSheetClose"
   bindconfirmclaim="handleClaimConfirm"
-  bindconfirmswitch="handleSwitchConfirm"
   bindreleasemine="handleReleaseMine"
   bindadminrelease="handleAdminRelease"
 />

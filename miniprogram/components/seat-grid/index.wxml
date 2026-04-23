@@ -13,7 +13,7 @@
           >
             <block wx:if="{{slot.isEmpty}}">
               <view class="seat-avatar-shell seat-avatar-shell--empty"></view>
-              <view class="seat-empty-placeholder"></view>
+              <view class="seat-name seat-empty-text">空位</view>
               <view class="seat-code seat-code--empty">{{slot.label}}</view>
             </block>
             <block wx:else>

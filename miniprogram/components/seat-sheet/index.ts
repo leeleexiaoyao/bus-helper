@@ -1,4 +1,4 @@
-import { getInitial } from "../../utils/format";
+import type { LocationDisplay } from "../../shared/types";
 
 Component({
   properties: {
@@ -8,66 +8,86 @@ Component({
     },
     mode: {
       type: String,
-      value: "detail"
+      value: "member-detail"
     },
     seat: {
       type: Object
     },
     member: {
       type: Object
-    },
-    claimNickname: {
-      type: String,
-      value: ""
-    },
-    claimAvatarUrl: {
-      type: String,
-      value: ""
-    },
-    canAdminRelease: {
-      type: Boolean,
-      value: false
     }
   },
   data: {
-    localInitial: "座",
-    isClaimMode: false,
-    isSwitchMode: false,
-    isSelfMode: false,
-    isDetailMode: true,
+    isEmptyConfirmMode: false,
+    isSelfDetailMode: false,
+    isMemberDetailMode: false,
+    isAdminMemberDetailMode: false,
+    showDetailCard: false,
     detailSeatLabel: "未入座",
-    showAdminBadge: false,
-    showAdminReleaseButton: false
+    detailBioText: "暂无签名",
+    detailLivingLocationDisplay: {
+      primary: "未填写",
+      secondary: "",
+      full: "",
+      isPlaceholder: true
+    } as LocationDisplay,
+    detailHometownLocationDisplay: {
+      primary: "未填写",
+      secondary: "",
+      full: "",
+      isPlaceholder: true
+    } as LocationDisplay,
+    detailAgeText: "未填写",
+    detailPersonaImageUrl: "",
+    showAdminBadge: false
   },
   observers: {
-    "visible, mode, claimNickname, member, canAdminRelease": function (
+    "visible, mode, member": function (
       visible: boolean,
       mode: string,
-      claimNickname: string,
       member: {
         seatLabel?: string;
         isAdmin?: boolean;
-        seatCode?: string | null;
-      } | null,
-      canAdminRelease: boolean
+        bio?: string;
+        livingLocationDisplay?: LocationDisplay;
+        hometownLocationDisplay?: LocationDisplay;
+        age?: string;
+        homePersonaImageUrl?: string;
+      } | null
     ) {
       if (!visible) {
         return;
       }
       this.setData({
-        localInitial: getInitial(claimNickname || "座"),
-        isClaimMode: mode === "claim",
-        isSwitchMode: mode === "switch",
-        isSelfMode: mode === "self",
-        isDetailMode: mode === "detail",
+        isEmptyConfirmMode: mode === "empty-confirm",
+        isSelfDetailMode: mode === "self-detail",
+        isMemberDetailMode: mode === "member-detail",
+        isAdminMemberDetailMode: mode === "admin-member-detail",
+        showDetailCard:
+          mode === "self-detail" || mode === "member-detail" || mode === "admin-member-detail",
         detailSeatLabel: member?.seatLabel ?? "未入座",
-        showAdminBadge: Boolean(member?.isAdmin),
-        showAdminReleaseButton: Boolean(canAdminRelease && member?.seatCode)
+        detailBioText: member?.bio?.trim() || "暂无签名",
+        detailLivingLocationDisplay: member?.livingLocationDisplay ?? {
+          primary: "未填写",
+          secondary: "",
+          full: "",
+          isPlaceholder: true
+        },
+        detailHometownLocationDisplay: member?.hometownLocationDisplay ?? {
+          primary: "未填写",
+          secondary: "",
+          full: "",
+          isPlaceholder: true
+        },
+        detailAgeText: member?.age?.trim() || "未填写",
+        detailPersonaImageUrl: member?.homePersonaImageUrl ?? "",
+        showAdminBadge: Boolean(member?.isAdmin)
       });
     }
   },
   methods: {
     stopPropagation() {},
+    stopTouchMove() {},
     handleMaskTap() {
       this.triggerEvent("close");
     },

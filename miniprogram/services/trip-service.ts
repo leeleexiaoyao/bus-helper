@@ -25,8 +25,11 @@ import type {
   CreateTripInput,
   CurrentTripViewModel,
   DemoUserOption,
+  LotteryCard,
+  LotteryCardView,
+  LotteryClaimRecord,
+  LotteryClaimRecordView,
   LotteryDetailView,
-  LotteryParticipantView,
   LotteryPublishInput,
   MemberRole,
   MemberView,
@@ -51,6 +54,7 @@ import type {
   VoteChoice,
   VoteDetailView,
   VoteOption,
+  VoteOptionView,
   VotePublishInput,
   VoteSelectionMode,
   VoteSubmitInput,
@@ -63,8 +67,11 @@ import type {
 import {
   displayDepartureTime,
   displayTripName,
+  formatHometownLocationDisplay,
+  formatLivingLocationDisplay,
   getInitial,
-  parseTags
+  parseTags,
+  regionValueToArray
 } from "../utils/format";
 import { createId } from "../utils/id";
 import { AppStateRepository } from "../repositories/app-state-repository";
@@ -196,6 +203,29 @@ function assertVoteOptions(options: string[]): string[] {
   return normalized;
 }
 
+function assertVoteMaxSelections(
+  maxSelections: number | undefined,
+  selectionMode: VoteSelectionMode,
+  optionCount: number
+): number {
+  if (selectionMode === "single") {
+    return 1;
+  }
+
+  const normalized = assertPositiveCount(
+    maxSelections ?? optionCount,
+    "INVALID_VOTE_MAX_SELECTIONS",
+    "请填写正确的最多可选项数。"
+  );
+  if (normalized > optionCount) {
+    throw new BusinessError(
+      "VOTE_MAX_SELECTIONS_TOO_LARGE",
+      "最多可选项数不能超过投票选项数。"
+    );
+  }
+  return normalized;
+}
+
 function assertWheelItems(items: string[]): string[] {
   const normalized = items
     .map((item) => item.trim())
@@ -210,6 +240,22 @@ function assertWheelItems(items: string[]): string[] {
   }
 
   return normalized;
+}
+
+function assertLotteryAnswers(answers: string[]): string[] {
+  const normalized = answers
+    .map((answer) => answer.trim())
+    .filter(Boolean);
+
+  if (!normalized.length) {
+    throw new BusinessError("INVALID_LOTTERY_ANSWERS", "请至少填写 1 个答案。");
+  }
+
+  return normalized;
+}
+
+function assertLotteryDrawLimit(count: number): number {
+  return assertPositiveCount(count, "INVALID_LOTTERY_DRAW_LIMIT", "请填写正确的抽取次数。");
 }
 
 function isLegacyGeneratedWheelItem(item: string): boolean {
@@ -242,6 +288,42 @@ function getTemplateLabel(templateId: string): string {
   return "57 座";
 }
 
+function resolveHomePersonaImageUrl(homePersonaAssetId: string | null): string {
+  if (!homePersonaAssetId) {
+    return "";
+  }
+
+  return HOME_PERSONA_OPTIONS.find((option) => option.id === homePersonaAssetId)?.imageUrl ?? "";
+}
+
+function normalizeProfileText(value: string): string {
+  return value.trim();
+}
+
+function normalizeProfileBio(value: string): string {
+  const normalized = value.trim();
+  if (normalized.length > 40) {
+    throw new BusinessError("PROFILE_BIO_TOO_LONG", "个人签名最多输入 40 个字。");
+  }
+  return normalized;
+}
+
+function normalizeProfileTags(tagsInput: string): string[] {
+  const tags = parseTags(tagsInput);
+  if (tags.length > 4) {
+    throw new BusinessError("PROFILE_TAGS_LIMIT_EXCEEDED", "最多填写 4 个标签。");
+  }
+  const oversizedTag = tags.find((tag) => tag.length > 6);
+  if (oversizedTag) {
+    throw new BusinessError("PROFILE_TAG_TOO_LONG", "每个标签最多输入 6 个字。");
+  }
+  return tags;
+}
+
+function normalizeAge(value: string): string {
+  return value.replace(/\D+/g, "").slice(0, 3);
+}
+
 function uniqueByUserId(entries: ToolMemberSnapshot[]): ToolMemberSnapshot[] {
   const map = new Map<string, ToolMemberSnapshot>();
   entries.forEach((entry) => {
@@ -261,6 +343,16 @@ function shuffleArray<T>(items: T[]): T[] {
 
 function pickRandomItems<T>(items: T[], count: number): T[] {
   return shuffleArray(items).slice(0, count);
+}
+
+function buildLotteryCards(answers: string[]): LotteryCard[] {
+  return shuffleArray(answers).map((answer, index) => ({
+    id: `${createId("lottery-card")}-${index + 1}`,
+    order: index + 1,
+    answer,
+    claimedByUserId: null,
+    claimedAt: null
+  }));
 }
 
 function buildVoteOptions(optionLabels: string[]): VoteOption[] {
@@ -307,12 +399,15 @@ function getToolPhaseLabel(toolState: PublishedToolState | null): string {
     return toolState.phase === "result" ? "已结束" : "待开始";
   }
   if (toolState.type === "vote") {
-    return toolState.phase === "active" ? "投票中" : "待发布";
+    if (toolState.phase === "active") {
+      return "投票中";
+    }
+    return toolState.phase === "ended" ? "已结束" : "待发布";
   }
   if (toolState.type === "wheel") {
     return toolState.phase === "result" ? "已落点" : "待转动";
   }
-  return toolState.phase === "active" ? "抓阄中" : "待发布";
+  return toolState.cards.some((card) => !card.claimedByUserId) ? "进行中" : "已抽完";
 }
 
 function getVoteChoiceLabel(choice: VoteChoice | null): string {
@@ -326,6 +421,13 @@ function getVoteChoiceLabel(choice: VoteChoice | null): string {
     return "弃权";
   }
   return "未投票";
+}
+
+function compareVoteResultOptions(left: VoteOptionView, right: VoteOptionView): number {
+  if (right.supportCount !== left.supportCount) {
+    return right.supportCount - left.supportCount;
+  }
+  return left.label.localeCompare(right.label, "zh-Hans-CN");
 }
 
 type TripContext = {
@@ -631,6 +733,11 @@ export class TripService {
     const topic = assertVoteTopic(input.topic);
     const selectionMode = assertVoteSelectionMode(input.selectionMode);
     const optionLabels = assertVoteOptions(input.options);
+    const maxSelections = assertVoteMaxSelections(
+      input.maxSelections,
+      selectionMode,
+      optionLabels.length
+    );
     const excludeAdmin = Boolean(input.excludeAdmin);
     const participantUserIds = this.listTripParticipantUserIds(context.tripId, excludeAdmin);
 
@@ -646,6 +753,7 @@ export class TripService {
         phase: "active",
         topic,
         selectionMode,
+        maxSelections,
         options: buildVoteOptions(optionLabels),
         excludeAdmin,
         participantUserIds,
@@ -662,6 +770,11 @@ export class TripService {
     const topic = assertVoteTopic(input.topic);
     const selectionMode = assertVoteSelectionMode(input.selectionMode);
     const optionLabels = assertVoteOptions(input.options);
+    const maxSelections = assertVoteMaxSelections(
+      input.maxSelections,
+      selectionMode,
+      optionLabels.length
+    );
     const excludeAdmin = Boolean(input.excludeAdmin);
     const participantUserIds = this.listTripParticipantUserIds(context.tripId, excludeAdmin);
 
@@ -680,7 +793,9 @@ export class TripService {
           accumulator[userId] = {
             ...submission,
             optionIds:
-              selectionMode === "single" ? remappedOptionIds.slice(0, 1) : remappedOptionIds
+              selectionMode === "single"
+                ? remappedOptionIds.slice(0, 1)
+                : remappedOptionIds.slice(0, maxSelections)
           };
           return accumulator;
         },
@@ -691,6 +806,7 @@ export class TripService {
       nextState.publishedByUserId = context.currentUser.id;
       nextState.topic = topic;
       nextState.selectionMode = selectionMode;
+      nextState.maxSelections = maxSelections;
       nextState.excludeAdmin = excludeAdmin;
       nextState.options = nextOptions;
       nextState.participantUserIds = participantUserIds;
@@ -709,8 +825,11 @@ export class TripService {
     const toolState = this.requireStartedTool(context.trip, "vote") as PublishedVoteToolState;
     const existingSubmission = toolState.submissions[context.currentUser.id] ?? null;
 
-    if (toolState.phase !== "active") {
+    if (toolState.phase === "draft") {
       throw new BusinessError("VOTE_NOT_STARTED", "管理员还没有发布本轮投票。");
+    }
+    if (toolState.phase === "ended") {
+      throw new BusinessError("VOTE_ENDED", "本轮投票已结束。");
     }
     if (!toolState.participantUserIds.includes(context.currentUser.id)) {
       throw new BusinessError("VOTE_NOT_ALLOWED", "你不在本轮投票名单中。");
@@ -745,12 +864,18 @@ export class TripService {
       safeChoice === "approve" &&
       existingSubmission?.choice === "approve"
     ) {
-      if (existingOptionIds.length >= toolState.options.length) {
+      if (existingOptionIds.length >= toolState.maxSelections) {
         throw new BusinessError("VOTE_ALREADY_SUBMITTED", "可投选项都已经投完了。");
       }
       if (mergedOptionIds.length === existingOptionIds.length) {
         throw new BusinessError("VOTE_OPTION_REQUIRED", "请先选择新的投票选项。");
       }
+    }
+    if (toolState.selectionMode === "multiple" && mergedOptionIds.length > toolState.maxSelections) {
+      throw new BusinessError(
+        "VOTE_SELECTION_LIMIT_EXCEEDED",
+        `当前投票最多可选择 ${toolState.maxSelections} 项。`
+      );
     }
 
     this.tripRepository.updateTrip(context.tripId, (trip) => {
@@ -758,7 +883,7 @@ export class TripService {
       nextState.submissions[context.currentUser.id] = {
         choice: safeChoice,
         optionIds:
-          toolState.selectionMode === "multiple" && safeChoice === "approve"
+          nextState.selectionMode === "multiple" && safeChoice === "approve"
             ? mergedOptionIds
             : normalizedOptionIds,
         submittedAt: Date.now()
@@ -782,6 +907,24 @@ export class TripService {
       nextState.phase = "active";
       nextState.participantUserIds = participantUserIds;
       nextState.submissions = {};
+    });
+
+    return this.getToolDetailPageData("vote");
+  }
+
+  endVote(): ToolDetailViewModel {
+    const context = this.requireAdminTripContext();
+    const toolState = this.requireStartedTool(context.trip, "vote") as PublishedVoteToolState;
+    if (toolState.phase === "ended") {
+      throw new BusinessError("VOTE_ALREADY_ENDED", "本轮投票已经结束。");
+    }
+    if (toolState.phase !== "active") {
+      throw new BusinessError("VOTE_NOT_STARTED", "管理员还没有发布本轮投票。");
+    }
+
+    this.tripRepository.updateTrip(context.tripId, (trip) => {
+      const nextState = this.requireStartedTool(trip, "vote") as PublishedVoteToolState;
+      nextState.phase = "ended";
     });
 
     return this.getToolDetailPageData("vote");
@@ -892,33 +1035,22 @@ export class TripService {
     if (this.getPublishedToolState(context.trip, "lottery")) {
       throw new BusinessError("TOOL_ALREADY_STARTED", "玩法已创建，不能再次修改，请使用重置。");
     }
-    const winnerCount = assertPositiveCount(
-      input.winnerCount,
-      "INVALID_LOTTERY_COUNT",
-      "请填写正确的抽中人数。"
-    );
-    const excludeAdmin = Boolean(input.excludeAdmin);
-    const participantUserIds = this.listTripParticipantUserIds(context.tripId, excludeAdmin);
+    const answers = assertLotteryAnswers(input.answers);
+    const drawLimitPerUser = assertLotteryDrawLimit(input.drawLimitPerUser);
+    const permissionConfig = this.resolveLotteryPermissionConfig(context.tripId, context.currentUser.id, input);
 
-    if (!participantUserIds.length) {
-      throw new BusinessError("LOTTERY_NO_PARTICIPANTS", "当前没有可参与抓阄的成员。");
-    }
-    if (winnerCount > participantUserIds.length) {
-      throw new BusinessError("LOTTERY_COUNT_TOO_LARGE", "抽中人数不能超过当前成员数。");
-    }
-
-    const winnerUserIds = pickRandomItems(participantUserIds, winnerCount);
     this.tripRepository.updateTrip(context.tripId, (trip) => {
       trip.tools.lottery = {
         type: "lottery",
         publishedAt: Date.now(),
         publishedByUserId: context.currentUser.id,
         phase: "active",
-        winnerCount,
-        excludeAdmin,
-        participantUserIds,
-        winnerUserIds,
-        claims: {}
+        answers,
+        cards: buildLotteryCards(answers),
+        allowAssignedUser: permissionConfig.allowAssignedUser,
+        assignedUserId: permissionConfig.assignedUserId,
+        drawLimitPerUser,
+        claimsByUserId: {}
       };
     });
 
@@ -927,77 +1059,76 @@ export class TripService {
 
   recreateLotteryTool(input: LotteryPublishInput): ToolDetailViewModel {
     const context = this.requireAdminTripContext();
-    const toolState = this.requireStartedTool(context.trip, "lottery") as PublishedLotteryToolState;
-    const winnerCount = assertPositiveCount(
-      input.winnerCount,
-      "INVALID_LOTTERY_COUNT",
-      "请填写正确的抽中人数。"
-    );
-    const excludeAdmin = Boolean(input.excludeAdmin);
-    const participantUserIds = this.listTripParticipantUserIds(context.tripId, excludeAdmin);
-
-    if (!participantUserIds.length) {
-      throw new BusinessError("LOTTERY_NO_PARTICIPANTS", "当前没有可参与抓阄的成员。");
-    }
-    if (winnerCount > participantUserIds.length) {
-      throw new BusinessError("LOTTERY_COUNT_TOO_LARGE", "抽中人数不能超过当前成员数。");
-    }
-
-    const previousWinnerUserIds = toolState.winnerUserIds.filter((userId) => participantUserIds.includes(userId));
-    const missingWinnerCount = Math.max(0, winnerCount - previousWinnerUserIds.length);
-    const candidateUserIds = participantUserIds.filter((userId) => !previousWinnerUserIds.includes(userId));
-    const winnerUserIds = [
-      ...previousWinnerUserIds,
-      ...pickRandomItems(candidateUserIds, missingWinnerCount)
-    ].slice(0, winnerCount);
+    this.requireStartedTool(context.trip, "lottery");
+    const answers = assertLotteryAnswers(input.answers);
+    const drawLimitPerUser = assertLotteryDrawLimit(input.drawLimitPerUser);
+    const permissionConfig = this.resolveLotteryPermissionConfig(context.tripId, context.currentUser.id, input);
 
     this.tripRepository.updateTrip(context.tripId, (trip) => {
       const nextState = this.requireStartedTool(trip, "lottery") as PublishedLotteryToolState;
-      const nextClaims = Object.entries(nextState.claims).reduce<PublishedLotteryToolState["claims"]>(
-        (accumulator, [userId, claim]) => {
-          if (participantUserIds.includes(userId)) {
-            accumulator[userId] = {
-              ...claim,
-              isWinner: winnerUserIds.includes(userId)
-            };
-          }
-          return accumulator;
-        },
-        {}
-      );
-
       nextState.publishedAt = Date.now();
       nextState.publishedByUserId = context.currentUser.id;
-      nextState.excludeAdmin = excludeAdmin;
-      nextState.winnerCount = winnerCount;
-      nextState.participantUserIds = participantUserIds;
-      nextState.winnerUserIds = winnerUserIds;
-      nextState.claims = nextClaims;
+      nextState.phase = "active";
+      nextState.answers = answers;
+      nextState.cards = buildLotteryCards(answers);
+      nextState.allowAssignedUser = permissionConfig.allowAssignedUser;
+      nextState.assignedUserId = permissionConfig.assignedUserId;
+      nextState.drawLimitPerUser = drawLimitPerUser;
+      nextState.claimsByUserId = {};
     });
 
     return this.getToolDetailPageData("lottery");
   }
 
-  claimLottery(): ToolDetailViewModel {
+  claimLottery(cardId: string): ToolDetailViewModel {
     const context = this.requireTripContext();
     const toolState = this.requireStartedTool(context.trip, "lottery") as PublishedLotteryToolState;
 
     if (toolState.phase !== "active") {
       throw new BusinessError("LOTTERY_NOT_STARTED", "管理员还没有发布本轮抓阄。");
     }
-    if (!toolState.participantUserIds.includes(context.currentUser.id)) {
-      throw new BusinessError("LOTTERY_NOT_ALLOWED", "你不在本轮抓阄名单中。");
+    this.assertViewerCanClaimLottery(toolState, context.currentUser.id);
+
+    const viewerClaims = toolState.claimsByUserId[context.currentUser.id] ?? [];
+    if (viewerClaims.length >= toolState.drawLimitPerUser) {
+      throw new BusinessError("LOTTERY_DRAW_LIMIT_REACHED", "你的抽取次数已用完。");
     }
-    if (toolState.claims[context.currentUser.id]) {
-      throw new BusinessError("LOTTERY_ALREADY_CLAIMED", "你本轮已经抓过阄了。");
+    if (!toolState.cards.some((card) => !card.claimedByUserId)) {
+      throw new BusinessError("LOTTERY_NO_CARDS_LEFT", "所有卡片都已被抽取。");
+    }
+
+    const targetCard = toolState.cards.find((card) => card.id === cardId);
+    if (!targetCard) {
+      throw new BusinessError("LOTTERY_CARD_NOT_FOUND", "未找到对应卡片。");
+    }
+    if (targetCard.claimedByUserId) {
+      throw new BusinessError("LOTTERY_CARD_ALREADY_CLAIMED", "这张卡片已经被抽取。");
     }
 
     this.tripRepository.updateTrip(context.tripId, (trip) => {
       const nextState = this.requireStartedTool(trip, "lottery") as PublishedLotteryToolState;
-      nextState.claims[context.currentUser.id] = {
-        claimedAt: Date.now(),
-        isWinner: nextState.winnerUserIds.includes(context.currentUser.id)
-      };
+      const nextCard = nextState.cards.find((card) => card.id === cardId);
+      if (!nextCard) {
+        throw new BusinessError("LOTTERY_CARD_NOT_FOUND", "未找到对应卡片。");
+      }
+      if (nextCard.claimedByUserId) {
+        throw new BusinessError("LOTTERY_CARD_ALREADY_CLAIMED", "这张卡片已经被抽取。");
+      }
+
+      const claimedAt = Date.now();
+      nextCard.claimedByUserId = context.currentUser.id;
+      nextCard.claimedAt = claimedAt;
+      const nextClaims = nextState.claimsByUserId[context.currentUser.id] ?? [];
+      if (nextClaims.length >= nextState.drawLimitPerUser) {
+        throw new BusinessError("LOTTERY_DRAW_LIMIT_REACHED", "你的抽取次数已用完。");
+      }
+      nextClaims.push({
+        cardId: nextCard.id,
+        order: nextCard.order,
+        answer: nextCard.answer,
+        claimedAt
+      });
+      nextState.claimsByUserId[context.currentUser.id] = nextClaims;
     });
 
     return this.getToolDetailPageData("lottery");
@@ -1005,24 +1136,17 @@ export class TripService {
 
   resetLottery(): ToolDetailViewModel {
     const context = this.requireAdminTripContext();
-    const toolState = this.requireStartedTool(context.trip, "lottery") as PublishedLotteryToolState;
-    const participantUserIds = this.listTripParticipantUserIds(context.tripId, toolState.excludeAdmin);
-
-    if (!participantUserIds.length) {
-      throw new BusinessError("LOTTERY_NO_PARTICIPANTS", "当前没有可参与抓阄的成员。");
-    }
-    if (toolState.winnerCount > participantUserIds.length) {
-      throw new BusinessError("LOTTERY_COUNT_TOO_LARGE", "抽中人数不能超过当前成员数。");
-    }
-
-    const winnerUserIds = pickRandomItems(participantUserIds, toolState.winnerCount);
+    this.requireStartedTool(context.trip, "lottery");
 
     this.tripRepository.updateTrip(context.tripId, (trip) => {
       const nextState = this.requireStartedTool(trip, "lottery") as PublishedLotteryToolState;
       nextState.phase = "active";
-      nextState.participantUserIds = participantUserIds;
-      nextState.winnerUserIds = winnerUserIds;
-      nextState.claims = {};
+      nextState.cards = nextState.cards.map((card) => ({
+        ...card,
+        claimedByUserId: null,
+        claimedAt: null
+      }));
+      nextState.claimsByUserId = {};
     });
 
     return this.getToolDetailPageData("lottery");
@@ -1050,8 +1174,11 @@ export class TripService {
           ? "管理员"
           : "普通成员"
         : "暂未加入",
-      tags: currentTrip ? currentUser.tags : [],
-      showTagsCard: Boolean(currentTrip),
+      profileSummary: currentUser.bio || "去完善个人资料",
+      livingLocationDisplay: formatLivingLocationDisplay(currentUser.livingCity),
+      hometownLocationDisplay: formatHometownLocationDisplay(currentUser.hometown),
+      tags: currentUser.tags,
+      showTagsCard: true,
       showPrimaryAction: Boolean(currentTrip),
       primaryActionKind,
       primaryActionLabel:
@@ -1065,9 +1192,10 @@ export class TripService {
 
   getTagEditorData(): TagEditorViewModel {
     const currentUser = this.ensureAuthorizedAccess();
-    const tripId = this.requireCurrentTripId(currentUser);
-    const trip = this.tripRepository.getTrip(tripId);
-    return this.buildTagEditorView(currentUser, trip.tripName);
+    const tripName = currentUser.currentTripId
+      ? this.tripRepository.getTrip(currentUser.currentTripId).tripName
+      : undefined;
+    return this.buildTagEditorView(currentUser, tripName);
   }
 
   getTripSettings(): TripSettingsViewModel {
@@ -1096,19 +1224,29 @@ export class TripService {
   }
 
   updateProfile(input: UpdateProfileInput): TagEditorViewModel {
-    return this.updateTags(input.tagsInput);
-  }
-
-  updateTags(tagsInput: string): TagEditorViewModel {
     const currentUser = this.ensureAuthorizedAccess();
-    this.requireCurrentTripId(currentUser);
 
     this.userRepository.updateUser(currentUser.id, (user) => {
-      user.tags = parseTags(tagsInput);
+      user.tags = normalizeProfileTags(input.tagsInput);
+      user.bio = normalizeProfileBio(input.bio);
+      user.livingCity = normalizeProfileText(input.livingCity);
+      user.hometown = normalizeProfileText(input.hometown);
+      user.age = normalizeAge(input.age);
     });
 
     const nextUser = this.userRepository.getUser(currentUser.id);
     return this.buildTagEditorView(nextUser);
+  }
+
+  updateTags(tagsInput: string): TagEditorViewModel {
+    const currentUser = this.ensureAuthorizedAccess();
+    return this.updateProfile({
+      tagsInput,
+      bio: currentUser.bio,
+      livingCity: currentUser.livingCity,
+      hometown: currentUser.hometown,
+      age: currentUser.age
+    });
   }
 
   updateHomePersona(homePersonaAssetId: string | null): BootstrapResult {
@@ -1482,6 +1620,105 @@ export class TripService {
             wheelState.resultHistoryLabels = Array.isArray(wheelState.resultHistoryLabels)
               ? wheelState.resultHistoryLabels.filter((label) => wheelState.items.includes(label))
               : [];
+            return;
+          }
+
+          if (toolType === "lottery") {
+            const lotteryState = toolState as PublishedLotteryToolState;
+            if (!Array.isArray(lotteryState.cards) || !lotteryState.cards.length) {
+              trip.tools[toolType] = null;
+              return;
+            }
+
+            lotteryState.phase = "active";
+            lotteryState.drawLimitPerUser =
+              Number.isInteger(lotteryState.drawLimitPerUser) && lotteryState.drawLimitPerUser > 0
+                ? lotteryState.drawLimitPerUser
+                : 1;
+            lotteryState.answers = Array.isArray(lotteryState.answers)
+              ? lotteryState.answers
+                  .map((answer) => (typeof answer === "string" ? answer.trim() : ""))
+                  .filter(Boolean)
+              : [];
+            if (!lotteryState.answers.length) {
+              lotteryState.answers = lotteryState.cards.map((card) => card.answer);
+            }
+
+            const validMemberIds = new Set(tripMembers.map((member) => member.userId));
+            const fallbackAssignedUserId = toolState.publishedByUserId;
+            lotteryState.allowAssignedUser = Boolean(lotteryState.allowAssignedUser);
+            if (
+              !lotteryState.allowAssignedUser ||
+              typeof lotteryState.assignedUserId !== "string" ||
+              !validMemberIds.has(lotteryState.assignedUserId)
+            ) {
+              lotteryState.allowAssignedUser = false;
+              lotteryState.assignedUserId = fallbackAssignedUserId;
+            }
+
+            const claimedCardsByUserId = lotteryState.cards.reduce<Record<string, LotteryClaimRecord[]>>(
+              (accumulator, card) => {
+                if (!card.claimedByUserId) {
+                  card.claimedAt = null;
+                  return accumulator;
+                }
+                if (!validMemberIds.has(card.claimedByUserId)) {
+                  card.claimedByUserId = null;
+                  card.claimedAt = null;
+                  return accumulator;
+                }
+
+                const claimedAt = typeof card.claimedAt === "number" ? card.claimedAt : 0;
+                card.claimedAt = claimedAt;
+                if (!accumulator[card.claimedByUserId]) {
+                  accumulator[card.claimedByUserId] = [];
+                }
+                accumulator[card.claimedByUserId].push({
+                  cardId: card.id,
+                  order: card.order,
+                  answer: card.answer,
+                  claimedAt
+                });
+                return accumulator;
+              },
+              {}
+            );
+
+            Object.entries(claimedCardsByUserId).forEach(([userId, records]) => {
+              const sortedRecords = [...records].sort((left, right) => left.claimedAt - right.claimedAt);
+              const keptCardIds = new Set(
+                sortedRecords
+                  .slice(0, lotteryState.drawLimitPerUser)
+                  .map((record) => record.cardId)
+              );
+              lotteryState.cards.forEach((card) => {
+                if (card.claimedByUserId === userId && !keptCardIds.has(card.id)) {
+                  card.claimedByUserId = null;
+                  card.claimedAt = null;
+                }
+              });
+            });
+
+            lotteryState.claimsByUserId = lotteryState.cards.reduce<Record<string, LotteryClaimRecord[]>>(
+              (accumulator, card) => {
+                if (!card.claimedByUserId || typeof card.claimedAt !== "number") {
+                  return accumulator;
+                }
+
+                if (!accumulator[card.claimedByUserId]) {
+                  accumulator[card.claimedByUserId] = [];
+                }
+                accumulator[card.claimedByUserId].push({
+                  cardId: card.id,
+                  order: card.order,
+                  answer: card.answer,
+                  claimedAt: card.claimedAt
+                });
+                accumulator[card.claimedByUserId].sort((left, right) => left.claimedAt - right.claimedAt);
+                return accumulator;
+              },
+              {}
+            );
           }
         });
       });
@@ -1726,6 +1963,9 @@ export class TripService {
           ? "当前玩法已开启，但本轮投票还未发布。"
           : "等待管理员发布下一轮投票。";
       }
+      if (voteState.phase === "ended") {
+        return "本轮投票已结束，最终结果已公布。";
+      }
       if (!voteState.participantUserIds.includes(viewerId)) {
         return "你不在本轮投票名单中。";
       }
@@ -1733,9 +1973,9 @@ export class TripService {
       if (
         submission?.choice === "approve" &&
         voteState.selectionMode === "multiple" &&
-        submission.optionIds.length < voteState.options.length
+        submission.optionIds.length < voteState.maxSelections
       ) {
-        return `你已投 ${submission.optionIds.length} 项，还可以继续投票。`;
+        return `你已投 ${submission.optionIds.length} / ${voteState.maxSelections} 项，还可以继续投票。`;
       }
       return submission
         ? `你已完成投票：${getVoteChoiceLabel(submission.choice)}`
@@ -1759,18 +1999,24 @@ export class TripService {
     }
 
     const lotteryState = toolState as PublishedLotteryToolState;
-    if (lotteryState.phase === "ready") {
-      return viewerRole === "admin"
-        ? "当前玩法已开启，点“确定”可开始新一轮抓阄。"
-        : "等待管理员发布下一轮抓阄。";
+    const remainingCardCount = lotteryState.cards.filter((card) => !card.claimedByUserId).length;
+    if (!remainingCardCount) {
+      return "卡片已抽完。";
     }
-    if (!lotteryState.participantUserIds.includes(viewerId)) {
-      return "你不在本轮抓阄名单中。";
+
+    if (!this.canViewerClaimLottery(lotteryState, viewerId)) {
+      const assignedUserLabel =
+        lotteryState.allowAssignedUser && lotteryState.assignedUserId
+          ? this.userRepository.getUser(lotteryState.assignedUserId).nickname
+          : "管理员";
+      return `当前由 ${assignedUserLabel} 抽取卡片。`;
     }
-    if (lotteryState.claims[viewerId]) {
-      return lotteryState.claims[viewerId].isWinner ? "你本轮抓中了。" : "你本轮没有抓中。";
+
+    const viewerClaimedCount = lotteryState.claimsByUserId[viewerId]?.length ?? 0;
+    if (viewerClaimedCount >= lotteryState.drawLimitPerUser) {
+      return "你的抽取次数已用完。";
     }
-    return "点击按钮查看你本轮的个人结果。";
+    return "点击卡片开始翻签。";
   }
 
   private buildSeatDrawDetail(
@@ -1851,25 +2097,35 @@ export class TripService {
     const submissions = Object.values(submissionsRecord);
     const viewerSubmission = submissionsRecord[viewerId] ?? null;
     const options = Array.isArray(toolState.options) ? toolState.options : [];
+    const supportCountByOptionId = submissions.reduce<Record<string, number>>((accumulator, submission) => {
+      if (submission.choice !== "approve") {
+        return accumulator;
+      }
+
+      submission.optionIds.forEach((optionId) => {
+        accumulator[optionId] = (accumulator[optionId] ?? 0) + 1;
+      });
+      return accumulator;
+    }, {});
+    const optionViews: VoteOptionView[] = options.map((option) => ({
+      id: option.id,
+      label: option.label,
+      supportCount: supportCountByOptionId[option.id] ?? 0,
+      selectedByViewer: Boolean(viewerSubmission?.optionIds.includes(option.id))
+    }));
     return {
       phase: toolState.phase,
       topic: toolState.topic,
       excludeAdmin: toolState.excludeAdmin,
       selectionMode,
+      maxSelections: toolState.maxSelections,
       participantCount: participantUserIds.length,
       submittedCount: Object.keys(submissionsRecord).length,
       approveCount: submissions.filter((submission) => submission.choice === "approve").length,
       rejectCount: submissions.filter((submission) => submission.choice === "reject").length,
       abstainCount: submissions.filter((submission) => submission.choice === "abstain").length,
-      options: options.map((option) => ({
-        id: option.id,
-        label: option.label,
-        supportCount: submissions.filter(
-          (submission) =>
-            submission.choice === "approve" && submission.optionIds.includes(option.id)
-        ).length,
-        selectedByViewer: Boolean(viewerSubmission?.optionIds.includes(option.id))
-      })),
+      options: optionViews,
+      resultOptions: [...optionViews].sort(compareVoteResultOptions),
       viewerChoice: viewerSubmission?.choice ?? null,
       viewerSelectedOptionIds: viewerSubmission?.optionIds ?? [],
       viewerHasSubmitted: Boolean(viewerSubmission),
@@ -1883,15 +2139,7 @@ export class TripService {
     viewerId: string,
     viewerRole: MemberRole
   ): WheelDetailView {
-    const eligibleUsers = this.listTripParticipantUserIds(trip.id, false).map((userId) =>
-      this.buildToolResultMemberView(
-        {
-          userId,
-          seatCode: findSeatCodeByUserId(trip.seatMap, userId)
-        },
-        viewerId
-      )
-    );
+    const eligibleUsers = this.listToolEligibleUsers(trip, viewerId);
     const assignedUserId = toolState?.allowAssignedUser ? toolState.assignedUserId ?? null : null;
     const assignedUser = assignedUserId
       ? eligibleUsers.find((member) => member.userId === assignedUserId) ?? null
@@ -1939,6 +2187,31 @@ export class TripService {
     };
   }
 
+  private resolveLotteryPermissionConfig(
+    tripId: string,
+    adminUserId: string,
+    input: LotteryPublishInput
+  ): { allowAssignedUser: boolean; assignedUserId: string | null } {
+    const allowAssignedUser = Boolean(input.allowAssignedUser);
+    if (!allowAssignedUser) {
+      return {
+        allowAssignedUser: false,
+        assignedUserId: adminUserId
+      };
+    }
+
+    const assignedUserId = typeof input.assignedUserId === "string" ? input.assignedUserId : "";
+    const participantUserIds = this.listTripParticipantUserIds(tripId, false);
+    if (!assignedUserId || !participantUserIds.includes(assignedUserId)) {
+      throw new BusinessError("INVALID_LOTTERY_ASSIGNED_USER", "请选择可使用抓阄的成员。");
+    }
+
+    return {
+      allowAssignedUser: true,
+      assignedUserId
+    };
+  }
+
   private canViewerSpinWheel(
     toolState: PublishedWheelToolState,
     viewerId: string,
@@ -1960,40 +2233,76 @@ export class TripService {
     }
   }
 
+  private canViewerClaimLottery(toolState: PublishedLotteryToolState, viewerId: string): boolean {
+    if (toolState.allowAssignedUser) {
+      return toolState.assignedUserId === viewerId;
+    }
+    return toolState.publishedByUserId === viewerId;
+  }
+
+  private assertViewerCanClaimLottery(toolState: PublishedLotteryToolState, viewerId: string): void {
+    if (!this.canViewerClaimLottery(toolState, viewerId)) {
+      throw new BusinessError("LOTTERY_FORBIDDEN", "当前没有抽卡权限。");
+    }
+  }
+
   private buildLotteryDetail(
     trip: Trip,
     toolState: PublishedLotteryToolState | null,
     viewerId: string
-  ): LotteryDetailView | null {
-    if (!toolState) {
-      return null;
-    }
+  ): LotteryDetailView {
+    const eligibleUsers = this.listToolEligibleUsers(trip, viewerId);
+    const assignedUserId =
+      toolState?.allowAssignedUser ? toolState.assignedUserId ?? null : toolState?.publishedByUserId ?? null;
+    const assignedUser = assignedUserId
+      ? eligibleUsers.find((member) => member.userId === assignedUserId) ?? null
+      : null;
+    const viewerClaimRecords = [...(toolState?.claimsByUserId[viewerId] ?? [])]
+      .sort((left, right) => right.claimedAt - left.claimedAt)
+      .map<LotteryClaimRecordView>((record) => ({
+        cardId: record.cardId,
+        order: record.order,
+        answer: record.answer,
+        claimedAt: record.claimedAt
+      }));
+    const remainingCardCount = toolState?.cards.filter((card) => !card.claimedByUserId).length ?? 0;
+    const viewerEligible = toolState ? this.canViewerClaimLottery(toolState, viewerId) : false;
+    const drawLimitPerUser = toolState?.drawLimitPerUser ?? 1;
+    const viewerCanDraw =
+      Boolean(toolState) &&
+      viewerEligible &&
+      remainingCardCount > 0 &&
+      viewerClaimRecords.length < drawLimitPerUser;
 
-    const viewerClaim = toolState.claims[viewerId] ?? null;
     return {
-      phase: toolState.phase,
-      winnerCount: toolState.winnerCount,
-      excludeAdmin: toolState.excludeAdmin,
-      participantCount: toolState.participantUserIds.length,
-      claimedCount: Object.keys(toolState.claims).length,
-      viewerHasClaimed: Boolean(viewerClaim),
-      viewerIsWinner: viewerClaim ? viewerClaim.isWinner : null,
-      viewerResultText: !viewerClaim
-        ? "尚未抓阄"
-        : viewerClaim.isWinner
-          ? "恭喜你，抽中了。"
-          : "很遗憾，这次没有抽中。",
-      viewerEligible: toolState.participantUserIds.includes(viewerId),
-      participants: toolState.participantUserIds.map((userId) => {
-        const claim = toolState.claims[userId] ?? null;
-        return this.buildLotteryParticipantView(
-          trip,
-          userId,
-          viewerId,
-          claim?.isWinner ?? null,
-          Boolean(claim)
-        );
-      })
+      phase: toolState?.phase ?? "active",
+      answers: toolState?.answers ?? [],
+      cardCount: toolState?.cards.length ?? 0,
+      claimedCardCount: (toolState?.cards.length ?? 0) - remainingCardCount,
+      remainingCardCount,
+      drawLimitPerUser,
+      viewerClaimedCount: viewerClaimRecords.length,
+      viewerRemainingDrawCount: Math.max(0, drawLimitPerUser - viewerClaimRecords.length),
+      viewerEligible,
+      viewerCanDraw,
+      allowAssignedUser: Boolean(toolState?.allowAssignedUser),
+      assignedUserId,
+      assignedUserLabel: assignedUser?.nickname ?? null,
+      eligibleUsers,
+      cards:
+        toolState?.cards.map<LotteryCardView>((card) => ({
+          id: card.id,
+          order: card.order,
+          state:
+            card.claimedByUserId === viewerId
+              ? "viewer"
+              : card.claimedByUserId
+                ? "claimed"
+                : "available",
+          answer: card.claimedByUserId === viewerId ? card.answer : null,
+          canClaim: viewerCanDraw && !card.claimedByUserId
+        })) ?? [],
+      viewerClaimRecords
     };
   }
 
@@ -2012,28 +2321,16 @@ export class TripService {
     };
   }
 
-  private buildLotteryParticipantView(
-    trip: Trip,
-    userId: string,
-    viewerId: string,
-    isWinner: boolean | null,
-    claimed: boolean
-  ): LotteryParticipantView {
-    const user = this.userRepository.getUser(userId);
-    const seatCode = findSeatCodeByUserId(trip.seatMap, userId);
-    const statusText = !claimed ? "待抓阄" : isWinner ? "已抽中" : "未抽中";
-
-    return {
-      userId: user.id,
-      nickname: user.nickname,
-      avatarUrl: user.avatarUrl,
-      initial: getInitial(user.nickname),
-      seatLabel: seatCode ?? "未入座",
-      isSelf: user.id === viewerId,
-      statusText,
-      statusClassName: !claimed ? "lottery-status" : isWinner ? "lottery-status is-hit" : "lottery-status is-miss",
-      claimed
-    };
+  private listToolEligibleUsers(trip: Trip, viewerId: string): ToolResultMemberView[] {
+    return this.listTripParticipantUserIds(trip.id, false).map((userId) =>
+      this.buildToolResultMemberView(
+        {
+          userId,
+          seatCode: findSeatCodeByUserId(trip.seatMap, userId)
+        },
+        viewerId
+      )
+    );
   }
 
   private listTripParticipantUserIds(tripId: string, excludeAdmin: boolean): string[] {
@@ -2117,8 +2414,18 @@ export class TripService {
       currentUser,
       currentUserInitial: getInitial(currentUser.nickname),
       currentTripTitle: displayTripName(tripName ?? this.getCurrentTripName(currentUser)),
+      authNickname: currentUser.nickname,
+      authAvatarUrl: currentUser.avatarUrl,
+      currentPersonaId: currentUser.homePersonaAssetId ?? "",
+      currentPersonaImageUrl: resolveHomePersonaImageUrl(currentUser.homePersonaAssetId),
+      bio: currentUser.bio,
+      livingCity: currentUser.livingCity,
+      livingRegion: regionValueToArray(currentUser.livingCity, "district"),
+      hometown: currentUser.hometown,
+      hometownRegion: regionValueToArray(currentUser.hometown, "city"),
+      age: currentUser.age,
       tags: currentUser.tags,
-      tagsInput: currentUser.tags.join("，"),
+      tagsInput: currentUser.tags.join("\n"),
       previewTags: currentUser.tags
     };
   }
@@ -2179,6 +2486,13 @@ export class TripService {
           nickname: user.nickname,
           avatarUrl: user.avatarUrl,
           initial: getInitial(user.nickname),
+          bio: user.bio,
+          livingCity: user.livingCity,
+          hometown: user.hometown,
+          livingLocationDisplay: formatLivingLocationDisplay(user.livingCity),
+          hometownLocationDisplay: formatHometownLocationDisplay(user.hometown),
+          age: user.age,
+          homePersonaImageUrl: resolveHomePersonaImageUrl(user.homePersonaAssetId),
           tags: user.tags,
           role: relation.role as MemberRole,
           isAdmin: relation.role === "admin",

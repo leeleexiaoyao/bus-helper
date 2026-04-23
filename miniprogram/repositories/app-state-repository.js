@@ -18,6 +18,16 @@ function normalizeStringArray(value) {
 function normalizeVoteSelectionMode(value) {
     return value === "multiple" ? "multiple" : "single";
 }
+function normalizeVoteMaxSelections(value, selectionMode, optionCount) {
+    if (selectionMode === "single") {
+        return 1;
+    }
+    const normalized = typeof value === "number" ? Math.trunc(value) : optionCount;
+    if (!Number.isInteger(normalized) || normalized <= 0) {
+        return optionCount;
+    }
+    return Math.min(normalized, optionCount);
+}
 function normalizeVoteChoice(value) {
     if (value === "reject" || value === "abstain") {
         return value;
@@ -85,14 +95,16 @@ function normalizeVoteToolState(toolState) {
     if (!options.length || !participantUserIds.length) {
         return null;
     }
+    const selectionMode = normalizeVoteSelectionMode(toolState.selectionMode);
     return {
         type: "vote",
         publishedAt: typeof toolState.publishedAt === "number" ? toolState.publishedAt : 0,
         publishedByUserId: typeof toolState.publishedByUserId === "string" ? toolState.publishedByUserId : "",
-        phase: toolState.phase === "draft" ? "draft" : "active",
+        phase: toolState.phase === "draft" ? "draft" : toolState.phase === "ended" ? "ended" : "active",
         topic: typeof toolState.topic === "string" && toolState.topic.trim() ? toolState.topic.trim() : "投票",
         excludeAdmin: Boolean(toolState.excludeAdmin),
-        selectionMode: normalizeVoteSelectionMode(toolState.selectionMode),
+        selectionMode,
+        maxSelections: normalizeVoteMaxSelections(toolState.maxSelections, selectionMode, options.length),
         options,
         participantUserIds,
         submissions: normalizeVoteSubmissions(toolState.submissions, new Set(options.map((option) => option.id)))
@@ -156,6 +168,98 @@ function normalizeSeatDrawToolState(toolState) {
         lastResult
     };
 }
+function normalizeLotteryCards(value) {
+    if (!Array.isArray(value)) {
+        return [];
+    }
+    const seenCardIds = new Set();
+    return value.reduce((accumulator, entry, index) => {
+        if (!isRecord(entry)) {
+            return accumulator;
+        }
+        const id = typeof entry.id === "string" && entry.id.trim() ? entry.id.trim() : `legacy-lottery-card-${index + 1}`;
+        if (seenCardIds.has(id)) {
+            return accumulator;
+        }
+        const answer = typeof entry.answer === "string" ? entry.answer.trim() : "";
+        if (!answer) {
+            return accumulator;
+        }
+        seenCardIds.add(id);
+        accumulator.push({
+            id,
+            order: typeof entry.order === "number" && Number.isInteger(entry.order) && entry.order > 0
+                ? entry.order
+                : accumulator.length + 1,
+            answer,
+            claimedByUserId: typeof entry.claimedByUserId === "string" && entry.claimedByUserId.trim()
+                ? entry.claimedByUserId.trim()
+                : null,
+            claimedAt: typeof entry.claimedAt === "number" ? entry.claimedAt : null
+        });
+        return accumulator;
+    }, []);
+}
+function normalizeLotteryClaimRecords(value) {
+    if (!Array.isArray(value)) {
+        return [];
+    }
+    return value.reduce((accumulator, entry) => {
+        if (!isRecord(entry)) {
+            return accumulator;
+        }
+        const cardId = typeof entry.cardId === "string" ? entry.cardId.trim() : "";
+        const answer = typeof entry.answer === "string" ? entry.answer.trim() : "";
+        const claimedAt = typeof entry.claimedAt === "number" ? entry.claimedAt : NaN;
+        const order = typeof entry.order === "number" ? Math.trunc(entry.order) : NaN;
+        if (!cardId || !answer || !Number.isInteger(order) || order <= 0 || !Number.isFinite(claimedAt)) {
+            return accumulator;
+        }
+        accumulator.push({
+            cardId,
+            order,
+            answer,
+            claimedAt
+        });
+        return accumulator;
+    }, []);
+}
+function normalizeLotteryClaimsByUserId(value) {
+    if (!isRecord(value)) {
+        return {};
+    }
+    return Object.entries(value).reduce((accumulator, [userId, records]) => {
+        accumulator[userId] = normalizeLotteryClaimRecords(records);
+        return accumulator;
+    }, {});
+}
+function normalizeLotteryToolState(toolState) {
+    if (!isRecord(toolState)) {
+        return null;
+    }
+    const cards = normalizeLotteryCards(toolState.cards);
+    if (!cards.length) {
+        return null;
+    }
+    const answers = normalizeStringArray(toolState.answers);
+    const drawLimitPerUser = typeof toolState.drawLimitPerUser === "number" && Number.isInteger(toolState.drawLimitPerUser)
+        ? Math.max(1, toolState.drawLimitPerUser)
+        : 1;
+    return {
+        type: "lottery",
+        publishedAt: typeof toolState.publishedAt === "number" ? toolState.publishedAt : 0,
+        publishedByUserId: typeof toolState.publishedByUserId === "string" ? toolState.publishedByUserId.trim() : "",
+        phase: toolState.phase === "ready" ? "ready" : "active",
+        answers: answers.length ? answers : cards.map((card) => card.answer),
+        cards,
+        allowAssignedUser: Boolean(toolState.allowAssignedUser),
+        assignedUserId: typeof toolState.assignedUserId === "string" && toolState.assignedUserId.trim()
+            ? toolState.assignedUserId.trim()
+            : null,
+        drawLimitPerUser,
+        claimsByUserId: normalizeLotteryClaimsByUserId(toolState.claimsByUserId)
+    };
+}
 function normalizeToolState(toolType, toolState) {
     var _a;
     if (toolType === "seat-draw") {
@@ -163,6 +267,9 @@ function normalizeToolState(toolType, toolState) {
     }
     if (toolType === "vote") {
         return normalizeVoteToolState(toolState);
+    }
+    if (toolType === "lottery") {
+        return normalizeLotteryToolState(toolState);
     }
     return (_a = toolState) !== null && _a !== void 0 ? _a : null;
 }
@@ -180,7 +287,13 @@ function normalizeUser(user) {
         ((_a = user.homePersonaAssetId) === null || _a === void 0 ? void 0 : _a.trim())
         ? user.homePersonaAssetId.trim()
         : null;
-    return Object.assign(Object.assign({}, user), { tags: normalizeStringArray(user.tags), homePersonaAssetId: nextHomePersonaAssetId });
+    const nextBio = typeof user.bio === "string" ? user.bio.trim() : "";
+    const nextLivingCity = typeof user.livingCity === "string"
+        ? user.livingCity.trim()
+        : "";
+    const nextHometown = typeof user.hometown === "string" ? user.hometown.trim() : "";
+    const nextAge = typeof user.age === "string" ? user.age.trim() : "";
+    return Object.assign(Object.assign({}, user), { bio: nextBio, livingCity: nextLivingCity, hometown: nextHometown, age: nextAge, tags: normalizeStringArray(user.tags), homePersonaAssetId: nextHomePersonaAssetId });
 }
 function normalizeState(state) {
     if (!state) {

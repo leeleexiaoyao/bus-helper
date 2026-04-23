@@ -1,65 +1,89 @@
-<view wx:if="{{visible}}" class="sheet-mask" bindtap="handleMaskTap">
-  <view class="sheet-panel" style="border-radius: 32rpx; overflow: hidden; background: #ffffff;" catchtap="stopPropagation">
-    <view class="sheet-handle"></view>
+<view wx:if="{{visible}}" class="sheet-mask" bindtap="handleMaskTap" catchtouchmove="stopTouchMove">
+  <view
+    class="sheet-panel {{showDetailCard ? 'sheet-panel--detail' : ''}}"
+    style="border-radius: 32rpx; overflow: hidden; background: #ffffff;"
+    catchtap="stopPropagation"
+    catchtouchmove="stopTouchMove"
+  >
+    <view wx:if="{{!showDetailCard}}" class="sheet-handle"></view>
 
-    <block wx:if="{{isClaimMode}}">
-      <view class="sheet-title">确认入座</view>
-      <view class="sheet-subtitle">{{seat.label}} 会展示你的微信头像和昵称。</view>
-
-      <view class="claim-preview">
-        <image wx:if="{{claimAvatarUrl}}" class="claim-avatar" src="{{claimAvatarUrl}}" mode="aspectFill" />
-        <view wx:else class="claim-avatar claim-avatar--fallback avatar-fallback">{{localInitial}}</view>
-        <view class="claim-copy">
-          <view class="claim-name">{{claimNickname}}</view>
-          <view class="claim-seat">{{seat.label}}</view>
-        </view>
+    <block wx:if="{{isEmptyConfirmMode}}">
+      <view class="sheet-title sheet-title--compact">是否入座{{seat.label}}？</view>
+      <view class="sheet-actions-row">
+        <button class="sheet-footer-btn sheet-footer-btn--cancel" bindtap="handleClose">取消</button>
+        <button class="sheet-footer-btn sheet-footer-btn--primary" bindtap="handleConfirmClaim">入座</button>
       </view>
-
-      <button class="primary-btn sheet-action" bindtap="handleConfirmClaim">确认入座</button>
-    </block>
-
-    <block wx:elif="{{isSwitchMode}}">
-      <view class="sheet-title">确认换座</view>
-      <view class="sheet-subtitle">将你的座位变更为 {{seat.label}}。</view>
-      <button class="primary-btn sheet-action" bindtap="handleConfirmSwitch">确认换座</button>
-    </block>
-
-    <block wx:elif="{{isSelfMode}}">
-      <view class="sheet-title">解除当前座位</view>
-      <view class="sheet-subtitle">{{seat.label}} 将被释放，你会回到未入座状态。</view>
-      <button class="danger-btn sheet-action" bindtap="handleReleaseMine">解除我的座位</button>
     </block>
 
     <block wx:else>
-      <view class="detail-card">
-        <image wx:if="{{member.avatarUrl}}" class="detail-avatar" src="{{member.avatarUrl}}" mode="aspectFill" />
-        <view wx:else class="detail-avatar detail-avatar--fallback avatar-fallback">{{member.initial}}</view>
-        <view class="sheet-title detail-title">{{member.nickname}}</view>
-        <view class="sheet-subtitle detail-subtitle">{{detailSeatLabel}}</view>
-        <view class="detail-line">
-          <view class="mini-tag" wx:if="{{member.isSelf}}">我</view>
-          <view class="mini-tag mini-tag--admin" wx:if="{{showAdminBadge}}">管理员</view>
+      <view class="detail-shell">
+        <view class="detail-hero">
+          <view class="detail-hero-content">
+            <view class="detail-user-head">
+              <image wx:if="{{member.avatarUrl}}" class="detail-avatar" src="{{member.avatarUrl}}" mode="aspectFill" />
+              <view wx:else class="detail-avatar detail-avatar--fallback avatar-fallback">{{member.initial}}</view>
+            </view>
+
+            <view class="detail-main">
+              <view class="detail-title-row">
+                <view class="detail-name">{{member.nickname}}</view>
+                <view class="detail-seat">{{detailSeatLabel}}</view>
+              </view>
+
+              <view class="detail-line">
+                <view class="mini-tag" wx:if="{{member.isSelf}}">我</view>
+                <view class="mini-tag mini-tag--admin" wx:if="{{showAdminBadge}}">管理</view>
+              </view>
+
+              <view class="detail-bio">{{detailBioText}}</view>
+
+              <view class="tag-list detail-tags" wx:if="{{member.tags.length}}">
+                <view class="tag-chip detail-tag-chip" wx:for="{{member.tags}}" wx:key="*this">{{item}}</view>
+              </view>
+            </view>
+          </view>
+
+          <image
+            wx:if="{{detailPersonaImageUrl}}"
+            class="detail-figure"
+            src="{{detailPersonaImageUrl}}"
+            mode="heightFix"
+          />
         </view>
-        <view class="tag-list" wx:if="{{member.tags.length}}">
-          <view class="tag-chip" wx:for="{{member.tags}}" wx:key="*this">{{item}}</view>
+
+        <view class="detail-stats">
+          <view class="detail-stat-item">
+            <view class="detail-stat-value {{detailLivingLocationDisplay.isPlaceholder ? 'detail-stat-value--placeholder' : ''}}">
+              <text>{{detailLivingLocationDisplay.primary}}</text>
+              <text wx:if="{{detailLivingLocationDisplay.secondary}}" class="detail-stat-value-secondary">{{detailLivingLocationDisplay.secondary}}</text>
+            </view>
+            <view class="detail-stat-label">居住</view>
+          </view>
+          <view class="detail-stat-item">
+            <view class="detail-stat-value {{detailHometownLocationDisplay.isPlaceholder ? 'detail-stat-value--placeholder' : ''}}">
+              <text>{{detailHometownLocationDisplay.primary}}</text>
+              <text wx:if="{{detailHometownLocationDisplay.secondary}}" class="detail-stat-value-secondary">{{detailHometownLocationDisplay.secondary}}</text>
+            </view>
+            <view class="detail-stat-label">来自</view>
+          </view>
+          <view class="detail-stat-item detail-stat-item--age">
+            <view class="detail-stat-value">{{detailAgeText}}</view>
+            <view class="detail-stat-label">年龄</view>
+          </view>
         </view>
       </view>
 
-      <button
-        wx:if="{{showAdminReleaseButton}}"
-        class="danger-btn sheet-action"
-        bindtap="handleAdminRelease"
-      >
-        解除该座位
-      </button>
-      <button
-        wx:if="{{showAdminReleaseButton}}"
-        class="ghost-btn sheet-close"
-        bindtap="handleClose"
-      >
-        关闭
-      </button>
-      <button wx:else class="secondary-btn sheet-action" bindtap="handleClose">确定</button>
+      <view class="sheet-actions-row" wx:if="{{isSelfDetailMode}}">
+        <button class="sheet-footer-btn sheet-footer-btn--cancel" bindtap="handleClose">取消</button>
+        <button class="sheet-footer-btn sheet-footer-btn--danger" bindtap="handleReleaseMine">解除座位</button>
+      </view>
+
+      <view class="sheet-actions-row" wx:elif="{{isAdminMemberDetailMode}}">
+        <button class="sheet-footer-btn sheet-footer-btn--cancel" bindtap="handleClose">取消</button>
+        <button class="sheet-footer-btn sheet-footer-btn--danger" bindtap="handleAdminRelease">解除他的座位</button>
+      </view>
+
+      <button wx:else class="sheet-footer-btn sheet-footer-btn--primary detail-close-btn" bindtap="handleClose">好的</button>
     </block>
   </view>
 </view>

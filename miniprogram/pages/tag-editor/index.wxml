@@ -1,23 +1,125 @@
-<view class="page-shell" wx:if="{{viewModel}}">
-  <view class="card tag-card" style="border-radius: 32rpx; overflow: hidden; background: #ffffff;">
-    <view class="form-block">
-      <view class="field-label">标签（最多 3 个，逗号分隔）</view>
-      <input
-        class="field-input"
-        value="{{tagsInput}}"
+<view class="tag-editor-page" wx:if="{{viewModel}}">
+  <view class="tag-editor-content">
+    <view class="editor-section">
+      <view class="editor-section-title">基础信息</view>
+      <view class="editor-card">
+        <view class="editor-row editor-row--avatar" bindtap="handlePreviewAvatar">
+          <text class="editor-row-label">头像</text>
+          <view class="editor-row-main editor-row-main--avatar">
+            <image wx:if="{{authAvatarUrl}}" class="editor-avatar" src="{{authAvatarUrl}}" mode="aspectFill" />
+            <view wx:else class="editor-avatar editor-avatar--fallback avatar-fallback">{{viewModel.currentUserInitial}}</view>
+            <view class="editor-row-caret"></view>
+          </view>
+        </view>
+
+        <view class="editor-divider"></view>
+
+        <view class="editor-row">
+          <text class="editor-row-label">名称</text>
+          <view class="editor-row-main">
+            <text class="editor-row-value editor-row-value--muted">{{authNickname}}</text>
+          </view>
+        </view>
+
+        <view class="editor-divider"></view>
+
+        <picker mode="region" value="{{livingRegion}}" bindchange="handleLivingRegionChange">
+          <view class="editor-row editor-row--action">
+            <text class="editor-row-label">居住</text>
+            <view class="editor-row-main">
+              <view class="editor-row-value-wrap editor-row-value-wrap--raised">
+                <text class="editor-row-value {{livingCity ? '' : 'editor-row-value--placeholder'}}">
+                  {{livingCity ? livingCity : "请选择居住地"}}
+                </text>
+              </view>
+              <view class="editor-row-caret"></view>
+            </view>
+          </view>
+        </picker>
+
+        <view class="editor-divider"></view>
+
+        <picker mode="region" value="{{hometownRegion}}" bindchange="handleHometownRegionChange">
+          <view class="editor-row editor-row--action">
+            <text class="editor-row-label">来自</text>
+            <view class="editor-row-main">
+              <view class="editor-row-value-wrap editor-row-value-wrap--raised">
+                <text class="editor-row-value {{hometown ? '' : 'editor-row-value--placeholder'}}">
+                  {{hometown ? hometown : "请选择省市"}}
+                </text>
+              </view>
+              <view class="editor-row-caret"></view>
+            </view>
+          </view>
+        </picker>
+
+        <view class="editor-divider"></view>
+
+        <picker mode="selector" range="{{ageOptions}}" value="{{agePickerIndex}}" bindchange="handleAgeChange">
+          <view class="editor-row editor-row--action">
+            <text class="editor-row-label">年龄</text>
+            <view class="editor-row-main">
+              <text class="editor-row-value">{{age}}岁</text>
+              <view class="editor-row-caret"></view>
+            </view>
+          </view>
+        </picker>
+
+        <view class="editor-divider"></view>
+
+        <view class="editor-row" bindtap="handleOpenPersonaSheet">
+          <text class="editor-row-label">我的形象</text>
+          <view class="editor-row-main editor-row-main--avatar">
+            <image wx:if="{{currentPersonaImageUrl}}" class="editor-persona-thumb" src="{{currentPersonaImageUrl}}" mode="aspectFill" />
+            <text wx:else class="editor-row-value editor-row-value--placeholder">去选择</text>
+            <view class="editor-row-caret"></view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="editor-section">
+      <view class="editor-section-title">个人签名</view>
+      <textarea
+        class="editor-textarea"
+        value="{{bio}}"
         maxlength="40"
-        placeholder="例如：路痴，INFJ，靠窗党"
-        bindinput="handleInput"
-      />
+        placeholder="请输入签名信息，不超过40字"
+        placeholder-style="color: #c7c7c7; font-size: 26rpx;"
+        auto-height
+        data-field="bio"
+        bindinput="handleFieldInput"
+      ></textarea>
     </view>
 
-    <view class="tag-list current-tags" wx:if="{{previewTags.length}}">
-      <view class="tag-chip" wx:for="{{previewTags}}" wx:key="*this">{{item}}</view>
+    <view class="editor-section">
+      <view class="editor-section-title">标签</view>
+      <textarea
+        class="editor-textarea"
+        value="{{tagsInput}}"
+        maxlength="80"
+        placeholder="每个标签不超过6个字，最多4个，以换行分割"
+        placeholder-style="color: #c7c7c7; font-size: 26rpx;"
+        auto-height
+        bindinput="handleTagsInput"
+      ></textarea>
+      <view class="tag-list editor-tag-list" wx:if="{{previewTags.length}}">
+        <view class="tag-chip editor-tag-chip" wx:for="{{previewTags}}" wx:key="*this">{{item}}</view>
+      </view>
     </view>
-    <view wx:else class="preview-empty">保存后会同步到首页成员列表和成员详情。</view>
-
-    <button class="primary-btn save-btn" loading="{{submitting}}" bindtap="handleSave">
-      保存标签
-    </button>
   </view>
+
+  <view class="editor-save-bar">
+    <button class="editor-save-btn" loading="{{submitting}}" bindtap="handleSave">保存</button>
+  </view>
+
+  <persona-sheet
+    visible="{{showPersonaSheet}}"
+    active="{{personaSheetActive}}"
+    options="{{personaOptions}}"
+    selectedId="{{personaDraftId}}"
+    bindselect="handlePersonaSelect"
+    bindcancel="handlePersonaCancel"
+    bindconfirm="handlePersonaConfirm"
+  />
 </view>

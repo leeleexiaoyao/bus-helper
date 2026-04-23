@@ -21,8 +21,8 @@
 }
 
 .seat-card {
-  min-height: 206rpx;
-  padding: 26rpx 8rpx 18rpx;
+  min-height: 196rpx;
+  padding: 26rpx 8rpx 14rpx;
   border-radius: 24rpx;
   background: #ffffff;
   display: flex;
@@ -60,7 +60,7 @@
 }
 
 .seat-avatar-shell--empty {
-  margin-top: 2rpx;
+  margin-top: 0;
 }
 
 .seat-avatar--fallback {
@@ -108,17 +108,13 @@
 }
 
 .seat-code--empty {
-  margin-top: 12rpx;
+  margin-top: 8rpx;
 }
 
-.seat-empty-placeholder {
-  width: 68rpx;
-  height: 18rpx;
-  margin-top: 18rpx;
-  border-radius: 999rpx;
-  background: rgba(217, 217, 217, 0.34);
+.seat-empty-text {
+  color: #c6c8cb;
 }
 
 .aisle {
-  min-height: 206rpx;
+  min-height: 196rpx;
 }

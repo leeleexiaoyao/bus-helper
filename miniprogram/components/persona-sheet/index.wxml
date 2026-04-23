@@ -1,0 +1,28 @@
+<view wx:if="{{visible}}" class="persona-sheet-layer {{active ? 'is-active' : ''}}" catchtouchmove="noop">
+  <view class="persona-sheet-mask" bindtap="handleMaskTap"></view>
+  <view class="persona-sheet-panel" catchtap="noop" catchtouchmove="noop">
+    <view class="persona-sheet-title">选择形象</view>
+    <view class="persona-grid">
+      <view
+        wx:for="{{renderOptions}}"
+        wx:key="id"
+        wx:for-item="option"
+        class="{{option.className}}"
+        data-persona-id="{{option.id}}"
+        catchtap="handleSelect"
+      >
+        <image class="persona-option-image" src="{{option.imageUrl}}" mode="aspectFill" />
+      </view>
+    </view>
+    <view class="persona-sheet-actions">
+      <button class="persona-sheet-btn persona-sheet-btn--cancel" bindtap="handleCancel">取消</button>
+      <button
+        class="persona-sheet-btn persona-sheet-btn--confirm {{selectedId ? '' : 'is-disabled'}}"
+        bindtap="handleConfirm"
+        disabled="{{!selectedId}}"
+      >
+        确定
+      </button>
+    </view>
+  </view>
+</view>

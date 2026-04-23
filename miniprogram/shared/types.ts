@@ -6,7 +6,7 @@ export type ToolType = "seat-draw" | "vote" | "wheel" | "lottery";
 export type VoteChoice = "approve" | "reject" | "abstain";
 export type VoteSelectionMode = "single" | "multiple";
 export type SeatDrawPhase = "ready" | "rolling" | "result";
-export type VotePhase = "draft" | "active";
+export type VotePhase = "draft" | "active" | "ended";
 export type WheelPhase = "draft" | "result";
 export type LotteryPhase = "ready" | "active";
 
@@ -15,6 +15,10 @@ export interface User {
   nickname: string;
   avatarUrl: string;
   homePersonaAssetId: string | null;
+  bio: string;
+  livingCity: string;
+  hometown: string;
+  age: string;
   tags: string[];
   currentTripId: string | null;
   isAuthorized: boolean;
@@ -23,6 +27,13 @@ export interface User {
 export interface HomePersonaOption {
   id: string;
   imageUrl: string;
+}
+
+export interface LocationDisplay {
+  primary: string;
+  secondary: string;
+  full: string;
+  isPlaceholder: boolean;
 }
 
 export interface PublishedToolBaseState {
@@ -60,6 +71,7 @@ export interface PublishedVoteToolState extends PublishedToolBaseState {
   topic: string;
   excludeAdmin: boolean;
   selectionMode: VoteSelectionMode;
+  maxSelections: number;
   options: VoteOption[];
   participantUserIds: string[];
   submissions: Record<string, VoteSubmission>;
@@ -76,19 +88,30 @@ export interface PublishedWheelToolState extends PublishedToolBaseState {
   spunAt: number | null;
 }
 
-export interface LotteryClaim {
+export interface LotteryCard {
+  id: string;
+  order: number;
+  answer: string;
+  claimedByUserId: string | null;
+  claimedAt: number | null;
+}
+
+export interface LotteryClaimRecord {
+  cardId: string;
+  order: number;
+  answer: string;
   claimedAt: number;
-  isWinner: boolean;
 }
 
 export interface PublishedLotteryToolState extends PublishedToolBaseState {
   type: "lottery";
   phase: LotteryPhase;
-  winnerCount: number;
-  excludeAdmin: boolean;
-  participantUserIds: string[];
-  winnerUserIds: string[];
-  claims: Record<string, LotteryClaim>;
+  answers: string[];
+  cards: LotteryCard[];
+  allowAssignedUser: boolean;
+  assignedUserId: string | null;
+  drawLimitPerUser: number;
+  claimsByUserId: Record<string, LotteryClaimRecord[]>;
 }
 
 export type PublishedToolState =
@@ -185,6 +208,13 @@ export interface MemberView {
   nickname: string;
   avatarUrl: string;
   initial: string;
+  bio: string;
+  livingCity: string;
+  hometown: string;
+  livingLocationDisplay: LocationDisplay;
+  hometownLocationDisplay: LocationDisplay;
+  age: string;
+  homePersonaImageUrl: string;
   tags: string[];
   role: MemberRole;
   isAdmin: boolean;
@@ -236,6 +266,10 @@ export interface CreateTripInput {
 
 export interface UpdateProfileInput {
   tagsInput: string;
+  bio: string;
+  livingCity: string;
+  hometown: string;
+  age: string;
 }
 
 export interface AuthorizeProfileInput {
@@ -335,12 +369,14 @@ export interface VoteDetailView {
   topic: string;
   excludeAdmin: boolean;
   selectionMode: VoteSelectionMode;
+  maxSelections: number;
   participantCount: number;
   submittedCount: number;
   approveCount: number;
   rejectCount: number;
   abstainCount: number;
   options: VoteOptionView[];
+  resultOptions: VoteOptionView[];
   viewerChoice: VoteChoice | null;
   viewerSelectedOptionIds: string[];
   viewerHasSubmitted: boolean;
@@ -360,23 +396,38 @@ export interface WheelDetailView {
   resultHistoryLabels: string[];
 }
 
-export interface LotteryParticipantView extends ToolResultMemberView {
-  statusText: string;
-  statusClassName: string;
-  claimed: boolean;
+export interface LotteryCardView {
+  id: string;
+  order: number;
+  state: "available" | "viewer" | "claimed";
+  answer: string | null;
+  canClaim: boolean;
+}
+
+export interface LotteryClaimRecordView {
+  cardId: string;
+  order: number;
+  answer: string;
+  claimedAt: number;
 }
 
 export interface LotteryDetailView {
   phase: LotteryPhase;
-  winnerCount: number;
-  excludeAdmin: boolean;
-  participantCount: number;
-  claimedCount: number;
-  viewerHasClaimed: boolean;
-  viewerIsWinner: boolean | null;
-  viewerResultText: string;
+  answers: string[];
+  cardCount: number;
+  claimedCardCount: number;
+  remainingCardCount: number;
+  drawLimitPerUser: number;
+  viewerClaimedCount: number;
+  viewerRemainingDrawCount: number;
   viewerEligible: boolean;
-  participants: LotteryParticipantView[];
+  viewerCanDraw: boolean;
+  allowAssignedUser: boolean;
+  assignedUserId: string | null;
+  assignedUserLabel: string | null;
+  eligibleUsers: ToolResultMemberView[];
+  cards: LotteryCardView[];
+  viewerClaimRecords: LotteryClaimRecordView[];
 }
 
 export interface ToolDetailViewModel extends AccessStateViewModel {
@@ -406,6 +457,7 @@ export interface VotePublishInput {
   topic: string;
   options: string[];
   selectionMode: VoteSelectionMode;
+  maxSelections?: number;
   excludeAdmin: boolean;
 }
 
@@ -421,8 +473,10 @@ export interface WheelPublishInput {
 }
 
 export interface LotteryPublishInput {
-  winnerCount: number;
-  excludeAdmin: boolean;
+  answers: string[];
+  drawLimitPerUser: number;
+  allowAssignedUser?: boolean;
+  assignedUserId?: string | null;
 }
 
 export type ProfilePrimaryActionKind = "leave" | "dissolve" | "none";
@@ -433,6 +487,9 @@ export interface ProfilePageViewModel extends AccessStateViewModel {
   currentTripTitle: string;
   currentSeatLabel: string;
   currentRoleLabel: string;
+  profileSummary: string;
+  livingLocationDisplay: LocationDisplay;
+  hometownLocationDisplay: LocationDisplay;
   tags: string[];
   showTagsCard: boolean;
   showPrimaryAction: boolean;
@@ -444,6 +501,16 @@ export interface TagEditorViewModel {
   currentUser: User;
   currentUserInitial: string;
   currentTripTitle: string;
+  authNickname: string;
+  authAvatarUrl: string;
+  currentPersonaId: string;
+  currentPersonaImageUrl: string;
+  bio: string;
+  livingCity: string;
+  livingRegion: string[];
+  hometown: string;
+  hometownRegion: string[];
+  age: string;
   tags: string[];
   tagsInput: string;
   previewTags: string[];

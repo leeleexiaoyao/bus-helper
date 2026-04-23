@@ -1,7 +1,49 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const trip_service_1 = require("../../services/trip-service");
+const constants_1 = require("../../shared/constants");
 const feedback_1 = require("../../utils/feedback");
+const SETTINGS_ITEMS = [
+    {
+        id: "share",
+        label: "分享",
+        icon: "/assets/icons/profile-share.svg",
+        action: "share",
+        isShare: true,
+        showDivider: true
+    },
+    {
+        id: "feedback",
+        label: "问题反馈",
+        icon: "/assets/icons/profile-feedback.svg",
+        action: "feedback",
+        isShare: false,
+        showDivider: true
+    },
+    {
+        id: "about",
+        label: "关于小程序",
+        icon: "/assets/icons/profile-about.svg",
+        action: "about",
+        isShare: false,
+        showDivider: false
+    }
+];
+function buildTextStat(value) {
+    const trimmed = value.trim();
+    return {
+        primary: trimmed || "未填写",
+        secondary: "",
+        isPlaceholder: !trimmed
+    };
+}
+function resolveProfileIllustrationUrl(homePersonaAssetId) {
+    var _a, _b;
+    if (!homePersonaAssetId) {
+        return constants_1.HOME_PERSONA_IMAGE_URL;
+    }
+    return (_b = (_a = constants_1.HOME_PERSONA_OPTIONS.find((option) => option.id === homePersonaAssetId)) === null || _a === void 0 ? void 0 : _a.imageUrl) !== null && _b !== void 0 ? _b : constants_1.HOME_PERSONA_IMAGE_URL;
+}
 Page({
     data: {
         pageData: null,
@@ -11,7 +53,20 @@ Page({
         showDissolveAction: false,
         navProgress: 0,
         authPresetNickname: "",
-        authPresetAvatarUrl: ""
+        authPresetAvatarUrl: "",
+        profileIllustrationUrl: "/assets/personas/profile-illustration.svg",
+        editIconUrl: "/assets/icons/profile-edit.svg",
+        settingsItems: SETTINGS_ITEMS,
+        profileStats: {
+            age: buildTextStat(""),
+            living: buildTextStat(""),
+            hometown: buildTextStat("")
+        }
+    },
+    onLoad() {
+        wx.showShareMenu({
+            menus: ["shareAppMessage"]
+        });
     },
     onShow() {
         this.refreshPage();
@@ -36,7 +91,13 @@ Page({
                 showDissolveAction: pageData.primaryActionKind === "dissolve",
                 navProgress: 0,
                 authPresetNickname: pageData.currentUser.nickname,
-                authPresetAvatarUrl: pageData.currentUser.avatarUrl
+                authPresetAvatarUrl: pageData.currentUser.avatarUrl,
+                profileIllustrationUrl: resolveProfileIllustrationUrl(pageData.currentUser.homePersonaAssetId),
+                profileStats: {
+                    age: buildTextStat(pageData.currentUser.age),
+                    living: pageData.livingLocationDisplay,
+                    hometown: pageData.hometownLocationDisplay
+                }
             });
         }
         catch (error) {
@@ -67,6 +128,16 @@ Page({
         wx.navigateTo({
             url: "/pages/about/index"
         });
+    },
+    handleMenuTap(event) {
+        const action = String(event.currentTarget.dataset.action || "");
+        if (action === "about") {
+            this.goAbout();
+            return;
+        }
+        if (action === "feedback") {
+            this.goFeedback();
+        }
     },
     handlePrimaryAction() {
         const pageData = this.data.pageData;
@@ -111,5 +182,11 @@ Page({
         catch (error) {
             (0, feedback_1.showErrorToast)(error);
         }
+    },
+    onShareAppMessage() {
+        return {
+            title: "巴士认座助手",
+            path: "/pages/home/index"
+        };
     }
 });

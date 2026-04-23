@@ -1,6 +1,66 @@
 import type { ProfilePageViewModel } from "../../shared/types";
 import { tripService } from "../../services/trip-service";
+import { HOME_PERSONA_IMAGE_URL, HOME_PERSONA_OPTIONS } from "../../shared/constants";
 import { showErrorToast, showSuccessToast } from "../../utils/feedback";
+
+interface ProfileMenuItem {
+  id: string;
+  label: string;
+  icon: string;
+  action: "about" | "share" | "feedback";
+  isShare: boolean;
+  showDivider: boolean;
+}
+
+interface ProfileStatDisplay {
+  primary: string;
+  secondary: string;
+  isPlaceholder: boolean;
+}
+
+const SETTINGS_ITEMS: ProfileMenuItem[] = [
+  {
+    id: "share",
+    label: "分享",
+    icon: "/assets/icons/profile-share.svg",
+    action: "share",
+    isShare: true,
+    showDivider: true
+  },
+  {
+    id: "feedback",
+    label: "问题反馈",
+    icon: "/assets/icons/profile-feedback.svg",
+    action: "feedback",
+    isShare: false,
+    showDivider: true
+  },
+  {
+    id: "about",
+    label: "关于小程序",
+    icon: "/assets/icons/profile-about.svg",
+    action: "about",
+    isShare: false,
+    showDivider: false
+  }
+];
+
+function buildTextStat(value: string): ProfileStatDisplay {
+  const trimmed = value.trim();
+  return {
+    primary: trimmed || "未填写",
+    secondary: "",
+    isPlaceholder: !trimmed
+  };
+}
+
+function resolveProfileIllustrationUrl(homePersonaAssetId: string | null): string {
+  if (!homePersonaAssetId) {
+    return HOME_PERSONA_IMAGE_URL;
+  }
+
+  return HOME_PERSONA_OPTIONS.find((option) => option.id === homePersonaAssetId)?.imageUrl ?? HOME_PERSONA_IMAGE_URL;
+}
 
 Page({
   data: {
@@ -11,7 +71,21 @@ Page({
     showDissolveAction: false,
     navProgress: 0,
     authPresetNickname: "",
-    authPresetAvatarUrl: ""
+    authPresetAvatarUrl: "",
+    profileIllustrationUrl: "/assets/personas/profile-illustration.svg",
+    editIconUrl: "/assets/icons/profile-edit.svg",
+    settingsItems: SETTINGS_ITEMS,
+    profileStats: {
+      age: buildTextStat(""),
+      living: buildTextStat(""),
+      hometown: buildTextStat("")
+    }
+  },
+
+  onLoad() {
+    wx.showShareMenu({
+      menus: ["shareAppMessage"]
+    });
   },
 
   onShow() {
@@ -39,7 +113,13 @@ Page({
         showDissolveAction: pageData.primaryActionKind === "dissolve",
         navProgress: 0,
         authPresetNickname: pageData.currentUser.nickname,
-        authPresetAvatarUrl: pageData.currentUser.avatarUrl
+        authPresetAvatarUrl: pageData.currentUser.avatarUrl,
+        profileIllustrationUrl: resolveProfileIllustrationUrl(pageData.currentUser.homePersonaAssetId),
+        profileStats: {
+          age: buildTextStat(pageData.currentUser.age),
+          living: pageData.livingLocationDisplay,
+          hometown: pageData.hometownLocationDisplay
+        }
       });
     } catch (error) {
       showErrorToast(error);
@@ -74,6 +154,18 @@ Page({
     wx.navigateTo({
       url: "/pages/about/index"
     });
+  },
+
+  handleMenuTap(event: WechatMiniprogram.CustomEvent) {
+    const action = String(event.currentTarget.dataset.action || "");
+    if (action === "about") {
+      this.goAbout();
+      return;
+    }
+
+    if (action === "feedback") {
+      this.goFeedback();
+    }
   },
 
   handlePrimaryAction() {
@@ -121,5 +213,12 @@ Page({
     } catch (error) {
       showErrorToast(error);
     }
+  },
+
+  onShareAppMessage() {
+    return {
+      title: "巴士认座助手",
+      path: "/pages/home/index"
+    };
   }
 });

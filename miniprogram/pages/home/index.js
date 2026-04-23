@@ -23,18 +23,15 @@ const initialData = {
     viewerSeatText: "未入座",
     currentPersonaId: "",
     currentPersonaImageUrl: "",
-    personaOptions: constants_1.HOME_PERSONA_OPTIONS.map((option) => (Object.assign(Object.assign({}, option), { className: "persona-option" }))),
+    personaOptions: constants_1.HOME_PERSONA_OPTIONS.map((option) => (Object.assign({}, option))),
     showPersonaSheet: false,
     personaSheetActive: false,
     personaDraftId: "",
     activeTab: "seats",
     sheetVisible: false,
-    sheetMode: "detail",
+    sheetMode: "member-detail",
     selectedSeat: null,
-    selectedMember: null,
-    claimNickname: "",
-    claimAvatarUrl: "",
-    sheetCanAdminRelease: false
+    selectedMember: null
 };
 function resolveHomePersonaImageUrl(user) {
     var _a, _b;
@@ -95,18 +92,13 @@ Page({
             viewerSeatText: (_g = (_f = result.currentTrip) === null || _f === void 0 ? void 0 : _f.tripMeta.viewerSeatCode) !== null && _g !== void 0 ? _g : "未入座",
             currentPersonaId,
             currentPersonaImageUrl,
-            personaOptions: constants_1.HOME_PERSONA_OPTIONS.map((option) => (Object.assign(Object.assign({}, option), { className: option.id === (this.data.showPersonaSheet ? this.data.personaDraftId : currentPersonaId)
-                    ? "persona-option is-active"
-                    : "persona-option" }))),
+            personaOptions: constants_1.HOME_PERSONA_OPTIONS.map((option) => (Object.assign({}, option))),
             showPersonaSheet: false,
             personaSheetActive: false,
             personaDraftId: currentPersonaId,
             sheetVisible: false,
             selectedSeat: null,
-            selectedMember: null,
-            claimNickname: result.currentUser.nickname,
-            claimAvatarUrl: result.currentUser.avatarUrl,
-            sheetCanAdminRelease: false
+            selectedMember: null
         });
     },
     handleAuthorizeProfile(event) {
@@ -144,8 +136,7 @@ Page({
         this.clearPersonaSheetCloseTimer();
         this.setData({
             showPersonaSheet: true,
-            personaDraftId,
-            personaOptions: constants_1.HOME_PERSONA_OPTIONS.map((option) => (Object.assign(Object.assign({}, option), { className: option.id === personaDraftId ? "persona-option is-active" : "persona-option" })))
+            personaDraftId
         });
         wx.nextTick(() => {
             this.setData({
@@ -154,10 +145,9 @@ Page({
         });
     },
     handlePersonaSelect(event) {
-        const personaId = String(event.currentTarget.dataset.personaId || "");
+        const personaId = String(event.detail.personaId || "");
         this.setData({
-            personaDraftId: personaId,
-            personaOptions: constants_1.HOME_PERSONA_OPTIONS.map((option) => (Object.assign(Object.assign({}, option), { className: option.id === personaId ? "persona-option is-active" : "persona-option" })))
+            personaDraftId: personaId
         });
     },
     handlePersonaCancel() {
@@ -180,8 +170,7 @@ Page({
         this.personaSheetCloseTimer = setTimeout(() => {
             this.setData({
                 showPersonaSheet: false,
-                personaDraftId: this.data.currentPersonaId,
-                personaOptions: constants_1.HOME_PERSONA_OPTIONS.map((option) => (Object.assign(Object.assign({}, option), { className: option.id === this.data.currentPersonaId ? "persona-option is-active" : "persona-option" })))
+                personaDraftId: this.data.currentPersonaId
             });
         }, 220);
     },
@@ -193,8 +182,39 @@ Page({
         this.personaSheetCloseTimer = 0;
     },
     noop() { },
+    getSelfMember() {
+        var _a, _b;
+        return (_b = (_a = this.data.currentTrip) === null || _a === void 0 ? void 0 : _a.members.find((member) => member.isSelf)) !== null && _b !== void 0 ? _b : null;
+    },
+    findSeatByCode(seatCode) {
+        var _a, _b;
+        if (!seatCode) {
+            return null;
+        }
+        const rows = (_b = (_a = this.data.currentTrip) === null || _a === void 0 ? void 0 : _a.seatRows) !== null && _b !== void 0 ? _b : [];
+        for (const row of rows) {
+            for (const seat of row.slots) {
+                if ((seat === null || seat === void 0 ? void 0 : seat.code) === seatCode) {
+                    return seat;
+                }
+            }
+        }
+        return null;
+    },
+    resolveMemberSheetMode(member) {
+        var _a;
+        if (!member) {
+            return "member-detail";
+        }
+        if (member.isSelf) {
+            return "self-detail";
+        }
+        return ((_a = this.data.currentTrip) === null || _a === void 0 ? void 0 : _a.tripMeta.viewerRole) === "admin"
+            ? "admin-member-detail"
+            : "member-detail";
+    },
     handleSeatTap(event) {
-        var _a, _b, _c, _d, _e, _f, _g, _h;
+        var _a, _b;
         const seat = event.detail.seat;
         if (!seat) {
             return;
@@ -202,34 +222,27 @@ Page({
         if (seat.isEmpty) {
             this.setData({
                 sheetVisible: true,
-                sheetMode: ((_a = this.data.currentTrip) === null || _a === void 0 ? void 0 : _a.tripMeta.viewerSeatCode) ? "switch" : "claim",
+                sheetMode: "empty-confirm",
                 selectedSeat: seat,
-                selectedMember: null,
-                claimNickname: (_c = (_b = this.data.currentUser) === null || _b === void 0 ? void 0 : _b.nickname) !== null && _c !== void 0 ? _c : "",
-                claimAvatarUrl: (_e = (_d = this.data.currentUser) === null || _d === void 0 ? void 0 : _d.avatarUrl) !== null && _e !== void 0 ? _e : "",
-                sheetCanAdminRelease: false
+                selectedMember: null
             });
             return;
         }
+        const targetMember = (_b = (_a = this.data.currentTrip) === null || _a === void 0 ? void 0 : _a.members.find((member) => { var _a; return member.userId === ((_a = seat.occupant) === null || _a === void 0 ? void 0 : _a.userId); })) !== null && _b !== void 0 ? _b : null;
         if (seat.isMine) {
             this.setData({
                 sheetVisible: true,
-                sheetMode: "self",
+                sheetMode: "self-detail",
                 selectedSeat: seat,
-                selectedMember: null,
-                sheetCanAdminRelease: false
+                selectedMember: targetMember !== null && targetMember !== void 0 ? targetMember : this.getSelfMember()
             });
             return;
         }
-        const targetMember = (_g = (_f = this.data.currentTrip) === null || _f === void 0 ? void 0 : _f.members.find((member) => { var _a; return member.userId === ((_a = seat.occupant) === null || _a === void 0 ? void 0 : _a.userId); })) !== null && _g !== void 0 ? _g : null;
         this.setData({
             sheetVisible: true,
-            sheetMode: "detail",
+            sheetMode: this.resolveMemberSheetMode(targetMember),
             selectedSeat: seat,
-            selectedMember: targetMember,
-            sheetCanAdminRelease: Boolean(((_h = this.data.currentTrip) === null || _h === void 0 ? void 0 : _h.tripMeta.viewerRole) === "admin" &&
-                (targetMember === null || targetMember === void 0 ? void 0 : targetMember.seatCode) &&
-                !(targetMember === null || targetMember === void 0 ? void 0 : targetMember.isSelf))
+            selectedMember: targetMember
         });
     },
     handleMemberTap(event) {
@@ -237,43 +250,29 @@ Page({
         const member = event.detail.member;
         this.setData({
             sheetVisible: true,
-            sheetMode: "detail",
+            sheetMode: this.resolveMemberSheetMode(member),
             selectedMember: member,
-            selectedSeat: null,
-            sheetCanAdminRelease: Boolean(((_a = this.data.currentTrip) === null || _a === void 0 ? void 0 : _a.tripMeta.viewerRole) === "admin" &&
-                (member === null || member === void 0 ? void 0 : member.seatCode) &&
-                !(member === null || member === void 0 ? void 0 : member.isSelf))
+            selectedSeat: this.findSeatByCode((_a = member === null || member === void 0 ? void 0 : member.seatCode) !== null && _a !== void 0 ? _a : null)
         });
     },
     handleSheetClose() {
         this.setData({
             sheetVisible: false,
             selectedSeat: null,
-            selectedMember: null,
-            sheetCanAdminRelease: false
+            selectedMember: null
         });
     },
     handleClaimConfirm() {
+        var _a;
         if (!this.data.selectedSeat) {
             return;
         }
         try {
-            const result = trip_service_1.tripService.claimSeat(this.data.selectedSeat.code);
+            const result = ((_a = this.data.currentTrip) === null || _a === void 0 ? void 0 : _a.tripMeta.viewerSeatCode)
+                ? trip_service_1.tripService.switchSeat(this.data.selectedSeat.code)
+                : trip_service_1.tripService.claimSeat(this.data.selectedSeat.code);
             this.applyBootstrapResult(result);
             (0, feedback_1.showSuccessToast)("入座成功");
-        }
-        catch (error) {
-            (0, feedback_1.showErrorToast)(error);
-        }
-    },
-    handleSwitchConfirm() {
-        if (!this.data.selectedSeat) {
-            return;
-        }
-        try {
-            const result = trip_service_1.tripService.switchSeat(this.data.selectedSeat.code);
-            this.applyBootstrapResult(result);
-            (0, feedback_1.showSuccessToast)("换座成功");
         }
         catch (error) {
             (0, feedback_1.showErrorToast)(error);

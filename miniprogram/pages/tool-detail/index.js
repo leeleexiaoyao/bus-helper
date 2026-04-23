@@ -5,8 +5,8 @@ const errors_1 = require("../../shared/errors");
 const trip_service_1 = require("../../services/trip-service");
 const feedback_1 = require("../../utils/feedback");
 let seatDrawRollingSyncTimer = null;
-let lotteryRollingInterval = null;
-let lotteryRollingTimeout = null;
+let voteRefreshTimer = null;
+const VOTE_REFRESH_INTERVAL_MS = 10000;
 function isToolType(value) {
     return ["seat-draw", "vote", "wheel", "lottery"].includes(value);
 }
@@ -19,6 +19,12 @@ function parseWheelItems(input) {
 function parseVoteOptions(input) {
     return input
         .split(/\n|,|，|;|；/)
+        .map((item) => item.trim())
+        .filter(Boolean);
+}
+function parseLotteryAnswers(input) {
+    return input
+        .split(/\r?\n/)
         .map((item) => item.trim())
         .filter(Boolean);
 }
@@ -64,6 +70,10 @@ function getWheelTargetRotation(itemCount, resultIndex) {
     const targetAngle = resultIndex * step + step / 2;
     return 360 - targetAngle;
 }
+function normalizeRotation(rotation) {
+    const normalized = rotation % 360;
+    return normalized < 0 ? normalized + 360 : normalized;
+}
 async function pickSecureRandomIndex(itemCount) {
     if (itemCount <= 1) {
         return 0;
@@ -96,19 +106,26 @@ function buildVoteInteractionState(pageData, selectedIds) {
             viewerResultLabel: ""
         };
     }
+    if (detail.phase !== "active") {
+        return {
+            approveDisabled: true,
+            abstainDisabled: true,
+            viewerResultLabel: detail.phase === "ended" ? "本轮投票已结束。" : ""
+        };
+    }
     const validOptionIds = new Set(detail.options.map((option) => option.id));
     const currentSelectedIds = Array.from(new Set(selectedIds)).filter((optionId) => validOptionIds.has(optionId));
     const persistedOptionIds = new Set(detail.viewerSelectedOptionIds);
     const pendingOptionCount = currentSelectedIds.filter((optionId) => !persistedOptionIds.has(optionId)).length;
     const allOptionsSelected = detail.selectionMode === "multiple" &&
-        detail.options.length > 0 &&
-        detail.viewerSelectedOptionIds.length >= detail.options.length;
+        detail.maxSelections > 0 &&
+        detail.viewerSelectedOptionIds.length >= detail.maxSelections;
     let viewerResultLabel = "";
     if (detail.viewerChoice === "approve") {
         if (detail.selectionMode === "multiple" &&
             detail.viewerSelectedOptionIds.length > 0 &&
-            detail.viewerSelectedOptionIds.length < detail.options.length) {
-            viewerResultLabel = `你已投 ${detail.viewerSelectedOptionIds.length} 项，还可继续投票。`;
+            detail.viewerSelectedOptionIds.length < detail.maxSelections) {
+            viewerResultLabel = `你已投 ${detail.viewerSelectedOptionIds.length} / ${detail.maxSelections} 项，还可继续投票。`;
         }
         else {
             viewerResultLabel = "你已完成投票。";
@@ -128,9 +145,6 @@ function buildVoteInteractionState(pageData, selectedIds) {
         viewerResultLabel
     };
 }
-function pickRollingLabel(entry) {
-    return `${entry.nickname} / ${entry.seatLabel}`;
-}
 function buildVoteOptionCards(pageData, selectedIds) {
     var _a, _b;
     const selectedIdSet = new Set(selectedIds);
@@ -148,14 +162,10 @@ function clearSeatDrawRollingTimer() {
         seatDrawRollingSyncTimer = null;
     }
 }
-function clearLotteryRollingTimer() {
-    if (lotteryRollingInterval !== null) {
-        clearInterval(lotteryRollingInterval);
-        lotteryRollingInterval = null;
-    }
-    if (lotteryRollingTimeout !== null) {
-        clearTimeout(lotteryRollingTimeout);
-        lotteryRollingTimeout = null;
+function clearVoteRefreshTimer() {
+    if (voteRefreshTimer !== null) {
+        clearInterval(voteRefreshTimer);
+        voteRefreshTimer = null;
     }
 }
 Page({
@@ -180,6 +190,7 @@ Page({
         voteTopicInput: "",
         voteOptionsInput: "",
         voteSelectionMode: "single",
+        voteMaxSelectionsInput: "1",
         voteExcludeAdmin: false,
         voteSelectedOptionIds: [],
         voteOptionCards: [],
@@ -197,15 +208,19 @@ Page({
         wheelBackgroundStyle: "",
         wheelLights: buildWheelLights(),
         wheelSpinning: false,
+        wheelVisibleHistoryLabels: [],
         wheelAllowAssignedUser: false,
         wheelAssignedUserId: "",
         wheelAssignedUserIndex: 0,
         wheelEligibleUserLabels: [],
         wheelShowResult: false,
-        lotteryWinnerCountInput: "1",
-        lotteryExcludeAdmin: false,
-        lotteryRolling: false,
-        lotteryRollingText: ""
+        lotteryAnswersInput: "",
+        lotteryDrawLimitInput: "1",
+        lotteryAllowAssignedUser: false,
+        lotteryAssignedUserId: "",
+        lotteryAssignedUserIndex: 0,
+        lotteryEligibleUserLabels: [],
+        lotteryFlippingCardId: ""
     },
     onLoad(query) {
         const nextToolType = String(query.type || "");
@@ -236,11 +251,11 @@ Page({
     },
     onHide() {
         clearSeatDrawRollingTimer();
-        clearLotteryRollingTimer();
+        clearVoteRefreshTimer();
     },
     onUnload() {
         clearSeatDrawRollingTimer();
-        clearLotteryRollingTimer();
+        clearVoteRefreshTimer();
     },
     refreshPage() {
         var _a, _b, _c;
@@ -260,57 +275,73 @@ Page({
         }
     },
     applyPageData(pageData) {
-        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17, _18, _19, _20, _21, _22, _23, _24, _25, _26, _27, _28, _29, _30, _31, _32, _33, _34, _35, _36;
         const voteSelectionMode = (_b = (_a = pageData.voteDetail) === null || _a === void 0 ? void 0 : _a.selectionMode) !== null && _b !== void 0 ? _b : "single";
-        const voteSelectedOptionIds = (_d = (_c = pageData.voteDetail) === null || _c === void 0 ? void 0 : _c.viewerSelectedOptionIds) !== null && _d !== void 0 ? _d : [];
+        const voteValidOptionIds = new Set((_d = (_c = pageData.voteDetail) === null || _c === void 0 ? void 0 : _c.options.map((option) => option.id)) !== null && _d !== void 0 ? _d : []);
+        const localVoteSelectedOptionIds = this.data.voteSelectedOptionIds.filter((optionId) => voteValidOptionIds.has(optionId));
+        const voteSelectedOptionIds = pageData.toolType === "vote" && ((_e = pageData.voteDetail) === null || _e === void 0 ? void 0 : _e.phase) === "active"
+            ? Array.from(new Set([
+                ...((_g = (_f = pageData.voteDetail) === null || _f === void 0 ? void 0 : _f.viewerSelectedOptionIds) !== null && _g !== void 0 ? _g : []),
+                ...localVoteSelectedOptionIds
+            ]))
+            : (_j = (_h = pageData.voteDetail) === null || _h === void 0 ? void 0 : _h.viewerSelectedOptionIds) !== null && _j !== void 0 ? _j : [];
         const voteInteraction = buildVoteInteractionState(pageData, voteSelectedOptionIds);
-        const seatDrawCount = Math.max(1, Math.min(5, (_f = (_e = pageData.seatDrawDetail) === null || _e === void 0 ? void 0 : _e.drawCount) !== null && _f !== void 0 ? _f : 1));
-        const wheelEligibleUsers = (_h = (_g = pageData.wheelDetail) === null || _g === void 0 ? void 0 : _g.eligibleUsers) !== null && _h !== void 0 ? _h : [];
-        const wheelAssignedUserId = (_p = (_m = (_k = (_j = pageData.wheelDetail) === null || _j === void 0 ? void 0 : _j.assignedUserId) !== null && _k !== void 0 ? _k : (_l = wheelEligibleUsers.find((member) => member.isSelf)) === null || _l === void 0 ? void 0 : _l.userId) !== null && _m !== void 0 ? _m : (_o = wheelEligibleUsers[0]) === null || _o === void 0 ? void 0 : _o.userId) !== null && _p !== void 0 ? _p : "";
+        const seatDrawCount = Math.max(1, Math.min(5, (_l = (_k = pageData.seatDrawDetail) === null || _k === void 0 ? void 0 : _k.drawCount) !== null && _l !== void 0 ? _l : 1));
+        const wheelEligibleUsers = (_o = (_m = pageData.wheelDetail) === null || _m === void 0 ? void 0 : _m.eligibleUsers) !== null && _o !== void 0 ? _o : [];
+        const wheelAssignedUserId = (_u = (_s = (_q = (_p = pageData.wheelDetail) === null || _p === void 0 ? void 0 : _p.assignedUserId) !== null && _q !== void 0 ? _q : (_r = wheelEligibleUsers.find((member) => member.isSelf)) === null || _r === void 0 ? void 0 : _r.userId) !== null && _s !== void 0 ? _s : (_t = wheelEligibleUsers[0]) === null || _t === void 0 ? void 0 : _t.userId) !== null && _u !== void 0 ? _u : "";
         const wheelAssignedUserIndex = Math.max(0, wheelEligibleUsers.findIndex((member) => member.userId === wheelAssignedUserId));
+        const lotteryEligibleUsers = (_w = (_v = pageData.lotteryDetail) === null || _v === void 0 ? void 0 : _v.eligibleUsers) !== null && _w !== void 0 ? _w : [];
+        const lotteryAssignedUserId = (_2 = (_0 = (_y = (_x = pageData.lotteryDetail) === null || _x === void 0 ? void 0 : _x.assignedUserId) !== null && _y !== void 0 ? _y : (_z = lotteryEligibleUsers.find((member) => member.isSelf)) === null || _z === void 0 ? void 0 : _z.userId) !== null && _0 !== void 0 ? _0 : (_1 = lotteryEligibleUsers[0]) === null || _1 === void 0 ? void 0 : _1.userId) !== null && _2 !== void 0 ? _2 : "";
+        const lotteryAssignedUserIndex = Math.max(0, lotteryEligibleUsers.findIndex((member) => member.userId === lotteryAssignedUserId));
         this.setData({
             pageData,
             toolTitle: pageData.toolTitle,
             isDraftEditing: false,
             isRecreateMode: false,
             showActionSheet: false,
-            seatDrawTopicInput: (_r = (_q = pageData.seatDrawDetail) === null || _q === void 0 ? void 0 : _q.topic) !== null && _r !== void 0 ? _r : "",
+            seatDrawTopicInput: (_4 = (_3 = pageData.seatDrawDetail) === null || _3 === void 0 ? void 0 : _3.topic) !== null && _4 !== void 0 ? _4 : "",
             drawCountPickerValue: seatDrawCount - 1,
             seatDrawCountLabel: `${seatDrawCount}人`,
-            seatDrawExcludePreviouslyDrawn: (_t = (_s = pageData.seatDrawDetail) === null || _s === void 0 ? void 0 : _s.excludePreviouslyDrawn) !== null && _t !== void 0 ? _t : false,
-            seatDrawExcludeAdmin: (_v = (_u = pageData.seatDrawDetail) === null || _u === void 0 ? void 0 : _u.excludeAdmin) !== null && _v !== void 0 ? _v : false,
-            voteTopicInput: (_x = (_w = pageData.voteDetail) === null || _w === void 0 ? void 0 : _w.topic) !== null && _x !== void 0 ? _x : "",
-            voteOptionsInput: (_z = (_y = pageData.voteDetail) === null || _y === void 0 ? void 0 : _y.options.map((option) => option.label).join("\n")) !== null && _z !== void 0 ? _z : "",
+            seatDrawExcludePreviouslyDrawn: (_6 = (_5 = pageData.seatDrawDetail) === null || _5 === void 0 ? void 0 : _5.excludePreviouslyDrawn) !== null && _6 !== void 0 ? _6 : false,
+            seatDrawExcludeAdmin: (_8 = (_7 = pageData.seatDrawDetail) === null || _7 === void 0 ? void 0 : _7.excludeAdmin) !== null && _8 !== void 0 ? _8 : false,
+            voteTopicInput: (_10 = (_9 = pageData.voteDetail) === null || _9 === void 0 ? void 0 : _9.topic) !== null && _10 !== void 0 ? _10 : "",
+            voteOptionsInput: (_12 = (_11 = pageData.voteDetail) === null || _11 === void 0 ? void 0 : _11.options.map((option) => option.label).join("\n")) !== null && _12 !== void 0 ? _12 : "",
             voteSelectionMode,
-            voteExcludeAdmin: (_1 = (_0 = pageData.voteDetail) === null || _0 === void 0 ? void 0 : _0.excludeAdmin) !== null && _1 !== void 0 ? _1 : false,
+            voteMaxSelectionsInput: String((_14 = (_13 = pageData.voteDetail) === null || _13 === void 0 ? void 0 : _13.maxSelections) !== null && _14 !== void 0 ? _14 : (voteSelectionMode === "multiple" ? 2 : 1)),
+            voteExcludeAdmin: (_16 = (_15 = pageData.voteDetail) === null || _15 === void 0 ? void 0 : _15.excludeAdmin) !== null && _16 !== void 0 ? _16 : false,
             voteSelectedOptionIds,
             voteOptionCards: buildVoteOptionCards(pageData, voteSelectedOptionIds),
-            votePhaseActive: ((_2 = pageData.voteDetail) === null || _2 === void 0 ? void 0 : _2.phase) === "active",
+            votePhaseActive: ((_17 = pageData.voteDetail) === null || _17 === void 0 ? void 0 : _17.phase) === "active",
             voteModeLabel: voteSelectionMode === "single" ? "单选" : "多选",
             voteModeSingleClass: voteSelectionMode === "single" ? "mode-chip is-active" : "mode-chip",
             voteModeMultipleClass: voteSelectionMode === "multiple" ? "mode-chip is-active" : "mode-chip",
             voteViewerResultLabel: voteInteraction.viewerResultLabel,
             voteApproveDisabled: voteInteraction.approveDisabled,
             voteAbstainDisabled: voteInteraction.abstainDisabled,
-            wheelItemsInput: (_4 = (_3 = pageData.wheelDetail) === null || _3 === void 0 ? void 0 : _3.items.join("\n")) !== null && _4 !== void 0 ? _4 : "",
-            wheelRotation: ((_5 = pageData.wheelDetail) === null || _5 === void 0 ? void 0 : _5.resultIndex) != null && pageData.wheelDetail.items.length
+            wheelItemsInput: (_19 = (_18 = pageData.wheelDetail) === null || _18 === void 0 ? void 0 : _18.items.join("\n")) !== null && _19 !== void 0 ? _19 : "",
+            wheelRotation: ((_20 = pageData.wheelDetail) === null || _20 === void 0 ? void 0 : _20.resultIndex) != null && pageData.wheelDetail.items.length
                 ? getWheelTargetRotation(pageData.wheelDetail.items.length, pageData.wheelDetail.resultIndex)
                 : 0,
             wheelTransitionMs: 0,
-            wheelSlices: buildWheelSlices((_7 = (_6 = pageData.wheelDetail) === null || _6 === void 0 ? void 0 : _6.items) !== null && _7 !== void 0 ? _7 : []),
-            wheelBackgroundStyle: buildWheelBackgroundStyle((_9 = (_8 = pageData.wheelDetail) === null || _8 === void 0 ? void 0 : _8.items) !== null && _9 !== void 0 ? _9 : []),
+            wheelSlices: buildWheelSlices((_22 = (_21 = pageData.wheelDetail) === null || _21 === void 0 ? void 0 : _21.items) !== null && _22 !== void 0 ? _22 : []),
+            wheelBackgroundStyle: buildWheelBackgroundStyle((_24 = (_23 = pageData.wheelDetail) === null || _23 === void 0 ? void 0 : _23.items) !== null && _24 !== void 0 ? _24 : []),
             wheelSpinning: false,
-            wheelAllowAssignedUser: (_11 = (_10 = pageData.wheelDetail) === null || _10 === void 0 ? void 0 : _10.allowAssignedUser) !== null && _11 !== void 0 ? _11 : false,
+            wheelVisibleHistoryLabels: (_26 = (_25 = pageData.wheelDetail) === null || _25 === void 0 ? void 0 : _25.resultHistoryLabels) !== null && _26 !== void 0 ? _26 : [],
+            wheelAllowAssignedUser: (_28 = (_27 = pageData.wheelDetail) === null || _27 === void 0 ? void 0 : _27.allowAssignedUser) !== null && _28 !== void 0 ? _28 : false,
             wheelAssignedUserId,
             wheelAssignedUserIndex,
             wheelEligibleUserLabels: wheelEligibleUsers.map((member) => `${member.nickname} / ${member.seatLabel}`),
-            wheelShowResult: Boolean((_12 = pageData.wheelDetail) === null || _12 === void 0 ? void 0 : _12.resultLabel),
-            lotteryWinnerCountInput: String((_14 = (_13 = pageData.lotteryDetail) === null || _13 === void 0 ? void 0 : _13.winnerCount) !== null && _14 !== void 0 ? _14 : 1),
-            lotteryExcludeAdmin: (_16 = (_15 = pageData.lotteryDetail) === null || _15 === void 0 ? void 0 : _15.excludeAdmin) !== null && _16 !== void 0 ? _16 : false,
-            lotteryRolling: false,
-            lotteryRollingText: ""
+            wheelShowResult: Boolean(((_29 = pageData.wheelDetail) === null || _29 === void 0 ? void 0 : _29.resultLabel) || ((_30 = pageData.wheelDetail) === null || _30 === void 0 ? void 0 : _30.resultHistoryLabels.length)),
+            lotteryAnswersInput: (_32 = (_31 = pageData.lotteryDetail) === null || _31 === void 0 ? void 0 : _31.answers.join("\n")) !== null && _32 !== void 0 ? _32 : "",
+            lotteryDrawLimitInput: String((_34 = (_33 = pageData.lotteryDetail) === null || _33 === void 0 ? void 0 : _33.drawLimitPerUser) !== null && _34 !== void 0 ? _34 : 1),
+            lotteryAllowAssignedUser: (_36 = (_35 = pageData.lotteryDetail) === null || _35 === void 0 ? void 0 : _35.allowAssignedUser) !== null && _36 !== void 0 ? _36 : false,
+            lotteryAssignedUserId,
+            lotteryAssignedUserIndex,
+            lotteryEligibleUserLabels: lotteryEligibleUsers.map((member) => `${member.nickname} / ${member.seatLabel}`),
+            lotteryFlippingCardId: ""
         });
         this.syncSeatDrawRollingTimer(pageData);
+        this.syncVoteRefreshTimer(pageData);
     },
     syncSeatDrawRollingTimer(pageData) {
         var _a;
@@ -325,6 +356,24 @@ Page({
         seatDrawRollingSyncTimer = setInterval(() => {
             this.refreshPage();
         }, 120);
+    },
+    syncVoteRefreshTimer(pageData) {
+        var _a;
+        const shouldSync = pageData.toolType === "vote" &&
+            pageData.isStarted &&
+            ((_a = pageData.voteDetail) === null || _a === void 0 ? void 0 : _a.phase) === "active" &&
+            pageData.voteDetail.viewerHasSubmitted &&
+            !this.data.isDraftEditing;
+        if (!shouldSync) {
+            clearVoteRefreshTimer();
+            return;
+        }
+        if (voteRefreshTimer !== null) {
+            return;
+        }
+        voteRefreshTimer = setInterval(() => {
+            this.refreshPage();
+        }, VOTE_REFRESH_INTERVAL_MS);
     },
     handlePageError(error) {
         if (error instanceof errors_1.BusinessError &&
@@ -360,7 +409,7 @@ Page({
         });
     },
     handleCreateDraft() {
-        var _a, _b, _c, _d, _e, _f, _g;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p;
         if (this.data.toolType === "seat-draw") {
             this.setData({
                 isDraftEditing: true,
@@ -387,12 +436,31 @@ Page({
             });
             return;
         }
+        if (this.data.toolType === "lottery") {
+            const eligibleUsers = (_k = (_j = (_h = this.data.pageData) === null || _h === void 0 ? void 0 : _h.lotteryDetail) === null || _j === void 0 ? void 0 : _j.eligibleUsers) !== null && _k !== void 0 ? _k : [];
+            const defaultAssignedUserId = (_p = (_m = (_l = eligibleUsers.find((member) => member.isSelf)) === null || _l === void 0 ? void 0 : _l.userId) !== null && _m !== void 0 ? _m : (_o = eligibleUsers[0]) === null || _o === void 0 ? void 0 : _o.userId) !== null && _p !== void 0 ? _p : "";
+            const defaultAssignedUserIndex = Math.max(0, eligibleUsers.findIndex((member) => member.userId === defaultAssignedUserId));
+            this.setData({
+                isDraftEditing: true,
+                isRecreateMode: false,
+                lotteryAnswersInput: "",
+                lotteryDrawLimitInput: "1",
+                lotteryAllowAssignedUser: false,
+                lotteryAssignedUserId: defaultAssignedUserId,
+                lotteryAssignedUserIndex: defaultAssignedUserIndex
+            });
+            return;
+        }
+        if (this.data.toolType === "vote") {
+            clearVoteRefreshTimer();
+        }
         this.setData({
             isDraftEditing: true,
             isRecreateMode: false
         });
     },
     handleRecreateDraft() {
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u;
         if (this.data.toolType === "seat-draw") {
             try {
                 const pageData = trip_service_1.tripService.closeSeatDraw();
@@ -414,6 +482,25 @@ Page({
             }
             return;
         }
+        if (this.data.toolType === "lottery") {
+            const eligibleUsers = (_c = (_b = (_a = this.data.pageData) === null || _a === void 0 ? void 0 : _a.lotteryDetail) === null || _b === void 0 ? void 0 : _b.eligibleUsers) !== null && _c !== void 0 ? _c : [];
+            const assignedUserId = (_k = (_h = (_f = (_e = (_d = this.data.pageData) === null || _d === void 0 ? void 0 : _d.lotteryDetail) === null || _e === void 0 ? void 0 : _e.assignedUserId) !== null && _f !== void 0 ? _f : (_g = eligibleUsers.find((member) => member.isSelf)) === null || _g === void 0 ? void 0 : _g.userId) !== null && _h !== void 0 ? _h : (_j = eligibleUsers[0]) === null || _j === void 0 ? void 0 : _j.userId) !== null && _k !== void 0 ? _k : "";
+            const assignedUserIndex = Math.max(0, eligibleUsers.findIndex((member) => member.userId === assignedUserId));
+            this.setData({
+                isDraftEditing: true,
+                isRecreateMode: true,
+                showActionSheet: false,
+                lotteryAnswersInput: (_o = (_m = (_l = this.data.pageData) === null || _l === void 0 ? void 0 : _l.lotteryDetail) === null || _m === void 0 ? void 0 : _m.answers.join("\n")) !== null && _o !== void 0 ? _o : "",
+                lotteryDrawLimitInput: String((_r = (_q = (_p = this.data.pageData) === null || _p === void 0 ? void 0 : _p.lotteryDetail) === null || _q === void 0 ? void 0 : _q.drawLimitPerUser) !== null && _r !== void 0 ? _r : 1),
+                lotteryAllowAssignedUser: (_u = (_t = (_s = this.data.pageData) === null || _s === void 0 ? void 0 : _s.lotteryDetail) === null || _t === void 0 ? void 0 : _t.allowAssignedUser) !== null && _u !== void 0 ? _u : false,
+                lotteryAssignedUserId: assignedUserId,
+                lotteryAssignedUserIndex: assignedUserIndex
+            });
+            return;
+        }
+        if (this.data.toolType === "vote") {
+            clearVoteRefreshTimer();
+        }
         this.setData({
             isDraftEditing: true,
             isRecreateMode: true,
@@ -421,6 +508,9 @@ Page({
         });
     },
     handleOpenActionSheet() {
+        if (this.data.toolType === "vote") {
+            clearVoteRefreshTimer();
+        }
         this.setData({
             showActionSheet: true
         });
@@ -429,6 +519,9 @@ Page({
         this.setData({
             showActionSheet: false
         });
+        if (this.data.toolType === "vote" && this.data.pageData) {
+            this.syncVoteRefreshTimer(this.data.pageData);
+        }
     },
     handleSheetPanelTap() { },
     handleSeatDrawTopicInput(event) {
@@ -477,7 +570,6 @@ Page({
         try {
             const nextPageData = trip_service_1.tripService.startSeatDrawRound();
             this.applyPageData(nextPageData);
-            (0, feedback_1.showSuccessToast)("抽号已开始");
         }
         catch (error) {
             this.handleActionError(error);
@@ -500,9 +592,19 @@ Page({
         }
         this.setData({
             voteSelectionMode: mode,
+            voteMaxSelectionsInput: mode === "single"
+                ? "1"
+                : Number(this.data.voteMaxSelectionsInput) > 1
+                    ? this.data.voteMaxSelectionsInput
+                    : "2",
             voteModeLabel: mode === "single" ? "单选" : "多选",
             voteModeSingleClass: mode === "single" ? "mode-chip is-active" : "mode-chip",
             voteModeMultipleClass: mode === "multiple" ? "mode-chip is-active" : "mode-chip"
+        });
+    },
+    handleVoteMaxSelectionsInput(event) {
+        this.setData({
+            voteMaxSelectionsInput: event.detail.value
         });
     },
     handleVoteExcludeAdminChange(event) {
@@ -518,12 +620,18 @@ Page({
                     topic: this.data.voteTopicInput,
                     options: parseVoteOptions(this.data.voteOptionsInput),
                     selectionMode: this.data.voteSelectionMode,
+                    maxSelections: this.data.voteSelectionMode === "multiple"
+                        ? Number(this.data.voteMaxSelectionsInput)
+                        : 1,
                     excludeAdmin: this.data.voteExcludeAdmin
                 })
                 : trip_service_1.tripService.publishVoteTool({
                     topic: this.data.voteTopicInput,
                     options: parseVoteOptions(this.data.voteOptionsInput),
                     selectionMode: this.data.voteSelectionMode,
+                    maxSelections: this.data.voteSelectionMode === "multiple"
+                        ? Number(this.data.voteMaxSelectionsInput)
+                        : 1,
                     excludeAdmin: this.data.voteExcludeAdmin
                 });
             this.applyPageData(pageData);
@@ -538,6 +646,9 @@ Page({
         const pageData = this.data.pageData;
         const detail = pageData === null || pageData === void 0 ? void 0 : pageData.voteDetail;
         if (!optionId || !(detail === null || detail === void 0 ? void 0 : detail.viewerEligible)) {
+            return;
+        }
+        if (detail.phase !== "active") {
             return;
         }
         if (detail.selectionMode === "single" && detail.viewerHasSubmitted) {
@@ -560,6 +671,10 @@ Page({
             nextIds = currentIds.filter((id) => id !== optionId);
         }
         else {
+            if (currentIds.length >= detail.maxSelections) {
+                (0, feedback_1.showErrorToast)(new errors_1.BusinessError("VOTE_SELECTION_LIMIT_EXCEEDED", `当前投票最多可选择 ${detail.maxSelections} 项。`));
+                return;
+            }
             nextIds = [...currentIds, optionId];
         }
         const voteInteraction = buildVoteInteractionState(pageData, nextIds);
@@ -584,6 +699,16 @@ Page({
             });
             this.applyPageData(pageData);
             (0, feedback_1.showSuccessToast)("已完成投票");
+        }
+        catch (error) {
+            this.handleActionError(error);
+        }
+    },
+    handleVoteEnd() {
+        try {
+            const pageData = trip_service_1.tripService.endVote();
+            this.applyPageData(pageData);
+            (0, feedback_1.showSuccessToast)("投票已结束");
         }
         catch (error) {
             this.handleActionError(error);
@@ -637,11 +762,15 @@ Page({
         }
         try {
             const currentItems = (_e = (_d = (_c = this.data.pageData) === null || _c === void 0 ? void 0 : _c.wheelDetail) === null || _d === void 0 ? void 0 : _d.items) !== null && _e !== void 0 ? _e : [];
+            const previousHistoryLabels = this.data.wheelVisibleHistoryLabels.slice();
             const selectedIndex = await pickSecureRandomIndex(currentItems.length);
             const pageData = trip_service_1.tripService.spinWheel(selectedIndex);
             const nextItems = (_g = (_f = pageData.wheelDetail) === null || _f === void 0 ? void 0 : _f.items) !== null && _g !== void 0 ? _g : [];
             const resultIndex = (_j = (_h = pageData.wheelDetail) === null || _h === void 0 ? void 0 : _h.resultIndex) !== null && _j !== void 0 ? _j : 0;
-            const targetRotation = this.data.wheelRotation + 2160 + getWheelTargetRotation(nextItems.length, resultIndex);
+            const targetRotationBase = getWheelTargetRotation(nextItems.length, resultIndex);
+            const currentRotationBase = normalizeRotation(this.data.wheelRotation);
+            const rotationDelta = normalizeRotation(targetRotationBase - currentRotationBase);
+            const targetRotation = this.data.wheelRotation + 2160 + rotationDelta;
             this.setData({
                 pageData,
                 toolTitle: pageData.toolTitle,
@@ -649,14 +778,17 @@ Page({
                 wheelBackgroundStyle: buildWheelBackgroundStyle(nextItems),
                 wheelSpinning: true,
                 wheelShowResult: false,
+                wheelVisibleHistoryLabels: previousHistoryLabels,
                 wheelTransitionMs: 4800,
                 wheelRotation: targetRotation,
                 isDraftEditing: false
             });
             setTimeout(() => {
+                var _a, _b;
                 this.setData({
                     wheelSpinning: false,
-                    wheelShowResult: true
+                    wheelShowResult: true,
+                    wheelVisibleHistoryLabels: (_b = (_a = pageData.wheelDetail) === null || _a === void 0 ? void 0 : _a.resultHistoryLabels) !== null && _b !== void 0 ? _b : []
                 });
             }, 4800);
             (0, feedback_1.showSuccessToast)("大转盘已启动");
@@ -672,14 +804,29 @@ Page({
         }
         this.handleWheelSpin();
     },
-    handleLotteryWinnerCountInput(event) {
+    handleLotteryAnswersInput(event) {
         this.setData({
-            lotteryWinnerCountInput: event.detail.value
+            lotteryAnswersInput: event.detail.value
         });
     },
-    handleLotteryExcludeAdminChange(event) {
+    handleLotteryDrawLimitInput(event) {
         this.setData({
-            lotteryExcludeAdmin: Boolean(event.detail.value)
+            lotteryDrawLimitInput: event.detail.value
+        });
+    },
+    handleLotteryAllowAssignedUserChange(event) {
+        this.setData({
+            lotteryAllowAssignedUser: Boolean(event.detail.value)
+        });
+    },
+    handleLotteryAssignedUserChange(event) {
+        var _a, _b, _c, _d, _e, _f, _g;
+        const index = Number((_a = event.detail.value) !== null && _a !== void 0 ? _a : 0);
+        const eligibleUsers = (_d = (_c = (_b = this.data.pageData) === null || _b === void 0 ? void 0 : _b.lotteryDetail) === null || _c === void 0 ? void 0 : _c.eligibleUsers) !== null && _d !== void 0 ? _d : [];
+        const targetUser = (_f = (_e = eligibleUsers[index]) !== null && _e !== void 0 ? _e : eligibleUsers[0]) !== null && _f !== void 0 ? _f : null;
+        this.setData({
+            lotteryAssignedUserIndex: index,
+            lotteryAssignedUserId: (_g = targetUser === null || targetUser === void 0 ? void 0 : targetUser.userId) !== null && _g !== void 0 ? _g : ""
         });
     },
     handleLotteryPublish() {
@@ -687,12 +834,16 @@ Page({
             const isRecreateMode = this.data.isRecreateMode;
             const pageData = this.data.isRecreateMode
                 ? trip_service_1.tripService.recreateLotteryTool({
-                    winnerCount: Number(this.data.lotteryWinnerCountInput),
-                    excludeAdmin: this.data.lotteryExcludeAdmin
+                    answers: parseLotteryAnswers(this.data.lotteryAnswersInput),
+                    drawLimitPerUser: Number(this.data.lotteryDrawLimitInput),
+                    allowAssignedUser: this.data.lotteryAllowAssignedUser,
+                    assignedUserId: this.data.lotteryAllowAssignedUser ? this.data.lotteryAssignedUserId : null
                 })
                 : trip_service_1.tripService.publishLotteryTool({
-                    winnerCount: Number(this.data.lotteryWinnerCountInput),
-                    excludeAdmin: this.data.lotteryExcludeAdmin
+                    answers: parseLotteryAnswers(this.data.lotteryAnswersInput),
+                    drawLimitPerUser: Number(this.data.lotteryDrawLimitInput),
+                    allowAssignedUser: this.data.lotteryAllowAssignedUser,
+                    assignedUserId: this.data.lotteryAllowAssignedUser ? this.data.lotteryAssignedUserId : null
                 });
             this.applyPageData(pageData);
             (0, feedback_1.showSuccessToast)(isRecreateMode ? "抓阄已重新创建" : "抓阄已发布");
@@ -701,39 +852,25 @@ Page({
             this.handleActionError(error);
         }
     },
-    handleLotteryClaim() {
-        var _a, _b;
-        const pageData = this.data.pageData;
-        const participants = (_b = (_a = pageData === null || pageData === void 0 ? void 0 : pageData.lotteryDetail) === null || _a === void 0 ? void 0 : _a.participants) !== null && _b !== void 0 ? _b : [];
-        if (!participants.length || this.data.lotteryRolling) {
+    handleLotteryCardTap(event) {
+        var _a, _b, _c;
+        const cardId = String(event.currentTarget.dataset.cardId || "");
+        const cards = (_c = (_b = (_a = this.data.pageData) === null || _a === void 0 ? void 0 : _a.lotteryDetail) === null || _b === void 0 ? void 0 : _b.cards) !== null && _c !== void 0 ? _c : [];
+        const card = cards.find((entry) => entry.id === cardId);
+        if (!cardId || !(card === null || card === void 0 ? void 0 : card.canClaim)) {
             return;
         }
-        clearLotteryRollingTimer();
-        let index = 0;
-        this.setData({
-            lotteryRolling: true,
-            lotteryRollingText: pickRollingLabel(participants[0])
-        });
-        lotteryRollingInterval = setInterval(() => {
-            index = (index + 1) % participants.length;
+        try {
+            const nextPageData = trip_service_1.tripService.claimLottery(cardId);
+            this.applyPageData(nextPageData);
             this.setData({
-                lotteryRollingText: pickRollingLabel(participants[index])
+                lotteryFlippingCardId: cardId
             });
-        }, 90);
-        lotteryRollingTimeout = setTimeout(() => {
-            clearLotteryRollingTimer();
-            try {
-                const nextPageData = trip_service_1.tripService.claimLottery();
-                this.applyPageData(nextPageData);
-                (0, feedback_1.showSuccessToast)("结果已揭晓");
-            }
-            catch (error) {
-                this.setData({
-                    lotteryRolling: false
-                });
-                this.handleActionError(error);
-            }
-        }, 1200);
+            (0, feedback_1.showSuccessToast)("结果已揭晓");
+        }
+        catch (error) {
+            this.handleActionError(error);
+        }
     },
     handleReset() {
         if (!this.data.toolType) {

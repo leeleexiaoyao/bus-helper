@@ -11,52 +11,93 @@
     />
   </block>
 
-  <block wx:if="{{showProfileContent}}">
-    <view class="profile-head">
-      <image
-        wx:if="{{pageData.currentUser.avatarUrl}}"
-        class="profile-avatar"
-        src="{{pageData.currentUser.avatarUrl}}"
-        mode="aspectFill"
-      />
-      <view wx:else class="profile-avatar profile-avatar--fallback avatar-fallback">{{pageData.currentUserInitial}}</view>
-
+  <block wx:if="{{showProfileContent && pageData}}">
+    <view class="profile-hero">
       <view class="profile-copy">
+        <view class="profile-head-row">
+          <image
+            wx:if="{{pageData.currentUser.avatarUrl}}"
+            class="profile-avatar"
+            src="{{pageData.currentUser.avatarUrl}}"
+            mode="aspectFill"
+          />
+          <view wx:else class="profile-avatar profile-avatar--fallback avatar-fallback">{{pageData.currentUserInitial}}</view>
+
+          <view class="profile-edit-btn" bindtap="goTagEditor">
+            <image class="profile-edit-icon" src="{{editIconUrl}}" mode="aspectFit" />
+            <text class="profile-edit-text">编辑资料</text>
+          </view>
+        </view>
+
         <view class="profile-name">{{pageData.currentUser.nickname}}</view>
         <view class="profile-seat">座位号:{{pageData.currentSeatLabel}}</view>
-        <view class="profile-trip">{{pageData.currentTripTitle}}</view>
+
+        <view class="profile-tags" wx:if="{{pageData.tags.length}}">
+          <view class="profile-tag" wx:for="{{pageData.tags}}" wx:key="*this">{{item}}</view>
+        </view>
+
+        <view class="profile-bio">{{pageData.profileSummary}}</view>
+
+        <view class="profile-stats">
+          <view class="profile-stat">
+            <view class="profile-stat-value {{profileStats.age.isPlaceholder ? 'profile-stat-value--placeholder' : ''}}">
+              <text>{{profileStats.age.primary}}</text>
+            </view>
+            <view class="profile-stat-label">年龄</view>
+          </view>
+          <view class="profile-stat-divider"></view>
+          <view class="profile-stat">
+            <view class="profile-stat-value {{profileStats.living.isPlaceholder ? 'profile-stat-value--placeholder' : ''}}">
+              <text>{{profileStats.living.primary}}</text>
+              <text wx:if="{{profileStats.living.secondary}}" class="profile-stat-value-secondary">{{profileStats.living.secondary}}</text>
+            </view>
+            <view class="profile-stat-label">居住</view>
+          </view>
+          <view class="profile-stat-divider"></view>
+          <view class="profile-stat">
+            <view class="profile-stat-value {{profileStats.hometown.isPlaceholder ? 'profile-stat-value--placeholder' : ''}}">
+              <text>{{profileStats.hometown.primary}}</text>
+              <text wx:if="{{profileStats.hometown.secondary}}" class="profile-stat-value-secondary">{{profileStats.hometown.secondary}}</text>
+            </view>
+            <view class="profile-stat-label">来自</view>
+          </view>
+        </view>
       </view>
+
+      <image class="profile-illustration" src="{{profileIllustrationUrl}}" mode="aspectFit" />
     </view>
 
-    <view
-      class="card tags-card"
-      style="border-radius: 32rpx; overflow: hidden; background: #ffffff;"
-      wx:if="{{pageData.showTagsCard}}"
-      bindtap="goTagEditor"
-    >
-      <view class="card-head">
-        <view class="card-title">我的标签</view>
-        <view class="card-link">去编辑 ></view>
-      </view>
+    <view class="settings-card">
+      <view class="settings-title">设置</view>
 
-      <view class="tag-list" wx:if="{{pageData.tags.length}}">
-        <view class="tag-chip" wx:for="{{pageData.tags}}" wx:key="*this">{{item}}</view>
-      </view>
-      <view wx:else class="card-empty">还没有标签，去补充几个让大家更容易认出你。</view>
-    </view>
+      <block wx:for="{{settingsItems}}" wx:key="id">
+        <view
+          wx:if="{{item.isShare}}"
+          class="settings-item settings-item--share"
+        >
+          <view class="settings-item-main">
+            <image class="settings-item-icon" src="{{item.icon}}" mode="aspectFit" />
+            <text class="settings-item-label">{{item.label}}</text>
+          </view>
+          <view class="settings-item-arrow"></view>
+          <button class="settings-share-trigger" open-type="share"></button>
+        </view>
 
-    <view class="card section-card" style="border-radius: 32rpx; overflow: hidden; background: #ffffff;">
-      <view class="card-title">其他</view>
+        <view
+          wx:else
+          class="settings-item"
+          data-action="{{item.action}}"
+          bindtap="handleMenuTap"
+        >
+          <view class="settings-item-main">
+            <image class="settings-item-icon" src="{{item.icon}}" mode="aspectFit" />
+            <text class="settings-item-label">{{item.label}}</text>
+          </view>
+          <view class="settings-item-arrow"></view>
+        </view>
 
-      <view class="menu-item" bindtap="goFeedback">
-        <view class="menu-label">建议反馈</view>
-        <view class="menu-arrow">></view>
-      </view>
-
-      <view class="menu-item menu-item--last" bindtap="goAbout">
-        <view class="menu-label">关于小程序</view>
-        <view class="menu-arrow">></view>
-      </view>
+        <view wx:if="{{item.showDivider}}" class="settings-divider"></view>
+      </block>
     </view>
 
     <button
@@ -74,7 +115,7 @@
       {{pageData.primaryActionLabel}}
     </button>
 
-    <view class="card demo-card" style="border-radius: 32rpx; overflow: hidden; background: #ffffff;">
+    <view class="card demo-card">
       <view class="card-title">演示身份切换</view>
       <view class="section-subtitle">本地版专用。切换后首页会展示该身份的当前车次和座位视角。</view>
 
