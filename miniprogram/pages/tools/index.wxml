@@ -1,10 +1,11 @@
 <view class="page-shell tools-page">
-  <page-navbar title="工具" progress="{{navProgress}}" />
+  <view class="tools-bg-hero"></view>
+  <page-navbar title="" progress="{{navProgress}}" />
 
   <block wx:if="{{showAuthGate}}">
     <auth-gate
-      title="先完成模拟授权"
-      subtitle="先用演示身份完成模拟授权，后面才能进入工具区；等主流程跑通后再切回真实微信授权。"
+      title="先完成微信授权"
+      subtitle="先完成微信头像和昵称授权，后面才能进入工具区。"
       presetNickname="{{authPresetNickname}}"
       presetAvatarUrl="{{authPresetAvatarUrl}}"
       bindauthorized="handleAuthorizeProfile"
@@ -12,6 +13,11 @@
   </block>
 
   <block wx:if="{{showToolsContent}}">
+    <view class="tools-header">
+      <view class="tools-title">工具箱</view>
+      <view class="tools-subtitle">趣味小工具，认座更轻松</view>
+    </view>
+
     <view class="tool-grid">
       <view
         class="tool-card tool-card--{{item.themeKey}} {{item.canEnter ? 'is-clickable' : ''}}"
@@ -23,7 +29,10 @@
         <view class="tool-card-body">
           <view class="tool-title">{{item.displayTitle}}</view>
           <view class="tool-description">{{item.displayDescription}}</view>
-          <view class="tool-cta">{{item.ctaLabel}}</view>
+        </view>
+        <view class="tool-cta">
+          <text>{{item.ctaLabel}}</text>
+          <image class="tool-cta-icon" src="/assets/icons/icon_tools_arrow.svg" mode="aspectFit" />
         </view>
         <image class="tool-image" src="{{item.imageUrl}}" mode="widthFix" />
       </view>

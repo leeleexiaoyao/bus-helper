@@ -1,4 +1,5 @@
 import { tripService } from "../../services/trip-service";
+import { waitForCloudReady } from "../../utils/cloud-ready";
 import { showErrorToast, showSuccessToast } from "../../utils/feedback";
 
 Page({
@@ -7,8 +8,9 @@ Page({
     submitting: false
   },
 
-  onShow() {
+  async onShow() {
     try {
+      await waitForCloudReady();
       tripService.ensureAuthorizedAccess();
     } catch (error) {
       showErrorToast(error);

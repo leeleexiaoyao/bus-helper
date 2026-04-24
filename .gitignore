@@ -4,3 +4,4 @@ dist/
 miniprogram_npm/
 *.log
 project.private.config.json
+.DS_Store

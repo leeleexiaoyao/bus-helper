@@ -1,6 +1,13 @@
 import { tripService } from "../../services/trip-service";
 import type { TripSettingsViewModel } from "../../shared/types";
+import { waitForCloudReady } from "../../utils/cloud-ready";
 import { showErrorToast, showSuccessToast } from "../../utils/feedback";
+
+const TEMPLATE_COPY = {
+  "template-49": "经典 49座",
+  "template-53": "舒适 53座",
+  "template-57": "宽敞 57座"
+} as const;
 
 Page({
   data: {
@@ -8,8 +15,9 @@ Page({
     templateLabel: ""
   },
 
-  onShow() {
+  async onShow() {
     try {
+      await waitForCloudReady();
       const settings = tripService.getTripSettings();
       if (settings.role !== "admin") {
         wx.switchTab({
@@ -19,12 +27,7 @@ Page({
       }
       this.setData({
         settings,
-        templateLabel:
-          settings.templateId === "template-49"
-            ? "49 座模板"
-            : settings.templateId === "template-53"
-              ? "53 座模板"
-              : "57 座模板"
+        templateLabel: TEMPLATE_COPY[settings.templateId]
       });
     } catch (error) {
       showErrorToast(error);
@@ -32,6 +35,20 @@ Page({
         url: "/pages/home/index"
       });
     }
+  },
+
+  handleCopyPassword() {
+    if (!this.data.settings) {
+      return;
+    }
+
+    wx.setClipboardData({
+      data: this.data.settings.password,
+      success: () => {
+        showSuccessToast("已复制");
+      },
+      fail: showErrorToast
+    });
   },
 
   handleDissolve() {

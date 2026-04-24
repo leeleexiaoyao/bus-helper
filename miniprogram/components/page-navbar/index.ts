@@ -83,7 +83,7 @@ Component({
 
       this.setData({
         navOpacityStyle: `opacity: ${safeProgress};`,
-        titleStyle: `color: rgb(${titleColor[0]}, ${titleColor[1]}, ${titleColor[2]});`
+        titleStyle: `color: rgb(${titleColor[0]}, ${titleColor[1]}, ${titleColor[2]}); opacity: ${safeProgress};`
       });
     }
   }

@@ -45,9 +45,15 @@ class TripRepository {
     listTripMembers(tripId) {
         return this.appStateRepository.read().tripMembers.filter((member) => member.tripId === tripId);
     }
+    listTripFavorites(tripId) {
+        return this.appStateRepository.read().tripFavorites.filter((favorite) => favorite.tripId === tripId);
+    }
     getTripMember(tripId, userId) {
         var _a;
         return (_a = this.listTripMembers(tripId).find((member) => member.userId === userId)) !== null && _a !== void 0 ? _a : null;
+    }
+    hasTripFavorite(tripId, sourceUserId, targetUserId) {
+        return this.listTripFavorites(tripId).some((favorite) => favorite.sourceUserId === sourceUserId && favorite.targetUserId === targetUserId);
     }
     addTripMember(tripId, userId, role, joinedAt) {
         return this.appStateRepository.update((state) => {
@@ -65,6 +71,24 @@ class TripRepository {
             return nextMember;
         });
     }
+    addTripFavorite(tripId, sourceUserId, targetUserId, createdAt) {
+        return this.appStateRepository.update((state) => {
+            const exists = state.tripFavorites.find((favorite) => favorite.tripId === tripId &&
+                favorite.sourceUserId === sourceUserId &&
+                favorite.targetUserId === targetUserId);
+            if (exists) {
+                return exists;
+            }
+            const nextFavorite = {
+                tripId,
+                sourceUserId,
+                targetUserId,
+                createdAt
+            };
+            state.tripFavorites.push(nextFavorite);
+            return nextFavorite;
+        });
+    }
     removeTripMember(tripId, userId) {
         this.appStateRepository.update((state) => {
             state.tripMembers = state.tripMembers.filter((member) => !(member.tripId === tripId && member.userId === userId));
@@ -73,6 +97,24 @@ class TripRepository {
     removeAllTripMembers(tripId) {
         this.appStateRepository.update((state) => {
             state.tripMembers = state.tripMembers.filter((member) => member.tripId !== tripId);
+        });
+    }
+    removeTripFavorite(tripId, sourceUserId, targetUserId) {
+        this.appStateRepository.update((state) => {
+            state.tripFavorites = state.tripFavorites.filter((favorite) => !(favorite.tripId === tripId &&
+                favorite.sourceUserId === sourceUserId &&
+                favorite.targetUserId === targetUserId));
+        });
+    }
+    removeTripFavoritesByTrip(tripId) {
+        this.appStateRepository.update((state) => {
+            state.tripFavorites = state.tripFavorites.filter((favorite) => favorite.tripId !== tripId);
+        });
+    }
+    removeTripFavoritesByUserInTrip(tripId, userId) {
+        this.appStateRepository.update((state) => {
+            state.tripFavorites = state.tripFavorites.filter((favorite) => favorite.tripId !== tripId ||
+                (favorite.sourceUserId !== userId && favorite.targetUserId !== userId));
         });
     }
 }

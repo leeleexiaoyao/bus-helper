@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const constants_1 = require("../../shared/constants");
 const trip_service_1 = require("../../services/trip-service");
+const cloud_ready_1 = require("../../utils/cloud-ready");
 const feedback_1 = require("../../utils/feedback");
 const format_1 = require("../../utils/format");
 const AGE_OPTIONS = Array.from({ length: 75 }, (_, index) => index + 16);
@@ -37,7 +38,14 @@ Page({
         submitting: false
     },
     personaSheetCloseTimer: 0,
-    onShow() {
+    async onShow() {
+        try {
+            await (0, cloud_ready_1.waitForCloudReady)();
+        }
+        catch (error) {
+            (0, feedback_1.showErrorToast)(error);
+            return;
+        }
         this.refreshPage();
     },
     onUnload() {

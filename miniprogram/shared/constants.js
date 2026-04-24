@@ -1,11 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.TOOL_META = exports.TOOL_TYPES = exports.DEMO_SWITCHABLE_USER_IDS = exports.DEMO_USERS = exports.TRIP_TEMPLATES = exports.HOME_PERSONA_OPTIONS = exports.DEFAULT_WHEEL_ITEMS = exports.WHEEL_MAX_ITEMS = exports.HOME_PERSONA_IMAGE_URL = exports.DEFAULT_AVATAR_URL = exports.DEFAULT_DEPARTURE_TIME = exports.DEFAULT_TRIP_NAME = exports.APP_STATE_STORAGE_KEY = exports.APP_STATE_VERSION = void 0;
+exports.TOOL_META = exports.TOOL_TYPES = exports.DEMO_SWITCHABLE_USER_IDS = exports.DEMO_USERS = exports.TRIP_TEMPLATES = exports.HOME_PERSONA_OPTIONS = exports.DEFAULT_WHEEL_ITEMS = exports.WHEEL_MAX_ITEMS = exports.HOME_PERSONA_IMAGE_URL = exports.DEFAULT_AVATAR_URL = exports.DEFAULT_DEPARTURE_TIME = exports.DEFAULT_TRIP_NAME = exports.MAX_MEMBER_FAVORITES_PER_TRIP = exports.APP_STATE_STORAGE_KEY = exports.APP_STATE_VERSION = void 0;
 exports.createEmptyTripTools = createEmptyTripTools;
 exports.createInitialAppState = createInitialAppState;
 exports.createSeededDemoAppState = createSeededDemoAppState;
-exports.APP_STATE_VERSION = 9;
+exports.APP_STATE_VERSION = 10;
 exports.APP_STATE_STORAGE_KEY = "bus-seat-buddy-state";
+exports.MAX_MEMBER_FAVORITES_PER_TRIP = 2;
 exports.DEFAULT_TRIP_NAME = "未命名车次";
 exports.DEFAULT_DEPARTURE_TIME = "待定";
 exports.DEFAULT_AVATAR_URL = "";
@@ -138,6 +139,7 @@ function createInitialAppState() {
         }, {}),
         trips: {},
         tripMembers: [],
+        tripFavorites: [],
         activeUserId: exports.DEMO_USERS[0].id
     };
 }
@@ -296,6 +298,7 @@ function createSeededDemoAppState() {
             [seededTrip.id]: seededTrip
         },
         tripMembers: seededTripMembers,
+        tripFavorites: [],
         activeUserId: SEED_ACTIVE_USER_ID
     };
 }

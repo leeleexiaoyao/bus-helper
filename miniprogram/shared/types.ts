@@ -154,11 +154,19 @@ export interface TripMember {
   joinedAt: number;
 }
 
+export interface TripFavoriteRelation {
+  tripId: string;
+  sourceUserId: string;
+  targetUserId: string;
+  createdAt: number;
+}
+
 export interface AppState {
   version: number;
   users: Record<string, User>;
   trips: Record<string, Trip>;
   tripMembers: TripMember[];
+  tripFavorites: TripFavoriteRelation[];
   activeUserId: string;
 }
 
@@ -216,12 +224,18 @@ export interface MemberView {
   age: string;
   homePersonaImageUrl: string;
   tags: string[];
+  tagViews: Array<{
+    label: string;
+    style: string;
+  }>;
   role: MemberRole;
   isAdmin: boolean;
   showMeta: boolean;
   seatCode: string | null;
   seatLabel: string;
   isSelf: boolean;
+  isFavoritedByViewer: boolean;
+  isMutualFavoriteWithViewer: boolean;
 }
 
 export interface SeatOccupantView {
@@ -495,6 +509,42 @@ export interface ProfilePageViewModel extends AccessStateViewModel {
   showPrimaryAction: boolean;
   primaryActionKind: ProfilePrimaryActionKind;
   primaryActionLabel: string;
+}
+
+export interface FavoriteMemberCardView {
+  userId: string;
+  nickname: string;
+  avatarUrl: string;
+  initial: string;
+  seatLabel: string;
+  isAdmin: boolean;
+  tags: string[];
+  tagViews: Array<{
+    label: string;
+    style: string;
+  }>;
+  isMutualFavoriteWithViewer: boolean;
+}
+
+export interface FavoriteRankingItemView {
+  userId: string;
+  nickname: string;
+  avatarUrl: string;
+  initial: string;
+  seatLabel: string;
+  isAdmin: boolean;
+  favoriteCount: number;
+}
+
+export interface FavoritePageViewModel extends AccessStateViewModel {
+  tripName: string;
+  viewerRoleLabel: string;
+  isAdmin: boolean;
+  favoriteLimit: number;
+  favoriteCount: number;
+  showRankingTab: boolean;
+  favorites: FavoriteMemberCardView[];
+  ranking: FavoriteRankingItemView[];
 }
 
 export interface TagEditorViewModel {

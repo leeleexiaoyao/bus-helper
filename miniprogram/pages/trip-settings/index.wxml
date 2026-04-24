@@ -1,15 +1,27 @@
-<view class="page-shell" wx:if="{{settings}}">
-  <view class="card settings-card" style="border-radius: 32rpx; overflow: hidden; background: #ffffff;">
-    <view class="section-title">{{settings.tripName}}</view>
-    <view class="section-subtitle">{{settings.departureTime}}</view>
-
-    <view class="setting-item" style="border-radius: 24rpx; overflow: hidden;">
-      <view class="field-label">当前密码</view>
-      <view class="setting-value">{{settings.password}}</view>
+<view class="trip-settings-page" wx:if="{{settings}}">
+  <view class="settings-content">
+    <view class="setting-row">
+      <view class="setting-label">行程名称</view>
+      <view class="setting-value">{{settings.tripName}}</view>
     </view>
 
-    <view class="setting-item" style="border-radius: 24rpx; overflow: hidden;">
-      <view class="field-label">座位模板</view>
+    <view class="setting-row">
+      <view class="setting-label">出发时间</view>
+      <view class="setting-value setting-value--muted">{{settings.departureTime}}</view>
+    </view>
+
+    <view class="setting-row">
+      <view class="setting-label">车次口令</view>
+      <view class="password-control">
+        <text class="password-text">{{settings.password}}</text>
+        <button class="copy-button" hover-class="none" bindtap="handleCopyPassword">
+          <view class="copy-icon"></view>
+        </button>
+      </view>
+    </view>
+
+    <view class="setting-row">
+      <view class="setting-label">座位模板</view>
       <view class="setting-value">{{templateLabel}}</view>
     </view>
 

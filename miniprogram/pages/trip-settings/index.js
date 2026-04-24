@@ -1,14 +1,21 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const trip_service_1 = require("../../services/trip-service");
+const cloud_ready_1 = require("../../utils/cloud-ready");
 const feedback_1 = require("../../utils/feedback");
+const TEMPLATE_COPY = {
+    "template-49": "经典 49座",
+    "template-53": "舒适 53座",
+    "template-57": "宽敞 57座"
+};
 Page({
     data: {
         settings: null,
         templateLabel: ""
     },
-    onShow() {
+    async onShow() {
         try {
+            await (0, cloud_ready_1.waitForCloudReady)();
             const settings = trip_service_1.tripService.getTripSettings();
             if (settings.role !== "admin") {
                 wx.switchTab({
@@ -18,11 +25,7 @@ Page({
             }
             this.setData({
                 settings,
-                templateLabel: settings.templateId === "template-49"
-                    ? "49 座模板"
-                    : settings.templateId === "template-53"
-                        ? "53 座模板"
-                        : "57 座模板"
+                templateLabel: TEMPLATE_COPY[settings.templateId]
             });
         }
         catch (error) {
@@ -31,6 +34,18 @@ Page({
                 url: "/pages/home/index"
             });
         }
+    },
+    handleCopyPassword() {
+        if (!this.data.settings) {
+            return;
+        }
+        wx.setClipboardData({
+            data: this.data.settings.password,
+            success: () => {
+                (0, feedback_1.showSuccessToast)("已复制");
+            },
+            fail: feedback_1.showErrorToast
+        });
     },
     handleDissolve() {
         wx.showModal({

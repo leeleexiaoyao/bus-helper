@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UserRepository = void 0;
 const errors_1 = require("../shared/errors");
+const cloud_user_session_1 = require("../services/cloud/cloud-user-session");
 class UserRepository {
     constructor(appStateRepository) {
         this.appStateRepository = appStateRepository;
@@ -17,7 +18,7 @@ class UserRepository {
         return user;
     }
     updateUser(userId, updater) {
-        return this.appStateRepository.update((state) => {
+        const nextUser = this.appStateRepository.update((state) => {
             const user = state.users[userId];
             if (!user) {
                 throw new errors_1.BusinessError("USER_NOT_FOUND", "未找到当前用户。");
@@ -25,6 +26,8 @@ class UserRepository {
             updater(user);
             return user;
         });
+        (0, cloud_user_session_1.scheduleUserCloudSync)(nextUser);
+        return nextUser;
     }
     setCurrentTripId(userId, tripId) {
         return this.updateUser(userId, (user) => {

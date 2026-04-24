@@ -13,6 +13,7 @@ import type {
   PublishedSeatDrawToolState,
   PublishedToolState,
   PublishedVoteToolState,
+  TripFavoriteRelation,
   User,
   ToolType,
   Trip,
@@ -406,6 +407,35 @@ function normalizeUser(user: User): User {
   };
 }
 
+function normalizeTripFavorites(value: unknown): TripFavoriteRelation[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.reduce<TripFavoriteRelation[]>((accumulator, entry) => {
+    if (!isRecord(entry)) {
+      return accumulator;
+    }
+
+    const tripId = typeof entry.tripId === "string" ? entry.tripId.trim() : "";
+    const sourceUserId = typeof entry.sourceUserId === "string" ? entry.sourceUserId.trim() : "";
+    const targetUserId = typeof entry.targetUserId === "string" ? entry.targetUserId.trim() : "";
+    const createdAt = typeof entry.createdAt === "number" ? entry.createdAt : 0;
+
+    if (!tripId || !sourceUserId || !targetUserId || sourceUserId === targetUserId) {
+      return accumulator;
+    }
+
+    accumulator.push({
+      tripId,
+      sourceUserId,
+      targetUserId,
+      createdAt
+    });
+    return accumulator;
+  }, []);
+}
+
 function normalizeState(state: AppState | null): AppState {
   if (!state) {
     return createInitialAppState();
@@ -426,8 +456,36 @@ function normalizeState(state: AppState | null): AppState {
     trips: Object.values(state.trips).reduce<AppState["trips"]>((accumulator, trip) => {
       accumulator[trip.id] = normalizeTrip(trip as Trip);
       return accumulator;
-    }, {})
+    }, {}),
+    tripFavorites: normalizeTripFavorites((state as AppState & { tripFavorites?: unknown }).tripFavorites)
   };
+
+  const membershipSet = new Set(
+    nextState.tripMembers.map((member) => `${member.tripId}:${member.userId}`)
+  );
+  const dedupedFavorites = new Map<string, TripFavoriteRelation>();
+  nextState.tripFavorites.forEach((favorite) => {
+    const trip = nextState.trips[favorite.tripId];
+    if (!trip || trip.status !== "active") {
+      return;
+    }
+    if (!nextState.users[favorite.sourceUserId] || !nextState.users[favorite.targetUserId]) {
+      return;
+    }
+    if (
+      !membershipSet.has(`${favorite.tripId}:${favorite.sourceUserId}`) ||
+      !membershipSet.has(`${favorite.tripId}:${favorite.targetUserId}`)
+    ) {
+      return;
+    }
+
+    const key = `${favorite.tripId}:${favorite.sourceUserId}:${favorite.targetUserId}`;
+    const existing = dedupedFavorites.get(key);
+    if (!existing || favorite.createdAt < existing.createdAt) {
+      dedupedFavorites.set(key, favorite);
+    }
+  });
+  nextState.tripFavorites = Array.from(dedupedFavorites.values());
 
   return nextState;
 }

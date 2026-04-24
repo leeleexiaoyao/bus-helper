@@ -1,6 +1,7 @@
 import type { HomePersonaOption, TagEditorViewModel } from "../../shared/types";
 import { HOME_PERSONA_OPTIONS } from "../../shared/constants";
 import { tripService } from "../../services/trip-service";
+import { waitForCloudReady } from "../../utils/cloud-ready";
 import { showErrorToast, showSuccessToast } from "../../utils/feedback";
 import { parseTags } from "../../utils/format";
 
@@ -64,7 +65,14 @@ Page({
   } as TagEditorPageData,
   personaSheetCloseTimer: 0,
 
-  onShow() {
+  async onShow() {
+    try {
+      await waitForCloudReady();
+    } catch (error) {
+      showErrorToast(error);
+      return;
+    }
+
     this.refreshPage();
   },
 

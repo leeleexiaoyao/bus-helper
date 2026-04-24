@@ -7,6 +7,7 @@ import type {
   VoteSelectionMode
 } from "../../shared/types";
 import { tripService } from "../../services/trip-service";
+import { waitForCloudReady } from "../../utils/cloud-ready";
 import { showErrorToast, showSuccessToast } from "../../utils/feedback";
 
 type WheelSliceView = {
@@ -305,7 +306,14 @@ Page({
     });
   },
 
-  onShow() {
+  async onShow() {
+    try {
+      await waitForCloudReady();
+    } catch (error) {
+      showErrorToast(error);
+      return;
+    }
+
     this.refreshPage();
   },
 

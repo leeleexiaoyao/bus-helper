@@ -1,10 +1,22 @@
 "use strict";
+var __rest = (this && this.__rest) || function (s, e) {
+    var t = {};
+    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+        t[p] = s[p];
+    if (s != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                t[p[i]] = s[p[i]];
+        }
+    return t;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.tripService = exports.TripService = void 0;
 const constants_1 = require("../shared/constants");
 const errors_1 = require("../shared/errors");
 const seat_1 = require("../shared/seat");
 const format_1 = require("../utils/format");
+const tag_style_1 = require("../utils/tag-style");
 const id_1 = require("../utils/id");
 const app_state_repository_1 = require("../repositories/app-state-repository");
 const session_repository_1 = require("../repositories/session-repository");
@@ -16,31 +28,31 @@ const SEAT_DRAW_ROLLING_DURATION_MS = 3000;
 const TOOL_PAGE_META = {
     vote: {
         displayTitle: "投票",
-        displayDescription: "选出你喜欢的",
+        displayDescription: "一起选出最佳方案",
         imageUrl: "/assets/icons/icon_tools_投票.png",
-        ctaLabel: "玩这个>",
-        sortOrder: 1
+        ctaLabel: "去使用",
+        sortOrder: 2
     },
     "seat-draw": {
-        displayTitle: "随机选号",
-        displayDescription: "看看谁运气好",
+        displayTitle: "随机抽号",
+        displayDescription: "公平随机不偏心",
         imageUrl: "/assets/icons/icon_tools_随机选号.png",
-        ctaLabel: "玩这个>",
-        sortOrder: 2
+        ctaLabel: "去使用",
+        sortOrder: 1
     },
     lottery: {
         displayTitle: "抽签",
-        displayDescription: "谁是天选之人",
+        displayDescription: "神秘配对等你揭晓",
         imageUrl: "/assets/icons/icon_tools_抽签.png",
-        ctaLabel: "玩这个>",
-        sortOrder: 3
+        ctaLabel: "去使用",
+        sortOrder: 4
     },
     wheel: {
         displayTitle: "幸运大转盘",
-        displayDescription: "幸运转转转",
+        displayDescription: "转出你的幸运",
         imageUrl: "/assets/icons/icon_tools_幸运大转盘.png",
-        ctaLabel: "玩这个>",
-        sortOrder: 4
+        ctaLabel: "去使用",
+        sortOrder: 3
     }
 };
 function assertTripName(tripName) {
@@ -53,10 +65,36 @@ function assertPassword(password) {
         throw new errors_1.BusinessError("INVALID_PASSWORD", "请输入 6 位数字密码。");
     }
 }
+function assertDepartureTime(departureTime) {
+    const trimmed = departureTime.trim();
+    const match = trimmed.match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})$/);
+    if (!match) {
+        throw new errors_1.BusinessError("INVALID_DEPARTURE_TIME", "请选择出发日期和时间。");
+    }
+    const [, yearText, monthText, dayText, hourText, minuteText] = match;
+    const year = Number(yearText);
+    const month = Number(monthText);
+    const day = Number(dayText);
+    const hour = Number(hourText);
+    const minute = Number(minuteText);
+    const candidate = new Date(year, month - 1, day, hour, minute);
+    const isValidDate = candidate.getFullYear() === year &&
+        candidate.getMonth() === month - 1 &&
+        candidate.getDate() === day &&
+        candidate.getHours() === hour &&
+        candidate.getMinutes() === minute;
+    if (!isValidDate) {
+        throw new errors_1.BusinessError("INVALID_DEPARTURE_TIME", "请选择正确的出发日期和时间。");
+    }
+    return trimmed;
+}
 function assertTemplateExists(templateId) {
     if (!constants_1.TRIP_TEMPLATES.some((template) => template.id === templateId)) {
         throw new errors_1.BusinessError("INVALID_TEMPLATE", "请选择座位模板。");
     }
+}
+function createSixDigitPassword(seed) {
+    return String(seed).padStart(6, "0").slice(-6);
 }
 function assertNickname(nickname, fallback) {
     const trimmed = nickname.trim();
@@ -288,6 +326,15 @@ function compareVoteResultOptions(left, right) {
         return right.supportCount - left.supportCount;
     }
     return left.label.localeCompare(right.label, "zh-Hans-CN");
+}
+function compareFavoriteRankingItems(left, right) {
+    if (right.favoriteCount !== left.favoriteCount) {
+        return right.favoriteCount - left.favoriteCount;
+    }
+    if (left.joinedAt !== right.joinedAt) {
+        return left.joinedAt - right.joinedAt;
+    }
+    return left.userId.localeCompare(right.userId);
 }
 class TripService {
     constructor(storageAdapter = storage_adapter_1.wxStorageAdapter) {
@@ -863,6 +910,21 @@ class TripService {
                     ? "退出车次"
                     : "" });
     }
+    getFavoritesPageData() {
+        const currentUser = this.getActiveUser();
+        const accessState = this.buildAccessState(currentUser);
+        if (!currentUser.currentTripId) {
+            return Object.assign(Object.assign({}, accessState), { tripName: "未加入车次", viewerRoleLabel: "暂未加入", isAdmin: false, favoriteLimit: constants_1.MAX_MEMBER_FAVORITES_PER_TRIP, favoriteCount: 0, showRankingTab: false, favorites: [], ranking: [] });
+        }
+        const currentTrip = this.buildCurrentTripView(currentUser.currentTripId, currentUser.id);
+        const favoriteMembers = currentTrip.members
+            .filter((member) => member.isFavoritedByViewer)
+            .map((member) => this.buildFavoriteMemberCardView(member));
+        const ranking = currentTrip.tripMeta.viewerRole === "admin"
+            ? this.buildFavoriteRankingItems(currentTrip.tripMeta.tripId, currentTrip.members)
+            : [];
+        return Object.assign(Object.assign({}, accessState), { tripName: currentTrip.tripMeta.tripName, viewerRoleLabel: currentTrip.tripMeta.viewerRoleLabel, isAdmin: currentTrip.tripMeta.isAdmin, favoriteLimit: constants_1.MAX_MEMBER_FAVORITES_PER_TRIP, favoriteCount: favoriteMembers.length, showRankingTab: currentTrip.tripMeta.isAdmin, favorites: favoriteMembers, ranking });
+    }
     getTagEditorData() {
         const currentUser = this.ensureAuthorizedAccess();
         const tripName = currentUser.currentTripId
@@ -890,6 +952,27 @@ class TripService {
     switchActiveUser(userId) {
         this.userRepository.getUser(userId);
         this.sessionRepository.setActiveUserId(userId);
+        return this.bootstrapApp();
+    }
+    toggleFavoriteMember(targetUserId) {
+        const context = this.requireTripContext();
+        if (!this.tripRepository.getTripMember(context.tripId, targetUserId)) {
+            throw new errors_1.BusinessError("FAVORITE_TARGET_INVALID", "只能收藏当前车次成员。");
+        }
+        if (targetUserId === context.currentUser.id) {
+            throw new errors_1.BusinessError("FAVORITE_SELF_NOT_ALLOWED", "不能收藏自己。");
+        }
+        if (this.tripRepository.hasTripFavorite(context.tripId, context.currentUser.id, targetUserId)) {
+            this.tripRepository.removeTripFavorite(context.tripId, context.currentUser.id, targetUserId);
+            return this.bootstrapApp();
+        }
+        const currentFavoriteCount = this.tripRepository
+            .listTripFavorites(context.tripId)
+            .filter((favorite) => favorite.sourceUserId === context.currentUser.id).length;
+        if (currentFavoriteCount >= constants_1.MAX_MEMBER_FAVORITES_PER_TRIP) {
+            throw new errors_1.BusinessError("FAVORITE_LIMIT_EXCEEDED", `最多可收藏 ${constants_1.MAX_MEMBER_FAVORITES_PER_TRIP} 人。`);
+        }
+        this.tripRepository.addTripFavorite(context.tripId, context.currentUser.id, targetUserId, Date.now());
         return this.bootstrapApp();
     }
     updateProfile(input) {
@@ -933,11 +1016,27 @@ class TripService {
         });
         return this.bootstrapApp();
     }
+    generateAvailableTripPassword() {
+        for (let index = 0; index < 1000; index += 1) {
+            const candidate = createSixDigitPassword(Math.floor(Math.random() * 1000000));
+            if (!this.tripRepository.findActiveTripByPassword(candidate)) {
+                return candidate;
+            }
+        }
+        for (let index = 0; index <= 999999; index += 1) {
+            const candidate = createSixDigitPassword(index);
+            if (!this.tripRepository.findActiveTripByPassword(candidate)) {
+                return candidate;
+            }
+        }
+        throw new errors_1.BusinessError("PASSWORD_POOL_EXHAUSTED", "车次口令已用完，请稍后再试。");
+    }
     createTrip(input) {
         const currentUser = this.getActiveUser();
         this.assertAuthorizedUser(currentUser);
         this.assertUserIsFree(currentUser);
         assertTripName(input.tripName);
+        const departureTime = assertDepartureTime(input.departureTime);
         assertPassword(input.password);
         assertTemplateExists(input.templateId);
         this.tripRepository.ensurePasswordAvailable(input.password);
@@ -947,7 +1046,7 @@ class TripService {
         this.tripRepository.saveTrip({
             id: tripId,
             tripName: input.tripName.trim(),
-            departureTime: input.departureTime.trim(),
+            departureTime,
             password: input.password,
             templateId: input.templateId,
             creatorUserId: currentUser.id,
@@ -990,6 +1089,7 @@ class TripService {
                 trip.seatMap[currentSeat] = null;
             });
         }
+        this.tripRepository.removeTripFavoritesByUserInTrip(currentUser.currentTripId, currentUser.id);
         this.tripRepository.removeTripMember(currentUser.currentTripId, currentUser.id);
         this.userRepository.setCurrentTripId(currentUser.id, null);
         return this.bootstrapApp();
@@ -1009,6 +1109,7 @@ class TripService {
         memberRelations.forEach((memberRelation) => {
             this.userRepository.setCurrentTripId(memberRelation.userId, null);
         });
+        this.tripRepository.removeTripFavoritesByTrip(tripId);
         this.tripRepository.removeAllTripMembers(tripId);
         this.tripRepository.updateTrip(tripId, (trip) => {
             trip.status = "dissolved";
@@ -1098,6 +1199,7 @@ class TripService {
     }
     repairState() {
         this.appStateRepository.update((state) => {
+            var _a;
             if (!state.users[state.activeUserId]) {
                 const fallbackUserId = Object.keys(state.users)[0];
                 if (fallbackUserId) {
@@ -1299,6 +1401,30 @@ class TripService {
                 });
             });
             const validMembershipSet = new Set(state.tripMembers.map((member) => `${member.tripId}:${member.userId}`));
+            const dedupedFavorites = new Map();
+            state.tripFavorites = ((_a = state.tripFavorites) !== null && _a !== void 0 ? _a : []).filter((favorite) => {
+                const trip = state.trips[favorite.tripId];
+                if (!trip || trip.status !== "active") {
+                    return false;
+                }
+                if (!state.users[favorite.sourceUserId] || !state.users[favorite.targetUserId]) {
+                    return false;
+                }
+                if (favorite.sourceUserId === favorite.targetUserId) {
+                    return false;
+                }
+                if (!validMembershipSet.has(`${favorite.tripId}:${favorite.sourceUserId}`) ||
+                    !validMembershipSet.has(`${favorite.tripId}:${favorite.targetUserId}`)) {
+                    return false;
+                }
+                const key = `${favorite.tripId}:${favorite.sourceUserId}:${favorite.targetUserId}`;
+                const existing = dedupedFavorites.get(key);
+                if (!existing || favorite.createdAt < existing.createdAt) {
+                    dedupedFavorites.set(key, favorite);
+                }
+                return !existing;
+            });
+            state.tripFavorites = Array.from(dedupedFavorites.values());
             Object.values(state.trips).forEach((trip) => {
                 const seenUsers = new Set();
                 Object.keys(trip.seatMap).forEach((seatCode) => {
@@ -1874,6 +2000,55 @@ class TripService {
             previewTags: currentUser.tags
         };
     }
+    buildFavoriteMemberCardView(member) {
+        return {
+            userId: member.userId,
+            nickname: member.nickname,
+            avatarUrl: member.avatarUrl,
+            initial: member.initial,
+            seatLabel: member.seatLabel,
+            isAdmin: member.isAdmin,
+            tags: member.tags,
+            tagViews: member.tagViews,
+            isMutualFavoriteWithViewer: member.isMutualFavoriteWithViewer
+        };
+    }
+    buildFavoriteRankingItems(tripId, members) {
+        const favoriteCountMap = this.tripRepository
+            .listTripFavorites(tripId)
+            .reduce((accumulator, favorite) => {
+            var _a;
+            accumulator[favorite.targetUserId] = ((_a = accumulator[favorite.targetUserId]) !== null && _a !== void 0 ? _a : 0) + 1;
+            return accumulator;
+        }, {});
+        const joinedAtMap = this.tripRepository
+            .listTripMembers(tripId)
+            .reduce((accumulator, member) => {
+            accumulator[member.userId] = member.joinedAt;
+            return accumulator;
+        }, {});
+        return members
+            .map((member) => {
+            var _a, _b;
+            return ({
+                userId: member.userId,
+                nickname: member.nickname,
+                avatarUrl: member.avatarUrl,
+                initial: member.initial,
+                seatLabel: member.seatLabel,
+                isAdmin: member.isAdmin,
+                favoriteCount: (_a = favoriteCountMap[member.userId]) !== null && _a !== void 0 ? _a : 0,
+                joinedAt: (_b = joinedAtMap[member.userId]) !== null && _b !== void 0 ? _b : Number.MAX_SAFE_INTEGER
+            });
+        })
+            .filter((member) => member.favoriteCount > 0)
+            .sort(compareFavoriteRankingItems)
+            .slice(0, 3)
+            .map((_a) => {
+            var { joinedAt: _joinedAt } = _a, member = __rest(_a, ["joinedAt"]);
+            return member;
+        });
+    }
     getCurrentTripName(currentUser) {
         if (!currentUser.currentTripId) {
             return "";
@@ -1886,7 +2061,8 @@ class TripService {
         if (trip.status !== "active") {
             throw new errors_1.BusinessError("TRIP_INACTIVE", "当前车次已经结束。");
         }
-        const members = this.buildMemberViews(trip, viewerId);
+        const favorites = this.tripRepository.listTripFavorites(trip.id);
+        const members = this.buildMemberViews(trip, viewerId, favorites);
         const seatMap = (0, seat_1.buildSeatOccupantMap)(trip.seatMap, members);
         const viewerRole = (_b = (_a = members.find((member) => member.userId === viewerId)) === null || _a === void 0 ? void 0 : _a.role) !== null && _b !== void 0 ? _b : "member";
         const viewerSeatCode = (_d = (_c = members.find((member) => member.userId === viewerId)) === null || _c === void 0 ? void 0 : _c.seatCode) !== null && _d !== void 0 ? _d : null;
@@ -1914,12 +2090,14 @@ class TripService {
             members
         };
     }
-    buildMemberViews(trip, viewerId) {
+    buildMemberViews(trip, viewerId, favorites) {
         const relations = this.tripRepository.listTripMembers(trip.id);
+        const favoriteSet = new Set(favorites.map((favorite) => `${favorite.sourceUserId}:${favorite.targetUserId}`));
         return relations
             .map((relation) => {
             const user = this.userRepository.getUser(relation.userId);
             const seatCode = (0, seat_1.findSeatCodeByUserId)(trip.seatMap, user.id);
+            const isFavoritedByViewer = favoriteSet.has(`${viewerId}:${user.id}`);
             return {
                 userId: user.id,
                 nickname: user.nickname,
@@ -1933,12 +2111,17 @@ class TripService {
                 age: user.age,
                 homePersonaImageUrl: resolveHomePersonaImageUrl(user.homePersonaAssetId),
                 tags: user.tags,
+                tagViews: (0, tag_style_1.buildTagColorViews)(user.tags, 2),
                 role: relation.role,
                 isAdmin: relation.role === "admin",
                 showMeta: relation.role === "admin" || user.id === viewerId,
                 seatCode,
                 seatLabel: seatCode !== null && seatCode !== void 0 ? seatCode : "未入座",
-                isSelf: user.id === viewerId
+                isSelf: user.id === viewerId,
+                isFavoritedByViewer,
+                isMutualFavoriteWithViewer: user.id !== viewerId &&
+                    isFavoritedByViewer &&
+                    favoriteSet.has(`${user.id}:${viewerId}`)
             };
         })
             .sort(seat_1.sortMembers);

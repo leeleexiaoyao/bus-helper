@@ -1,36 +1,43 @@
 import { TRIP_TEMPLATES } from "../../shared/constants";
 import type { TemplateId } from "../../shared/types";
 import { tripService } from "../../services/trip-service";
+import { waitForCloudReady } from "../../utils/cloud-ready";
 import { showErrorToast, showSuccessToast } from "../../utils/feedback";
 
-function formatTemplateLayout(rowSeatCounts: number[]): string {
-  const groups = rowSeatCounts.reduce<Array<{ rowCount: number; seatCount: number }>>(
-    (accumulator, seatCount) => {
-      const lastGroup = accumulator[accumulator.length - 1];
-      if (lastGroup && lastGroup.seatCount === seatCount) {
-        lastGroup.rowCount += 1;
-        return accumulator;
-      }
+const DEFAULT_TEMPLATE_ID: TemplateId = "template-49";
+const TEMPLATE_COPY: Record<TemplateId, { title: string; layoutText: string }> = {
+  "template-49": {
+    title: "经典 49座",
+    layoutText: "4 × 11 + 5"
+  },
+  "template-53": {
+    title: "舒适 53座",
+    layoutText: "4 × 12 + 5"
+  },
+  "template-57": {
+    title: "宽敞 57座",
+    layoutText: "4 × 13 + 5"
+  }
+};
 
-      accumulator.push({
-        rowCount: 1,
-        seatCount
-      });
-      return accumulator;
-    },
-    []
-  );
-
-  return groups
-    .map((group) => `${group.rowCount}排${group.seatCount}座`)
-    .join("+");
+function getDepartureDisplay(departureDate: string, departureClock: string): string {
+  if (departureDate && departureClock) {
+    return `${departureDate}  ${departureClock}`;
+  }
+  if (departureDate) {
+    return `${departureDate}  选择时间`;
+  }
+  if (departureClock) {
+    return `选择日期  ${departureClock}`;
+  }
+  return "";
 }
 
 function buildTemplates(selectedTemplateId: TemplateId | "") {
   return TRIP_TEMPLATES.map((template) => ({
     ...template,
-    displayName: `${template.seatCount} 座`,
-    layoutText: formatTemplateLayout(template.rowSeatCounts),
+    displayName: TEMPLATE_COPY[template.id].title,
+    layoutText: TEMPLATE_COPY[template.id].layoutText,
     selected: selectedTemplateId === template.id,
     className:
       selectedTemplateId === template.id ? "template-card is-active" : "template-card"
@@ -45,9 +52,12 @@ Page({
     navRightPadding: 112,
     tripName: "",
     departureTime: "",
+    departureDate: "",
+    departureClock: "",
+    departureDisplay: "",
     password: "",
-    templateId: "" as TemplateId | "",
-    templates: buildTemplates(""),
+    templateId: DEFAULT_TEMPLATE_ID as TemplateId,
+    templates: buildTemplates(DEFAULT_TEMPLATE_ID),
     submitting: false
   },
 
@@ -59,16 +69,28 @@ Page({
     const navTotalHeight = statusBarHeight + navHeight;
     const navRightPadding = Math.max(systemInfo.windowWidth - capsule.left + 16, 112);
 
-    this.setData({
-      statusBarHeight,
-      navHeight,
-      navTotalHeight,
-      navRightPadding
-    });
+    try {
+      this.setData({
+        statusBarHeight,
+        navHeight,
+        navTotalHeight,
+        navRightPadding,
+        password: tripService.generateAvailableTripPassword()
+      });
+    } catch (error) {
+      this.setData({
+        statusBarHeight,
+        navHeight,
+        navTotalHeight,
+        navRightPadding
+      });
+      showErrorToast(error);
+    }
   },
 
-  onShow() {
+  async onShow() {
     try {
+      await waitForCloudReady();
       tripService.ensureAuthorizedAccess();
     } catch (error) {
       showErrorToast(error);
@@ -101,6 +123,36 @@ Page({
     this.setData({
       templateId,
       templates: buildTemplates(templateId)
+    });
+  },
+
+  handleDepartureDateChange(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    const departureDate = String(event.detail.value || "");
+    const departureDisplay = getDepartureDisplay(departureDate, this.data.departureClock);
+    this.setData({
+      departureDate,
+      departureDisplay,
+      departureTime: departureDate && this.data.departureClock ? `${departureDate} ${this.data.departureClock}` : ""
+    });
+  },
+
+  handleDepartureTimeChange(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    const departureClock = String(event.detail.value || "");
+    const departureDisplay = getDepartureDisplay(this.data.departureDate, departureClock);
+    this.setData({
+      departureClock,
+      departureDisplay,
+      departureTime: this.data.departureDate && departureClock ? `${this.data.departureDate} ${departureClock}` : ""
+    });
+  },
+
+  handleCopyPassword() {
+    wx.setClipboardData({
+      data: this.data.password,
+      success: () => {
+        showSuccessToast("已复制");
+      },
+      fail: showErrorToast
     });
   },
 

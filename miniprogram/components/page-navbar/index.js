@@ -80,7 +80,7 @@ Component({
             const titleColor = startColor.map((channel, index) => Math.round(channel + (endColor[index] - channel) * safeProgress));
             this.setData({
                 navOpacityStyle: `opacity: ${safeProgress};`,
-                titleStyle: `color: rgb(${titleColor[0]}, ${titleColor[1]}, ${titleColor[2]});`
+                titleStyle: `color: rgb(${titleColor[0]}, ${titleColor[1]}, ${titleColor[2]}); opacity: ${safeProgress};`
             });
         }
     }

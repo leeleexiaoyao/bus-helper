@@ -1,5 +1,6 @@
 import type { ToolType, ToolsPageViewModel } from "../../shared/types";
 import { tripService } from "../../services/trip-service";
+import { waitForCloudReady } from "../../utils/cloud-ready";
 import { showErrorToast, showSuccessToast } from "../../utils/feedback";
 
 Page({
@@ -12,7 +13,14 @@ Page({
     authPresetAvatarUrl: ""
   },
 
-  onShow() {
+  async onShow() {
+    try {
+      await waitForCloudReady();
+    } catch (error) {
+      showErrorToast(error);
+      return;
+    }
+
     this.refreshPage();
   },
 

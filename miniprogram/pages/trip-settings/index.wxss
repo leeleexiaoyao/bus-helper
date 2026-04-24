@@ -1,21 +1,115 @@
-.settings-card {
-  padding: 30rpx 26rpx;
+.trip-settings-page {
+  min-height: 100vh;
+  background: #f4f4f3;
 }
 
-.setting-item {
+.settings-content {
+  padding: 24rpx 32rpx 64rpx;
+  box-sizing: border-box;
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 128rpx;
   margin-top: 24rpx;
-  padding: 20rpx;
+  padding: 0 32rpx;
+  gap: 24rpx;
   border-radius: 24rpx;
-  background: rgba(255, 255, 255, 0.94);
-  overflow: hidden;
+  background: #ffffff;
+  box-sizing: border-box;
 }
 
-.setting-value {
-  margin-top: 10rpx;
+.setting-row:first-child {
+  margin-top: 0;
+}
+
+.setting-label {
+  flex: 0 0 auto;
+  color: #111111;
   font-size: 28rpx;
   font-weight: 600;
 }
 
+.setting-value {
+  flex: 1;
+  min-width: 0;
+  color: #20252b;
+  font-size: 28rpx;
+  font-weight: 500;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.setting-value--muted {
+  color: #9f9f9f;
+}
+
+.password-control {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+  gap: 14rpx;
+}
+
+.password-text {
+  color: #ff4527;
+  font-size: 28rpx;
+  font-weight: 500;
+  letter-spacing: 3.36rpx;
+}
+
+.copy-button {
+  position: relative;
+  width: 36rpx;
+  height: 36rpx;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  line-height: 1;
+  overflow: visible;
+}
+
+.copy-button::after {
+  border: none;
+}
+
+.copy-icon,
+.copy-icon::after {
+  position: absolute;
+  width: 20rpx;
+  height: 24rpx;
+  border: 3rpx solid #b3b7bd;
+  border-radius: 3rpx;
+  box-sizing: border-box;
+}
+
+.copy-icon {
+  top: 8rpx;
+  left: 6rpx;
+}
+
+.copy-icon::after {
+  content: "";
+  top: -8rpx;
+  left: 8rpx;
+  background: #ffffff;
+}
+
 .dissolve-btn {
-  margin-top: 30rpx;
+  width: 100%;
+  min-height: 88rpx;
+  margin-top: 60rpx;
+  padding: 0 32rpx;
+  border-radius: 999rpx;
+  color: #ffffff;
+  font-size: 32rpx;
+  font-weight: 600;
+  line-height: 88rpx;
 }

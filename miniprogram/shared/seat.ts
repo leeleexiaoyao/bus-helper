@@ -57,9 +57,10 @@ export function buildSeatRows(
   return Object.entries(grouped)
     .map(([rowNumber, rowSeats]) => {
       const slots: Array<SeatCellView | null> = [];
-      const seatCount = rowSeats.length;
+      const orderedRowSeats = reorderRowSeats(rowSeats);
+      const seatCount = orderedRowSeats.length;
 
-      rowSeats.forEach((seatCode, index) => {
+      orderedRowSeats.forEach((seatCode, index) => {
         if (seatCount === 4 && index === 2) {
           slots.push(null);
         }
@@ -143,4 +144,17 @@ export function sortMembers(left: MemberView, right: MemberView): number {
 
 function roleScore(role: MemberRole): number {
   return role === "admin" ? 2 : 1;
+}
+
+function reorderRowSeats(rowSeats: string[]): string[] {
+  if (rowSeats.length !== 5) {
+    return rowSeats;
+  }
+
+  const findSeat = (letter: string) => rowSeats.find((seatCode) => seatCode.endsWith(letter));
+  const orderedSeats = ["A", "B", "E", "C", "D"]
+    .map((letter) => findSeat(letter))
+    .filter((seatCode): seatCode is string => Boolean(seatCode));
+
+  return orderedSeats.length === rowSeats.length ? orderedSeats : rowSeats;
 }

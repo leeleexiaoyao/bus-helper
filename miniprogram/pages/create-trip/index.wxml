@@ -6,40 +6,53 @@
       <view class="custom-back" bindtap="handleBack">
         <view class="custom-back-icon"></view>
       </view>
-      <view class="custom-nav-title">创建车次</view>
+      <view class="custom-nav-title">巴士设置</view>
     </view>
   </view>
 
-  <view class="page-shell create-trip-content">
-    <view class="form-block">
-      <view class="field-label">车次名称（必填）</view>
+  <view class="create-trip-content">
+    <view class="setting-row">
+      <view class="setting-label">行程名称</view>
       <input
-        class="field-input"
+        class="setting-input"
         data-field="tripName"
         value="{{tripName}}"
         maxlength="24"
-        placeholder="请输入车次名称"
-        placeholder-class="field-placeholder"
+        placeholder="请输入行程名称"
+        placeholder-class="setting-placeholder"
         bindinput="handleInput"
       />
     </view>
 
-    <view class="form-block">
-      <view class="field-label">车次口令（必填）</view>
-      <input
-        class="field-input"
-        data-field="password"
-        value="{{password}}"
-        maxlength="6"
-        type="number"
-        placeholder="请输入 6 位数字口令"
-        placeholder-class="field-placeholder"
-        bindinput="handleInput"
-      />
+    <view class="setting-row">
+      <view class="setting-label">出发时间</view>
+      <view class="setting-time-control">
+        <picker mode="date" value="{{departureDate}}" bindchange="handleDepartureDateChange">
+          <view class="{{departureDate ? 'setting-time-text' : 'setting-time-text setting-time-text--placeholder'}}">
+            {{departureDate || "选择日期"}}
+          </view>
+        </picker>
+        <picker mode="time" value="{{departureClock}}" bindchange="handleDepartureTimeChange">
+          <view class="{{departureClock ? 'setting-time-text' : 'setting-time-text setting-time-text--placeholder'}}">
+            {{departureClock || "时间"}}
+          </view>
+        </picker>
+        <view class="setting-arrow"></view>
+      </view>
     </view>
 
-    <view class="form-block">
-      <view class="field-label">座位模板</view>
+    <view class="setting-row">
+      <view class="setting-label">车次口令</view>
+      <view class="password-control">
+        <text class="password-text">{{password}}</text>
+        <button class="copy-button" hover-class="none" bindtap="handleCopyPassword">
+          <view class="copy-icon"></view>
+        </button>
+      </view>
+    </view>
+
+    <view class="template-section">
+      <view class="setting-label">座位模板</view>
       <view class="template-list">
         <view
           class="{{item.className}}"
@@ -48,17 +61,14 @@
           data-template-id="{{item.id}}"
           bindtap="handleTemplateSelect"
         >
-          <view class="template-main">
-            <view class="template-name">{{item.displayName}}</view>
-            <view class="template-text">{{item.layoutText}}</view>
-          </view>
-          <view class="template-check"></view>
+          <view class="template-name">{{item.displayName}}</view>
+          <view class="template-text">{{item.layoutText}}</view>
         </view>
       </view>
     </view>
 
-    <button class="primary-btn submit-btn" loading="{{submitting}}" bindtap="handleSubmit">
-      立即创建
+    <button class="create-submit-btn" loading="{{submitting}}" bindtap="handleSubmit">
+      创建
     </button>
   </view>
 </view>

@@ -1,13 +1,15 @@
 import type { ProfilePageViewModel } from "../../shared/types";
 import { tripService } from "../../services/trip-service";
-import { HOME_PERSONA_IMAGE_URL, HOME_PERSONA_OPTIONS } from "../../shared/constants";
+import { HOME_PERSONA_OPTIONS } from "../../shared/constants";
+import { waitForCloudReady } from "../../utils/cloud-ready";
 import { showErrorToast, showSuccessToast } from "../../utils/feedback";
+import { buildTagColorViews, type TagColorView } from "../../utils/tag-style";
 
 interface ProfileMenuItem {
   id: string;
   label: string;
   icon: string;
-  action: "about" | "share" | "feedback";
+  action: "favorite" | "share" | "feedback" | "settings";
   isShare: boolean;
   showDivider: boolean;
 }
@@ -20,26 +22,34 @@ interface ProfileStatDisplay {
 
 const SETTINGS_ITEMS: ProfileMenuItem[] = [
   {
+    id: "favorite",
+    label: "收藏",
+    icon: "/assets/icons/me/icon_me_favorite.svg",
+    action: "favorite",
+    isShare: false,
+    showDivider: true
+  },
+  {
     id: "share",
     label: "分享",
-    icon: "/assets/icons/profile-share.svg",
+    icon: "/assets/icons/me/icon_me_share.svg",
     action: "share",
     isShare: true,
     showDivider: true
   },
   {
     id: "feedback",
-    label: "问题反馈",
-    icon: "/assets/icons/profile-feedback.svg",
+    label: "意见反馈",
+    icon: "/assets/icons/me/icon_me_feedback.svg",
     action: "feedback",
     isShare: false,
     showDivider: true
   },
   {
-    id: "about",
-    label: "关于小程序",
-    icon: "/assets/icons/profile-about.svg",
-    action: "about",
+    id: "settings",
+    label: "设置",
+    icon: "/assets/icons/me/icon_me_setting.svg",
+    action: "settings",
     isShare: false,
     showDivider: false
   }
@@ -54,12 +64,78 @@ function buildTextStat(value: string): ProfileStatDisplay {
   };
 }
 
-function resolveProfileIllustrationUrl(homePersonaAssetId: string | null): string {
-  if (!homePersonaAssetId) {
-    return HOME_PERSONA_IMAGE_URL;
+function buildAgeStat(value: string): ProfileStatDisplay {
+  const trimmed = value.trim();
+  return {
+    primary: trimmed ? `${trimmed} 岁` : "未填写",
+    secondary: "",
+    isPlaceholder: !trimmed
+  };
+}
+
+function trimProfileLocationSuffix(value: string): string {
+  const suffixes = ["特别行政区", "自治区", "自治州", "自治县", "地区", "盟", "省", "市", "区", "县"];
+  const matchedSuffix = suffixes.find((suffix) => value.endsWith(suffix));
+  if (!matchedSuffix) {
+    return value;
   }
 
-  return HOME_PERSONA_OPTIONS.find((option) => option.id === homePersonaAssetId)?.imageUrl ?? HOME_PERSONA_IMAGE_URL;
+  return value.slice(0, -matchedSuffix.length);
+}
+
+function parseLocationUnits(value: string): Array<{ name: string; suffix: string }> {
+  const units: Array<{ name: string; suffix: string }> = [];
+  const matcher = /(.+?)(特别行政区|自治区|自治州|自治县|地区|盟|省|市|区|县)/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = matcher.exec(value)) !== null) {
+    units.push({
+      name: match[1],
+      suffix: match[2]
+    });
+  }
+
+  return units;
+}
+
+function buildLocationStatFromName(name: string): ProfileStatDisplay {
+  return {
+    primary: name || "未填写",
+    secondary: "",
+    isPlaceholder: !name
+  };
+}
+
+function buildLivingLocationStat(value: string): ProfileStatDisplay {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return buildLocationStatFromName("");
+  }
+
+  const units = parseLocationUnits(trimmed);
+  const districtUnit = units.find((unit) => unit.suffix === "区" || unit.suffix === "县");
+  const cityUnit = units.find((unit) => unit.suffix === "市");
+  return buildLocationStatFromName(districtUnit?.name ?? cityUnit?.name ?? trimProfileLocationSuffix(trimmed));
+}
+
+function buildHometownLocationStat(value: string): ProfileStatDisplay {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return buildLocationStatFromName("");
+  }
+
+  const units = parseLocationUnits(trimmed);
+  const cityUnit = units.find((unit) => unit.suffix === "市");
+  const districtUnit = units.find((unit) => unit.suffix === "区" || unit.suffix === "县");
+  return buildLocationStatFromName(cityUnit?.name ?? districtUnit?.name ?? trimProfileLocationSuffix(trimmed));
+}
+
+function resolveProfileIllustrationUrl(homePersonaAssetId: string | null): string {
+  if (!homePersonaAssetId) {
+    return "";
+  }
+
+  return HOME_PERSONA_OPTIONS.find((option) => option.id === homePersonaAssetId)?.imageUrl ?? "";
 }
 
 Page({
@@ -67,16 +143,18 @@ Page({
     pageData: null as ProfilePageViewModel | null,
     showAuthGate: true,
     showProfileContent: false,
-    showLeaveAction: false,
-    showDissolveAction: false,
     navProgress: 0,
     authPresetNickname: "",
     authPresetAvatarUrl: "",
-    profileIllustrationUrl: "/assets/personas/profile-illustration.svg",
-    editIconUrl: "/assets/icons/profile-edit.svg",
+    profileIllustrationUrl: "",
+    hasProfileIllustration: false,
+    editIconUrl: "/assets/icons/me/icon_me_edit.svg",
+    flowerIconUrl: "/assets/icons/me/pic_me_flower.svg",
+    moreIconUrl: "/assets/icons/me/icon_me_more.svg",
     settingsItems: SETTINGS_ITEMS,
+    profileTagViews: [] as TagColorView[],
     profileStats: {
-      age: buildTextStat(""),
+      age: buildAgeStat(""),
       living: buildTextStat(""),
       hometown: buildTextStat("")
     }
@@ -88,7 +166,14 @@ Page({
     });
   },
 
-  onShow() {
+  async onShow() {
+    try {
+      await waitForCloudReady();
+    } catch (error) {
+      showErrorToast(error);
+      return;
+    }
+
     this.refreshPage();
   },
 
@@ -105,20 +190,21 @@ Page({
   refreshPage() {
     try {
       const pageData = tripService.getProfilePageData();
+      const profileIllustrationUrl = resolveProfileIllustrationUrl(pageData.currentUser.homePersonaAssetId);
       this.setData({
         pageData,
         showAuthGate: !pageData.isAuthorized,
         showProfileContent: pageData.isAuthorized,
-        showLeaveAction: pageData.primaryActionKind === "leave",
-        showDissolveAction: pageData.primaryActionKind === "dissolve",
         navProgress: 0,
         authPresetNickname: pageData.currentUser.nickname,
         authPresetAvatarUrl: pageData.currentUser.avatarUrl,
-        profileIllustrationUrl: resolveProfileIllustrationUrl(pageData.currentUser.homePersonaAssetId),
+        profileIllustrationUrl,
+        hasProfileIllustration: Boolean(profileIllustrationUrl),
+        profileTagViews: buildTagColorViews(pageData.tags),
         profileStats: {
-          age: buildTextStat(pageData.currentUser.age),
-          living: pageData.livingLocationDisplay,
-          hometown: pageData.hometownLocationDisplay
+          age: buildAgeStat(pageData.currentUser.age),
+          living: buildLivingLocationStat(pageData.currentUser.livingCity),
+          hometown: buildHometownLocationStat(pageData.currentUser.hometown)
         }
       });
     } catch (error) {
@@ -150,68 +236,32 @@ Page({
     });
   },
 
-  goAbout() {
+  goFavorite() {
     wx.navigateTo({
-      url: "/pages/about/index"
+      url: "/pages/favorites/index"
+    });
+  },
+
+  goSettings() {
+    wx.navigateTo({
+      url: "/pages/profile-settings/index"
     });
   },
 
   handleMenuTap(event: WechatMiniprogram.CustomEvent) {
     const action = String(event.currentTarget.dataset.action || "");
-    if (action === "about") {
-      this.goAbout();
+    if (action === "favorite") {
+      this.goFavorite();
       return;
     }
 
     if (action === "feedback") {
       this.goFeedback();
-    }
-  },
-
-  handlePrimaryAction() {
-    const pageData = this.data.pageData;
-    if (!pageData || pageData.primaryActionKind === "none") {
       return;
     }
 
-    const title = pageData.primaryActionKind === "dissolve" ? "解散车次" : "退出车次";
-    const content =
-      pageData.primaryActionKind === "dissolve"
-        ? "解散后，所有成员都会退出车次并清空座位绑定。"
-        : "退出后会释放你的座位，并回到未加入车次状态。";
-
-    wx.showModal({
-      title,
-      content,
-      success: ({ confirm }) => {
-        if (!confirm) {
-          return;
-        }
-
-        try {
-          if (pageData.primaryActionKind === "dissolve") {
-            tripService.dissolveCurrentTrip();
-            showSuccessToast("车次已解散");
-          } else {
-            tripService.leaveCurrentTrip();
-            showSuccessToast("已退出车次");
-          }
-          this.refreshPage();
-        } catch (error) {
-          showErrorToast(error);
-        }
-      }
-    });
-  },
-
-  handleSwitchDemoUser(event: WechatMiniprogram.CustomEvent) {
-    const userId = String(event.currentTarget.dataset.userId);
-    try {
-      tripService.switchActiveUser(userId);
-      this.refreshPage();
-      showSuccessToast("已切换身份");
-    } catch (error) {
-      showErrorToast(error);
+    if (action === "settings") {
+      this.goSettings();
     }
   },
 

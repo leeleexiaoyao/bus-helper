@@ -9,8 +9,9 @@ import type {
   User
 } from "./types";
 
-export const APP_STATE_VERSION = 9;
+export const APP_STATE_VERSION = 10;
 export const APP_STATE_STORAGE_KEY = "bus-seat-buddy-state";
+export const MAX_MEMBER_FAVORITES_PER_TRIP = 2;
 
 export const DEFAULT_TRIP_NAME = "未命名车次";
 export const DEFAULT_DEPARTURE_TIME = "待定";
@@ -164,6 +165,7 @@ export function createInitialAppState(): AppState {
     }, {}),
     trips: {},
     tripMembers: [],
+    tripFavorites: [],
     activeUserId: DEMO_USERS[0].id
   };
 }
@@ -344,6 +346,7 @@ export function createSeededDemoAppState(): AppState {
       [seededTrip.id]: seededTrip
     },
     tripMembers: seededTripMembers,
+    tripFavorites: [],
     activeUserId: SEED_ACTIVE_USER_ID
   };
 }

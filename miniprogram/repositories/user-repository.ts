@@ -1,5 +1,6 @@
 import { BusinessError } from "../shared/errors";
 import type { User } from "../shared/types";
+import { scheduleUserCloudSync } from "../services/cloud/cloud-user-session";
 import { AppStateRepository } from "./app-state-repository";
 
 export class UserRepository {
@@ -18,7 +19,7 @@ export class UserRepository {
   }
 
   updateUser(userId: string, updater: (user: User) => void): User {
-    return this.appStateRepository.update((state) => {
+    const nextUser = this.appStateRepository.update((state) => {
       const user = state.users[userId];
       if (!user) {
         throw new BusinessError("USER_NOT_FOUND", "未找到当前用户。");
@@ -26,6 +27,9 @@ export class UserRepository {
       updater(user);
       return user;
     });
+
+    scheduleUserCloudSync(nextUser);
+    return nextUser;
   }
 
   setCurrentTripId(userId: string, tripId: string | null): User {

@@ -4,7 +4,7 @@
   <view class="custom-nav" style="height: {{navTotalHeight}}px; padding-top: {{statusBarHeight}}px;">
     <view class="custom-nav-inner" style="height: {{navHeight}}px; padding-left: {{navRightPadding}}px; padding-right: {{navRightPadding}}px;">
       <view class="custom-back" bindtap="handleBack">
-        <text class="custom-back-icon">‹</text>
+        <view class="custom-back-icon"></view>
       </view>
       <view class="custom-nav-title">{{toolTitle}}</view>
     </view>

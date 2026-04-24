@@ -6,6 +6,7 @@ import { generateSeatCodes } from "../miniprogram/shared/seat";
 import { TripService } from "../miniprogram/services/trip-service";
 import type { ToolType, VoteChoice, VoteSubmitInput } from "../miniprogram/shared/types";
 import {
+  displayDepartureTime,
   formatHometownLocationDisplay,
   formatLivingLocationDisplay
 } from "../miniprogram/utils/format";
@@ -113,7 +114,7 @@ function setupTripWithMembers() {
   authorizeActiveUser(service, "小雨");
   const createdTrip = service.createTrip({
     tripName: "周末上山线",
-    departureTime: "4/20 07:30",
+    departureTime: "2025-04-20 07:30",
     password: "123456",
     templateId: "template-49"
   });
@@ -147,7 +148,7 @@ function setupTripWithMemberCount(memberCount: number) {
   authorizeActiveUser(service, "小雨");
   const createdTrip = service.createTrip({
     tripName: "49人联调线",
-    departureTime: "4/20 07:30",
+    departureTime: "2025-04-20 07:30",
     password: "123456",
     templateId: "template-49"
   });
@@ -243,7 +244,7 @@ function setupTripWith49Members() {
   authorizeActiveUser(service, "小雨");
   const createdTrip = service.createTrip({
     tripName: "49 人压力测试线",
-    departureTime: "4/20 07:30",
+    departureTime: "2025-04-20 07:30",
     password: "123456",
     templateId: "template-49"
   });
@@ -251,6 +252,7 @@ function setupTripWith49Members() {
   const seatCodes = flattenSeatCodes(createdTrip.currentTrip);
 
   assert.equal(seatCodes.length, 49);
+  assert.deepEqual(seatCodes.slice(-5), ["12A", "12B", "12E", "12C", "12D"]);
 
   service.claimSeat(seatCodes[0], {
     profileMode: "custom",
@@ -279,6 +281,27 @@ function setupTripWith49Members() {
 }
 
 {
+  assert.equal(displayDepartureTime("2025-05-01 08:00"), "05月01日 08:00");
+  assert.equal(displayDepartureTime("4/20 07:30"), "04月20日 07:30");
+}
+
+{
+  const { service } = createService();
+
+  authorizeActiveUser(service, "小雨");
+  expectBusinessError(
+    () =>
+      service.createTrip({
+        tripName: "缺少时间线",
+        departureTime: "",
+        password: "123456",
+        templateId: "template-49"
+      }),
+    "INVALID_DEPARTURE_TIME"
+  );
+}
+
+{
   const { service } = createService();
 
   let toolsPage = service.getToolsPageData();
@@ -287,7 +310,7 @@ function setupTripWith49Members() {
   assert.equal(toolsPage.toolCards.length, 4);
   assert.deepEqual(
     toolsPage.toolCards.map((card) => card.type),
-    ["vote", "seat-draw", "lottery", "wheel"]
+    ["seat-draw", "vote", "wheel", "lottery"]
   );
   assert.deepEqual(
     toolsPage.toolCards.map((card) => ({
@@ -298,28 +321,28 @@ function setupTripWith49Members() {
     })),
     [
       {
+        type: "seat-draw",
+        displayTitle: "随机抽号",
+        displayDescription: "公平随机不偏心",
+        ctaLabel: "去使用"
+      },
+      {
         type: "vote",
         displayTitle: "投票",
-        displayDescription: "选出你喜欢的",
-        ctaLabel: "玩这个>"
-      },
-      {
-        type: "seat-draw",
-        displayTitle: "随机选号",
-        displayDescription: "看看谁运气好",
-        ctaLabel: "玩这个>"
-      },
-      {
-        type: "lottery",
-        displayTitle: "抽签",
-        displayDescription: "谁是天选之人",
-        ctaLabel: "玩这个>"
+        displayDescription: "一起选出最佳方案",
+        ctaLabel: "去使用"
       },
       {
         type: "wheel",
         displayTitle: "幸运大转盘",
-        displayDescription: "幸运转转转",
-        ctaLabel: "玩这个>"
+        displayDescription: "转出你的幸运",
+        ctaLabel: "去使用"
+      },
+      {
+        type: "lottery",
+        displayTitle: "抽签",
+        displayDescription: "神秘配对等你揭晓",
+        ctaLabel: "去使用"
       }
     ]
   );
@@ -337,7 +360,7 @@ function setupTripWith49Members() {
 
   const createdTrip = service.createTrip({
     tripName: "周末上山线",
-    departureTime: "4/20 07:30",
+    departureTime: "2025-04-20 07:30",
     password: "123456",
     templateId: "template-49"
   });
@@ -1424,6 +1447,178 @@ function setupTripWith49Members() {
   assert.equal(living.secondary, "深圳市");
   assert.equal(hometown.primary, "深圳市");
   assert.equal(hometown.secondary, "广东省");
+}
+
+{
+  const { service } = createServiceWithUsers(5);
+
+  authorizeActiveUser(service, "小雨");
+  service.createTrip({
+    tripName: "收藏测试线",
+    departureTime: "2025-04-20 07:30",
+    password: "123456",
+    templateId: "template-49"
+  });
+  service.claimSeat("1A", {
+    profileMode: "custom",
+    nickname: "小雨",
+    avatarUrl: ""
+  });
+
+  joinTripAndSeat(service, "user-2", "阿山", "123456", "1B");
+  joinTripAndSeat(service, "user-3", "Miya", "123456", "1C");
+  joinTripAndSeat(service, "user-4", "老周", "123456", "1D");
+  service.switchActiveUser("user-5");
+  authorizeActiveUser(service, "路人");
+  service.createTrip({
+    tripName: "旁路线",
+    departureTime: "2025-04-21 08:30",
+    password: "654321",
+    templateId: "template-49"
+  });
+  service.claimSeat("1A", {
+    profileMode: "custom",
+    nickname: "路人",
+    avatarUrl: ""
+  });
+
+  service.switchActiveUser("user-1");
+  let currentTrip = service.bootstrapApp().currentTrip;
+  assert.equal(currentTrip?.members.find((member) => member.userId === "user-2")?.isFavoritedByViewer, false);
+
+  service.toggleFavoriteMember("user-2");
+  currentTrip = service.bootstrapApp().currentTrip;
+  assert.equal(currentTrip?.members.find((member) => member.userId === "user-2")?.isFavoritedByViewer, true);
+
+  service.toggleFavoriteMember("user-2");
+  currentTrip = service.bootstrapApp().currentTrip;
+  assert.equal(currentTrip?.members.find((member) => member.userId === "user-2")?.isFavoritedByViewer, false);
+
+  service.toggleFavoriteMember("user-2");
+  service.toggleFavoriteMember("user-3");
+  expectBusinessError(() => service.toggleFavoriteMember("user-4"), "FAVORITE_LIMIT_EXCEEDED");
+  expectBusinessError(() => service.toggleFavoriteMember("user-1"), "FAVORITE_SELF_NOT_ALLOWED");
+  expectBusinessError(() => service.toggleFavoriteMember("user-5"), "FAVORITE_TARGET_INVALID");
+}
+
+{
+  const { service } = setupTripWithMembers();
+
+  service.toggleFavoriteMember("user-2");
+  service.toggleFavoriteMember("user-3");
+
+  service.switchActiveUser("user-2");
+  service.toggleFavoriteMember("user-1");
+
+  service.switchActiveUser("user-3");
+  service.toggleFavoriteMember("user-1");
+
+  service.switchActiveUser("user-4");
+  service.toggleFavoriteMember("user-2");
+
+  service.switchActiveUser("user-1");
+  const currentTrip = service.bootstrapApp().currentTrip;
+  const member2 = currentTrip?.members.find((member) => member.userId === "user-2");
+  const member4 = currentTrip?.members.find((member) => member.userId === "user-4");
+  assert.equal(member2?.isMutualFavoriteWithViewer, true);
+  assert.equal(member4?.isMutualFavoriteWithViewer, false);
+
+  const favoritesPage = service.getFavoritesPageData();
+  assert.equal(favoritesPage.showRankingTab, true);
+  assert.equal(favoritesPage.favoriteCount, 2);
+  assert.deepEqual(
+    favoritesPage.ranking.map((item) => ({
+      userId: item.userId,
+      favoriteCount: item.favoriteCount
+    })),
+    [
+      {
+        userId: "user-1",
+        favoriteCount: 2
+      },
+      {
+        userId: "user-2",
+        favoriteCount: 2
+      },
+      {
+        userId: "user-3",
+        favoriteCount: 1
+      }
+    ]
+  );
+
+  service.switchActiveUser("user-2");
+  const memberFavoritesPage = service.getFavoritesPageData();
+  assert.equal(memberFavoritesPage.showRankingTab, false);
+}
+
+{
+  const { service, storage } = setupTripWithMembers();
+
+  service.toggleFavoriteMember("user-2");
+  service.toggleFavoriteMember("user-3");
+  service.switchActiveUser("user-2");
+  service.toggleFavoriteMember("user-1");
+  service.leaveCurrentTrip();
+
+  service.switchActiveUser("user-1");
+  let state = storage.getState();
+  assert.equal(state?.tripFavorites.length, 1);
+  assert.equal(state?.tripFavorites[0]?.targetUserId, "user-3");
+
+  service.dissolveCurrentTrip();
+  state = storage.getState();
+  assert.equal(state?.tripFavorites.length, 0);
+}
+
+{
+  const { service, storage, tripId } = setupTripWithMembers();
+  const state = storage.getState();
+  assert.ok(state);
+
+  state.tripFavorites = [
+    {
+      tripId,
+      sourceUserId: "user-1",
+      targetUserId: "user-2",
+      createdAt: 20
+    },
+    {
+      tripId,
+      sourceUserId: "user-1",
+      targetUserId: "user-2",
+      createdAt: 10
+    },
+    {
+      tripId,
+      sourceUserId: "user-1",
+      targetUserId: "user-1",
+      createdAt: 30
+    },
+    {
+      tripId: "missing-trip",
+      sourceUserId: "user-1",
+      targetUserId: "user-2",
+      createdAt: 40
+    },
+    {
+      tripId,
+      sourceUserId: "missing-user",
+      targetUserId: "user-2",
+      createdAt: 50
+    }
+  ];
+  storage.setState(state);
+
+  service.bootstrapApp();
+  const nextState = storage.getState();
+  assert.equal(nextState?.tripFavorites.length, 1);
+  assert.deepEqual(nextState?.tripFavorites[0], {
+    tripId,
+    sourceUserId: "user-1",
+    targetUserId: "user-2",
+    createdAt: 10
+  });
 }
 
 console.log("trip-service tests passed");

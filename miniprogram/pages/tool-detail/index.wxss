@@ -50,11 +50,12 @@
 }
 
 .custom-back-icon {
-  display: block;
-  color: var(--text-primary);
-  font-size: 52rpx;
-  font-weight: 500;
-  line-height: 1;
+  width: 20rpx;
+  height: 20rpx;
+  border-left: 4rpx solid #111111;
+  border-bottom: 4rpx solid #111111;
+  transform: rotate(45deg);
+  box-sizing: border-box;
 }
 
 .custom-nav-title {
@@ -618,6 +619,150 @@
 
 .tool-editor-btn {
   margin-top: 26rpx;
+}
+
+.tool-detail-page--editor {
+  background: #f4f4f3;
+}
+
+.tool-detail-page--editor .custom-nav {
+  background: #f4f4f3;
+}
+
+.tool-detail-page--editor .page-shell.tool-detail-content {
+  padding: 18rpx 32rpx 72rpx;
+}
+
+.tool-detail-page--editor .seat-draw-editor-card,
+.tool-detail-page--editor .tool-editor-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+  margin-top: 0;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.tool-detail-page--editor .seat-draw-editor-row,
+.tool-detail-page--editor .tool-editor-row,
+.tool-detail-page--editor .tool-editor-field,
+.tool-detail-page--editor .seat-draw-switch-row,
+.tool-detail-page--editor .tool-editor-inline {
+  margin-top: 0;
+  padding: 0 32rpx;
+  border-radius: 24rpx;
+  background: #ffffff;
+  box-sizing: border-box;
+}
+
+.tool-detail-page--editor .seat-draw-editor-row,
+.tool-detail-page--editor .tool-editor-row,
+.tool-detail-page--editor .seat-draw-switch-row,
+.tool-detail-page--editor .tool-editor-inline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 128rpx;
+  gap: 24rpx;
+}
+
+.tool-detail-page--editor .tool-editor-field {
+  padding-top: 28rpx;
+  padding-bottom: 28rpx;
+}
+
+.tool-detail-page--editor .seat-draw-editor-label,
+.tool-detail-page--editor .tool-editor-label,
+.tool-detail-page--editor .switch-title,
+.tool-detail-page--editor .mode-title,
+.tool-detail-page--editor .seat-draw-switch-text {
+  flex: 0 0 auto;
+  color: #111111;
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.tool-detail-page--editor .seat-draw-editor-input,
+.tool-detail-page--editor .seat-draw-editor-select,
+.tool-detail-page--editor .tool-editor-input,
+.tool-detail-page--editor .tool-editor-picker {
+  flex: 1;
+  min-width: 0;
+  min-height: 88rpx;
+  margin-top: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #20252b;
+  font-size: 28rpx;
+  font-weight: 500;
+  text-align: right;
+}
+
+.tool-detail-page--editor .seat-draw-editor-select {
+  justify-content: flex-end;
+  gap: 12rpx;
+}
+
+.tool-detail-page--editor .seat-draw-editor-select-text,
+.tool-detail-page--editor .seat-draw-editor-select-arrow,
+.tool-detail-page--editor .tool-editor-picker {
+  color: #9f9f9f;
+  font-size: 28rpx;
+}
+
+.tool-detail-page--editor .tool-editor-textarea {
+  min-height: 220rpx;
+  margin-top: 18rpx;
+  padding: 22rpx;
+  border: 1rpx solid #eef1f5;
+  border-radius: 20rpx;
+  background: #fbfbfb;
+  box-shadow: none;
+  color: #20252b;
+  font-size: 28rpx;
+  line-height: 1.55;
+}
+
+.tool-detail-page--editor .tool-editor-hint {
+  margin-top: 12rpx;
+  color: #9f9f9f;
+  font-size: 24rpx;
+}
+
+.tool-detail-page--editor .mode-switches {
+  justify-content: flex-end;
+}
+
+.tool-detail-page--editor .mode-chip {
+  padding: 12rpx 22rpx;
+  border-radius: 999rpx;
+  background: #f4f4f3;
+  color: #7a8290;
+  font-size: 24rpx;
+}
+
+.tool-detail-page--editor .mode-chip.is-active {
+  border-color: #d8e95f;
+  background: #f4ffd7;
+  color: #111111;
+}
+
+.tool-detail-page--editor .seat-draw-primary-btn,
+.tool-detail-page--editor .tool-editor-btn,
+.tool-detail-page--editor .seat-draw-editor-btn {
+  min-height: 88rpx;
+  margin-top: 36rpx;
+  padding: 0 32rpx;
+  border-radius: 999rpx;
+  background: #d8f940;
+  color: #111111;
+  font-size: 32rpx;
+  font-weight: 600;
+  line-height: 88rpx;
 }
 
 .rolling-label,

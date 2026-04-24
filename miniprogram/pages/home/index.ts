@@ -1,5 +1,6 @@
 import { tripService } from "../../services/trip-service";
 import { HOME_PERSONA_OPTIONS } from "../../shared/constants";
+import { waitForCloudReady } from "../../utils/cloud-ready";
 import type {
   BootstrapResult,
   CurrentTripViewModel,
@@ -47,6 +48,10 @@ interface HomePageData {
   selectedMember: MemberView | null;
 }
 
+interface ApplyBootstrapOptions {
+  preserveSelectedMemberId?: string | null;
+}
+
 const initialData: HomePageData = {
   showAuthGate: true,
   showTripContent: false,
@@ -91,7 +96,14 @@ Page({
   data: initialData,
   personaSheetCloseTimer: 0,
 
-  onShow() {
+  async onShow() {
+    try {
+      await waitForCloudReady();
+    } catch (error) {
+      showErrorToast(error);
+      return;
+    }
+
     this.refreshPage();
   },
 
@@ -114,13 +126,17 @@ Page({
     }
   },
 
-  applyBootstrapResult(result: BootstrapResult) {
+  applyBootstrapResult(result: BootstrapResult, options: ApplyBootstrapOptions = {}) {
     const showAuthGate = !result.currentUser.isAuthorized;
     const hasCurrentTrip = result.currentUser.isAuthorized && Boolean(result.currentTrip);
     const showTripEntry = result.currentUser.isAuthorized && !result.currentTrip;
     const activeTab = this.data.activeTab;
     const currentPersonaId = result.currentUser.homePersonaAssetId ?? "";
     const currentPersonaImageUrl = resolveHomePersonaImageUrl(result.currentUser);
+    const preservedMember =
+      options.preserveSelectedMemberId && result.currentTrip
+        ? result.currentTrip.members.find((member) => member.userId === options.preserveSelectedMemberId) ?? null
+        : null;
 
     this.setData({
       showAuthGate,
@@ -139,16 +155,21 @@ Page({
       authPresetAvatarUrl: result.currentUser.avatarUrl,
       currentTrip: hasCurrentTrip ? result.currentTrip : null,
       seatedMembers: (result.currentTrip?.members ?? []).filter((member) => Boolean(member.seatCode)),
-      viewerSeatText: result.currentTrip?.tripMeta.viewerSeatCode ?? "未入座",
+      viewerSeatText: result.currentTrip?.tripMeta.viewerSeatCode ?? "请选择您的座位",
       currentPersonaId,
       currentPersonaImageUrl,
       personaOptions: HOME_PERSONA_OPTIONS.map((option) => ({ ...option })),
       showPersonaSheet: false,
       personaSheetActive: false,
       personaDraftId: currentPersonaId,
-      sheetVisible: false,
-      selectedSeat: null,
-      selectedMember: null
+      sheetVisible: Boolean(preservedMember),
+      sheetMode: preservedMember
+        ? this.resolveMemberSheetMode(preservedMember, result.currentTrip)
+        : "member-detail",
+      selectedSeat: preservedMember
+        ? this.findSeatByCode(preservedMember.seatCode ?? null, result.currentTrip)
+        : null,
+      selectedMember: preservedMember
     });
   },
 
@@ -248,12 +269,16 @@ Page({
     return this.data.currentTrip?.members.find((member) => member.isSelf) ?? null;
   },
 
-  findSeatByCode(seatCode: string | null): SeatCellView | null {
+  findSeatByCode(
+    this: { data: HomePageData },
+    seatCode: string | null,
+    currentTrip?: CurrentTripViewModel | null
+  ): SeatCellView | null {
     if (!seatCode) {
       return null;
     }
 
-    const rows = this.data.currentTrip?.seatRows ?? [];
+    const rows = (currentTrip ?? this.data.currentTrip)?.seatRows ?? [];
     for (const row of rows) {
       for (const seat of row.slots) {
         if (seat?.code === seatCode) {
@@ -264,14 +289,18 @@ Page({
     return null;
   },
 
-  resolveMemberSheetMode(member: MemberView | null): SheetMode {
+  resolveMemberSheetMode(
+    this: { data: HomePageData },
+    member: MemberView | null,
+    currentTrip?: CurrentTripViewModel | null
+  ): SheetMode {
     if (!member) {
       return "member-detail";
     }
     if (member.isSelf) {
       return "self-detail";
     }
-    return this.data.currentTrip?.tripMeta.viewerRole === "admin"
+    return (currentTrip ?? this.data.currentTrip)?.tripMeta.viewerRole === "admin"
       ? "admin-member-detail"
       : "member-detail";
   },
@@ -366,6 +395,24 @@ Page({
       const result = tripService.adminReleaseSeat(this.data.selectedMember.userId);
       this.applyBootstrapResult(result);
       showSuccessToast("已解除对方座位");
+    } catch (error) {
+      showErrorToast(error);
+    }
+  },
+
+  handleToggleFavorite() {
+    if (!this.data.selectedMember) {
+      return;
+    }
+
+    const targetUserId = this.data.selectedMember.userId;
+    const wasFavorited = this.data.selectedMember.isFavoritedByViewer;
+    try {
+      const result = tripService.toggleFavoriteMember(targetUserId);
+      this.applyBootstrapResult(result, {
+        preserveSelectedMemberId: targetUserId
+      });
+      showSuccessToast(wasFavorited ? "已取消收藏" : "已收藏");
     } catch (error) {
       showErrorToast(error);
     }

@@ -1,10 +1,10 @@
 <view class="page-shell profile-page">
-  <page-navbar title="我的" progress="{{navProgress}}" />
+  <page-navbar title="" progress="{{navProgress}}" />
 
   <block wx:if="{{showAuthGate}}">
     <auth-gate
-      title="先完成模拟授权"
-      subtitle="先用演示身份完成模拟授权，才能查看“我的”信息、创建车次、加入车次以及同步个人标签。"
+      title="先完成微信授权"
+      subtitle="先完成微信头像和昵称授权，才能查看“我的”信息、创建车次、加入车次以及同步个人标签。"
       presetNickname="{{authPresetNickname}}"
       presetAvatarUrl="{{authPresetAvatarUrl}}"
       bindauthorized="handleAuthorizeProfile"
@@ -12,6 +12,14 @@
   </block>
 
   <block wx:if="{{showProfileContent && pageData}}">
+    <view class="profile-bg-hero">
+      <image class="profile-flower" src="{{flowerIconUrl}}" mode="aspectFit" />
+    </view>
+
+    <view class="profile-topbar">
+      <view class="profile-page-title">我的</view>
+    </view>
+
     <view class="profile-hero">
       <view class="profile-copy">
         <view class="profile-head-row">
@@ -23,17 +31,28 @@
           />
           <view wx:else class="profile-avatar profile-avatar--fallback avatar-fallback">{{pageData.currentUserInitial}}</view>
 
+          <view class="profile-main">
+            <view class="profile-name-row">
+              <view class="profile-name">{{pageData.currentUser.nickname}}</view>
+              <image class="profile-inline-edit" src="{{editIconUrl}}" mode="aspectFit" />
+            </view>
+            <view class="profile-seat">座位号:{{pageData.currentSeatLabel}}</view>
+          </view>
+
           <view class="profile-edit-btn" bindtap="goTagEditor">
-            <image class="profile-edit-icon" src="{{editIconUrl}}" mode="aspectFit" />
             <text class="profile-edit-text">编辑资料</text>
           </view>
         </view>
 
-        <view class="profile-name">{{pageData.currentUser.nickname}}</view>
-        <view class="profile-seat">座位号:{{pageData.currentSeatLabel}}</view>
-
-        <view class="profile-tags" wx:if="{{pageData.tags.length}}">
-          <view class="profile-tag" wx:for="{{pageData.tags}}" wx:key="*this">{{item}}</view>
+        <view class="profile-tags" wx:if="{{profileTagViews.length}}">
+          <view
+            class="profile-tag"
+            wx:for="{{profileTagViews}}"
+            wx:key="label"
+            style="{{item.style}}"
+          >
+            {{item.label}}
+          </view>
         </view>
 
         <view class="profile-bio">{{pageData.profileSummary}}</view>
@@ -49,7 +68,6 @@
           <view class="profile-stat">
             <view class="profile-stat-value {{profileStats.living.isPlaceholder ? 'profile-stat-value--placeholder' : ''}}">
               <text>{{profileStats.living.primary}}</text>
-              <text wx:if="{{profileStats.living.secondary}}" class="profile-stat-value-secondary">{{profileStats.living.secondary}}</text>
             </view>
             <view class="profile-stat-label">居住</view>
           </view>
@@ -57,19 +75,16 @@
           <view class="profile-stat">
             <view class="profile-stat-value {{profileStats.hometown.isPlaceholder ? 'profile-stat-value--placeholder' : ''}}">
               <text>{{profileStats.hometown.primary}}</text>
-              <text wx:if="{{profileStats.hometown.secondary}}" class="profile-stat-value-secondary">{{profileStats.hometown.secondary}}</text>
             </view>
             <view class="profile-stat-label">来自</view>
           </view>
         </view>
       </view>
 
-      <image class="profile-illustration" src="{{profileIllustrationUrl}}" mode="aspectFit" />
+      <image wx:if="{{hasProfileIllustration}}" class="profile-illustration" src="{{profileIllustrationUrl}}" mode="aspectFit" />
     </view>
 
     <view class="settings-card">
-      <view class="settings-title">设置</view>
-
       <block wx:for="{{settingsItems}}" wx:key="id">
         <view
           wx:if="{{item.isShare}}"
@@ -98,50 +113,6 @@
 
         <view wx:if="{{item.showDivider}}" class="settings-divider"></view>
       </block>
-    </view>
-
-    <button
-      wx:if="{{showLeaveAction}}"
-      class="secondary-btn profile-action"
-      bindtap="handlePrimaryAction"
-    >
-      {{pageData.primaryActionLabel}}
-    </button>
-    <button
-      wx:if="{{showDissolveAction}}"
-      class="danger-btn profile-action"
-      bindtap="handlePrimaryAction"
-    >
-      {{pageData.primaryActionLabel}}
-    </button>
-
-    <view class="card demo-card">
-      <view class="card-title">演示身份切换</view>
-      <view class="section-subtitle">本地版专用。切换后首页会展示该身份的当前车次和座位视角。</view>
-
-      <view class="demo-item" wx:for="{{pageData.demoUsers}}" wx:key="id">
-        <view class="demo-main">
-          <image wx:if="{{item.avatarUrl}}" class="demo-avatar" src="{{item.avatarUrl}}" mode="aspectFill" />
-          <view wx:else class="demo-avatar demo-avatar--fallback avatar-fallback">{{item.initial}}</view>
-
-          <view class="demo-copy">
-            <view class="demo-name">
-              {{item.nickname}}
-              <text wx:if="{{item.isActive}}" class="demo-active">当前</text>
-            </view>
-            <view class="demo-trip">{{item.currentTripName}}</view>
-          </view>
-        </view>
-
-        <button
-          class="ghost-btn demo-switch"
-          disabled="{{item.isActive}}"
-          data-user-id="{{item.id}}"
-          bindtap="handleSwitchDemoUser"
-        >
-          {{item.switchLabel}}
-        </button>
-      </view>
     </view>
   </block>
 </view>
