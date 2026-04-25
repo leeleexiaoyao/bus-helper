@@ -134,6 +134,7 @@ Page({
         pageData: null,
         showAuthGate: false,
         showProfileContent: false,
+        showSeedDemoEntry: false,
         seedDemoToggling: false,
         navProgress: 0,
         authPresetNickname: "",

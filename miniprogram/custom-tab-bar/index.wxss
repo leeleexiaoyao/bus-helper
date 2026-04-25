@@ -20,18 +20,11 @@
 .tab-item {
   flex: 1;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8rpx;
   min-height: 88rpx;
   padding: 10rpx 0 calc(env(safe-area-inset-bottom) + 10rpx);
   box-sizing: border-box;
-}
-
-.tab-icon {
-  width: 52rpx;
-  height: 52rpx;
 }
 
 .tab-label {

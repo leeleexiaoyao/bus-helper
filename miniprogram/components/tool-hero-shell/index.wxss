@@ -35,10 +35,13 @@
 
 .tool-hero-title {
   margin-top: 8rpx;
+  max-width: 440rpx;
+  min-height: 56rpx;
   color: #171720;
   font-size: 40rpx;
   font-weight: 600;
   line-height: 1.4;
+  word-break: break-all;
 }
 
 .tool-hero-subtitle {

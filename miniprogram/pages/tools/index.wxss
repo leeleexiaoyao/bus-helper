@@ -173,13 +173,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 20rpx;
   position: relative;
   z-index: 1;
-}
-
-.tools-empty-illustration {
-  width: 320rpx;
 }
 
 .tools-empty-label {

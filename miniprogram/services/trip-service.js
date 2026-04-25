@@ -27,34 +27,38 @@ const SEAT_DRAW_MAX_COUNT = 5;
 const SEAT_DRAW_ROLLING_DURATION_MS = 3000;
 const TOOL_PAGE_META = {
     vote: {
-        displayTitle: "投票",
-        displayDescription: "一起选出最佳方案",
+        displayTitle: "做选择",
+        displayDescription: "选出最佳方案",
         imageUrl: "/assets/icons/icon_tools_投票.png",
         ctaLabel: "去使用",
         sortOrder: 2
     },
     "seat-draw": {
-        displayTitle: "随机抽号",
-        displayDescription: "公平随机不偏心",
+        displayTitle: "随机抽",
+        displayDescription: "公平随机抽号",
         imageUrl: "/assets/icons/icon_tools_随机选号.png",
         ctaLabel: "去使用",
         sortOrder: 1
     },
     lottery: {
-        displayTitle: "抽签",
-        displayDescription: "神秘配对等你揭晓",
+        displayTitle: "幸运签",
+        displayDescription: "抽好签配好运",
         imageUrl: "/assets/icons/icon_tools_抽签.png",
         ctaLabel: "去使用",
         sortOrder: 4
     },
     wheel: {
-        displayTitle: "幸运大转盘",
-        displayDescription: "转出你的幸运",
+        displayTitle: "大转盘",
+        displayDescription: "大风车转啊转",
         imageUrl: "/assets/icons/icon_tools_幸运大转盘.png",
         ctaLabel: "去使用",
         sortOrder: 3
     }
 };
+function getFallbackTopic(topic, fallback) {
+    const normalized = typeof topic === "string" ? topic.trim() : "";
+    return normalized || fallback;
+}
 function assertTripName(tripName) {
     if (!tripName.trim()) {
         throw new errors_1.BusinessError("INVALID_TRIP_NAME", "请填写车次名称。");
@@ -120,6 +124,26 @@ function assertSeatDrawTopic(topic) {
     }
     if (trimmed.length > 20) {
         throw new errors_1.BusinessError("SEAT_DRAW_TOPIC_TOO_LONG", "主题最多输入 20 个字。");
+    }
+    return trimmed;
+}
+function assertWheelTopic(topic) {
+    const trimmed = topic.trim();
+    if (!trimmed) {
+        throw new errors_1.BusinessError("INVALID_WHEEL_TOPIC", "请填写主题名称。");
+    }
+    if (trimmed.length > 30) {
+        throw new errors_1.BusinessError("WHEEL_TOPIC_TOO_LONG", "主题名称最多输入 30 个字。");
+    }
+    return trimmed;
+}
+function assertLotteryTopic(topic) {
+    const trimmed = topic.trim();
+    if (!trimmed) {
+        throw new errors_1.BusinessError("INVALID_LOTTERY_TOPIC", "请填写主题名称。");
+    }
+    if (trimmed.length > 30) {
+        throw new errors_1.BusinessError("LOTTERY_TOPIC_TOO_LONG", "主题名称最多输入 30 个字。");
     }
     return trimmed;
 }
@@ -692,6 +716,7 @@ class TripService {
         if (this.getPublishedToolState(context.trip, "wheel")) {
             throw new errors_1.BusinessError("TOOL_ALREADY_STARTED", "玩法已创建，不能再次修改，请使用重置。");
         }
+        const topic = assertWheelTopic(typeof input.topic === "string" ? input.topic : "大转盘");
         const items = assertWheelItems(input.items);
         const permissionConfig = this.resolveWheelPermissionConfig(context.tripId, input);
         this.tripRepository.updateTrip(context.tripId, (trip) => {
@@ -700,6 +725,7 @@ class TripService {
                 publishedAt: Date.now(),
                 publishedByUserId: context.currentUser.id,
                 phase: "draft",
+                topic,
                 items,
                 allowAssignedUser: permissionConfig.allowAssignedUser,
                 assignedUserId: permissionConfig.assignedUserId,
@@ -714,6 +740,7 @@ class TripService {
         var _a;
         const context = this.requireAdminTripContext();
         const toolState = this.requireStartedTool(context.trip, "wheel");
+        const topic = assertWheelTopic(typeof input.topic === "string" ? input.topic : getFallbackTopic(toolState.topic, "大转盘"));
         const items = assertWheelItems(input.items);
         const permissionConfig = this.resolveWheelPermissionConfig(context.tripId, input);
         const previousResultLabel = toolState.resultIndex === null ? null : (_a = toolState.items[toolState.resultIndex]) !== null && _a !== void 0 ? _a : null;
@@ -725,6 +752,7 @@ class TripService {
             const nextState = this.requireStartedTool(trip, "wheel");
             nextState.publishedAt = Date.now();
             nextState.publishedByUserId = context.currentUser.id;
+            nextState.topic = topic;
             nextState.items = items;
             nextState.allowAssignedUser = permissionConfig.allowAssignedUser;
             nextState.assignedUserId = permissionConfig.assignedUserId;
@@ -774,6 +802,7 @@ class TripService {
         if (this.getPublishedToolState(context.trip, "lottery")) {
             throw new errors_1.BusinessError("TOOL_ALREADY_STARTED", "玩法已创建，不能再次修改，请使用重置。");
         }
+        const topic = assertLotteryTopic(typeof input.topic === "string" ? input.topic : "幸运签");
         const answers = assertLotteryAnswers(input.answers);
         const drawLimitPerUser = assertLotteryDrawLimit(input.drawLimitPerUser);
         const permissionConfig = this.resolveLotteryPermissionConfig(context.tripId, context.currentUser.id, input);
@@ -783,6 +812,7 @@ class TripService {
                 publishedAt: Date.now(),
                 publishedByUserId: context.currentUser.id,
                 phase: "active",
+                topic,
                 answers,
                 cards: buildLotteryCards(answers),
                 allowAssignedUser: permissionConfig.allowAssignedUser,
@@ -796,6 +826,7 @@ class TripService {
     recreateLotteryTool(input) {
         const context = this.requireAdminTripContext();
         this.requireStartedTool(context.trip, "lottery");
+        const topic = assertLotteryTopic(typeof input.topic === "string" ? input.topic : "幸运签");
         const answers = assertLotteryAnswers(input.answers);
         const drawLimitPerUser = assertLotteryDrawLimit(input.drawLimitPerUser);
         const permissionConfig = this.resolveLotteryPermissionConfig(context.tripId, context.currentUser.id, input);
@@ -804,6 +835,7 @@ class TripService {
             nextState.publishedAt = Date.now();
             nextState.publishedByUserId = context.currentUser.id;
             nextState.phase = "active";
+            nextState.topic = topic;
             nextState.answers = answers;
             nextState.cards = buildLotteryCards(answers);
             nextState.allowAssignedUser = permissionConfig.allowAssignedUser;
@@ -1762,6 +1794,7 @@ class TripService {
             : [];
         return {
             phase: (_c = toolState === null || toolState === void 0 ? void 0 : toolState.phase) !== null && _c !== void 0 ? _c : "draft",
+            topic: getFallbackTopic(toolState === null || toolState === void 0 ? void 0 : toolState.topic, "大转盘"),
             items: (_d = toolState === null || toolState === void 0 ? void 0 : toolState.items) !== null && _d !== void 0 ? _d : [],
             viewerCanSpin: toolState ? this.canViewerSpinWheel(toolState, viewerId, viewerRole) : false,
             allowAssignedUser: Boolean(toolState === null || toolState === void 0 ? void 0 : toolState.allowAssignedUser),
@@ -1855,6 +1888,7 @@ class TripService {
             viewerClaimRecords.length < drawLimitPerUser;
         return {
             phase: (_g = toolState === null || toolState === void 0 ? void 0 : toolState.phase) !== null && _g !== void 0 ? _g : "active",
+            topic: getFallbackTopic(toolState === null || toolState === void 0 ? void 0 : toolState.topic, "幸运签"),
             answers: (_h = toolState === null || toolState === void 0 ? void 0 : toolState.answers) !== null && _h !== void 0 ? _h : [],
             cardCount: (_j = toolState === null || toolState === void 0 ? void 0 : toolState.cards.length) !== null && _j !== void 0 ? _j : 0,
             claimedCardCount: ((_k = toolState === null || toolState === void 0 ? void 0 : toolState.cards.length) !== null && _k !== void 0 ? _k : 0) - remainingCardCount,

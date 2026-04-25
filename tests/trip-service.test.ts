@@ -322,26 +322,26 @@ function setupTripWith49Members() {
     [
       {
         type: "seat-draw",
-        displayTitle: "随机抽号",
-        displayDescription: "公平随机不偏心",
+        displayTitle: "随机抽",
+        displayDescription: "公平随机抽号",
         ctaLabel: "去使用"
       },
       {
         type: "vote",
-        displayTitle: "投票",
-        displayDescription: "一起选出最佳方案",
+        displayTitle: "做选择",
+        displayDescription: "选出最佳方案",
         ctaLabel: "去使用"
       },
       {
         type: "wheel",
-        displayTitle: "幸运大转盘",
-        displayDescription: "转出你的幸运",
+        displayTitle: "大转盘",
+        displayDescription: "大风车转啊转",
         ctaLabel: "去使用"
       },
       {
         type: "lottery",
-        displayTitle: "抽签",
-        displayDescription: "神秘配对等你揭晓",
+        displayTitle: "幸运签",
+        displayDescription: "抽好签配好运",
         ctaLabel: "去使用"
       }
     ]

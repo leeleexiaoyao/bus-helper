@@ -8,11 +8,6 @@
       data-index="{{index}}"
       bindtap="handleSwitch"
     >
-      <image
-        class="tab-icon"
-        src="{{selected === index ? item.selectedIconPath : item.iconPath}}"
-        mode="aspectFit"
-      />
       <view class="tab-label">{{item.text}}</view>
     </view>
   </view>

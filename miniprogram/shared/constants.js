@@ -96,26 +96,26 @@ exports.DEMO_SWITCHABLE_USER_IDS = exports.DEMO_USERS.slice(0, 2).map((user) => 
 exports.TOOL_TYPES = ["seat-draw", "vote", "wheel", "lottery"];
 exports.TOOL_META = {
     "seat-draw": {
-        title: "随机抽号",
-        description: "随机抽人",
+        title: "随机抽",
+        description: "公平随机抽号",
         iconGlyph: "抽",
         iconClassName: "tool-icon is-seat-draw"
     },
     vote: {
-        title: "投票",
-        description: "多人表决",
+        title: "做选择",
+        description: "选出最佳方案",
         iconGlyph: "票",
         iconClassName: "tool-icon is-vote"
     },
     wheel: {
         title: "大转盘",
-        description: "转盘抽签",
+        description: "大风车转啊转",
         iconGlyph: "盘",
         iconClassName: "tool-icon is-wheel"
     },
     lottery: {
-        title: "抓阄",
-        description: "个人揭晓",
+        title: "幸运签",
+        description: "抽好签配好运",
         iconGlyph: "阄",
         iconClassName: "tool-icon is-lottery"
     }
@@ -255,6 +255,7 @@ function buildSeedTripTools(occupiedUsers) {
             publishedAt: SEED_CREATED_AT,
             publishedByUserId: "user-1",
             phase: "draft",
+            topic: "大转盘",
             items: wheelItems,
             allowAssignedUser: false,
             assignedUserId: null,
@@ -267,6 +268,7 @@ function buildSeedTripTools(occupiedUsers) {
             publishedAt: SEED_CREATED_AT,
             publishedByUserId: "user-1",
             phase: "active",
+            topic: "幸运签",
             answers: ["去前排", "唱首歌", "请大家喝饮料"],
             cards: ["请大家喝饮料", "去前排", "唱首歌"].map((answer, index) => ({
                 id: `seed-lottery-card-${index + 1}`,

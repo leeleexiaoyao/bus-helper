@@ -161,56 +161,58 @@
     </view>
   </block>
 
-  <view wx:if="{{pageData}}" class="seed-data-card">
-    <view class="seed-data-copy">
-      <view class="seed-data-title">假数据</view>
-      <view class="seed-data-description">开启后自动填充 40 个完整用户和座位数据</view>
-    </view>
-    <switch
-      class="seed-data-switch"
-      color="#2f7cff"
-      checked="{{pageData.seedDemoEnabled}}"
-      disabled="{{seedDemoToggling}}"
-      bindchange="handleSeedDemoToggle"
-    />
-  </view>
-
-  <view wx:if="{{pageData && pageData.seedDemoEnabled}}" class="seed-role-card">
-    <view class="seed-role-header">
-      <view class="seed-role-title">角色切换</view>
-      <view class="seed-role-description">默认提供管理员和普通成员两个身份</view>
+  <block wx:if="{{showSeedDemoEntry}}">
+    <view wx:if="{{pageData}}" class="seed-data-card">
+      <view class="seed-data-copy">
+        <view class="seed-data-title">假数据</view>
+        <view class="seed-data-description">开启后自动填充 40 个完整用户和座位数据</view>
+      </view>
+      <switch
+        class="seed-data-switch"
+        color="#2f7cff"
+        checked="{{pageData.seedDemoEnabled}}"
+        disabled="{{seedDemoToggling}}"
+        bindchange="handleSeedDemoToggle"
+      />
     </view>
 
-    <view
-      class="seed-role-item"
-      wx:for="{{pageData.demoUsers}}"
-      wx:key="id"
-    >
-      <view class="seed-role-main">
-        <image
-          wx:if="{{item.avatarUrl}}"
-          class="seed-role-avatar"
-          src="{{item.avatarUrl}}"
-          mode="aspectFill"
-        />
-        <view wx:else class="seed-role-avatar seed-role-avatar--fallback">{{item.initial}}</view>
-        <view class="seed-role-copy">
-          <view class="seed-role-name-row">
-            <view class="seed-role-name">{{item.nickname}}</view>
-            <view class="seed-role-badge">{{item.roleLabel}}</view>
+    <view wx:if="{{pageData && pageData.seedDemoEnabled}}" class="seed-role-card">
+      <view class="seed-role-header">
+        <view class="seed-role-title">角色切换</view>
+        <view class="seed-role-description">默认提供管理员和普通成员两个身份</view>
+      </view>
+
+      <view
+        class="seed-role-item"
+        wx:for="{{pageData.demoUsers}}"
+        wx:key="id"
+      >
+        <view class="seed-role-main">
+          <image
+            wx:if="{{item.avatarUrl}}"
+            class="seed-role-avatar"
+            src="{{item.avatarUrl}}"
+            mode="aspectFill"
+          />
+          <view wx:else class="seed-role-avatar seed-role-avatar--fallback">{{item.initial}}</view>
+          <view class="seed-role-copy">
+            <view class="seed-role-name-row">
+              <view class="seed-role-name">{{item.nickname}}</view>
+              <view class="seed-role-badge">{{item.roleLabel}}</view>
+            </view>
+            <view class="seed-role-trip">{{item.currentTripName}}</view>
           </view>
-          <view class="seed-role-trip">{{item.currentTripName}}</view>
+        </view>
+        <view
+          class="seed-role-switch {{item.isActive ? 'is-active' : ''}}"
+          data-user-id="{{item.id}}"
+          bindtap="handleSwitchSeedDemoUser"
+        >
+          {{item.switchLabel}}
         </view>
       </view>
-      <view
-        class="seed-role-switch {{item.isActive ? 'is-active' : ''}}"
-        data-user-id="{{item.id}}"
-        bindtap="handleSwitchSeedDemoUser"
-      >
-        {{item.switchLabel}}
-      </view>
     </view>
-  </view>
+  </block>
 
   <block wx:if="{{showAuthGate}}">
     <view class="profile-auth-mask" bindtap="handleCloseAuthGate"></view>

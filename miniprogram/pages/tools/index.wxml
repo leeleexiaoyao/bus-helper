@@ -5,7 +5,7 @@
   <block wx:if="{{showToolsContent}}">
     <view class="tools-header">
       <view class="tools-title">工具</view>
-      <view class="tools-subtitle">趣味小工具，认座更轻松</view>
+      <view class="tools-subtitle">趣味小工具，让旅途更愉快</view>
     </view>
 
     <view class="tool-grid">
@@ -36,7 +36,6 @@
     </view>
 
     <view class="tools-empty-state">
-      <image class="tools-empty-illustration" src="/assets/personas/home-persona.png" mode="widthFix" />
       <view class="tools-empty-label">暂未开放</view>
     </view>
   </block>

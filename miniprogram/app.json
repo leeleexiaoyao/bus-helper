@@ -13,6 +13,7 @@
     "pages/about/index",
     "pages/trip-settings/index"
   ],
+  "lazyCodeLoading": "requiredComponents",
   "window": {
     "navigationBarTitleText": "巴士认座助手",
     "navigationBarBackgroundColor": "#eff5fc",

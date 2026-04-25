@@ -233,6 +233,33 @@ function normalizeLotteryClaimsByUserId(value) {
         return accumulator;
     }, {});
 }
+function normalizeWheelToolState(toolState) {
+    if (!isRecord(toolState)) {
+        return null;
+    }
+    const items = normalizeStringArray(toolState.items);
+    if (items.length < 2) {
+        return null;
+    }
+    const resultIndex = typeof toolState.resultIndex === "number" && Number.isInteger(toolState.resultIndex)
+        ? toolState.resultIndex
+        : null;
+    return {
+        type: "wheel",
+        publishedAt: typeof toolState.publishedAt === "number" ? toolState.publishedAt : 0,
+        publishedByUserId: typeof toolState.publishedByUserId === "string" ? toolState.publishedByUserId.trim() : "",
+        phase: toolState.phase === "result" ? "result" : "draft",
+        topic: typeof toolState.topic === "string" && toolState.topic.trim() ? toolState.topic.trim() : "幸运转盘",
+        items,
+        allowAssignedUser: Boolean(toolState.allowAssignedUser),
+        assignedUserId: typeof toolState.assignedUserId === "string" && toolState.assignedUserId.trim()
+            ? toolState.assignedUserId.trim()
+            : null,
+        resultIndex: resultIndex !== null && resultIndex >= 0 && resultIndex < items.length ? resultIndex : null,
+        resultHistoryLabels: normalizeStringArray(toolState.resultHistoryLabels).filter((label) => items.includes(label)),
+        spunAt: typeof toolState.spunAt === "number" ? toolState.spunAt : null
+    };
+}
 function normalizeLotteryToolState(toolState) {
     if (!isRecord(toolState)) {
         return null;
@@ -250,6 +277,7 @@ function normalizeLotteryToolState(toolState) {
         publishedAt: typeof toolState.publishedAt === "number" ? toolState.publishedAt : 0,
         publishedByUserId: typeof toolState.publishedByUserId === "string" ? toolState.publishedByUserId.trim() : "",
         phase: toolState.phase === "ready" ? "ready" : "active",
+        topic: typeof toolState.topic === "string" && toolState.topic.trim() ? toolState.topic.trim() : "抓阄",
         answers: answers.length ? answers : cards.map((card) => card.answer),
         cards,
         allowAssignedUser: Boolean(toolState.allowAssignedUser),
@@ -267,6 +295,9 @@ function normalizeToolState(toolType, toolState) {
     }
     if (toolType === "vote") {
         return normalizeVoteToolState(toolState);
+    }
+    if (toolType === "wheel") {
+        return normalizeWheelToolState(toolState);
     }
     if (toolType === "lottery") {
         return normalizeLotteryToolState(toolState);

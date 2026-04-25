@@ -1,0 +1,4 @@
+miniprogram/**/*.ts
+miniprogram/**/.DS_Store
+miniprogram/.DS_Store
+.DS_Store

@@ -26,6 +26,10 @@ const WHEEL_SLICE_COLORS = [
     "#d4e4ff",
     "#f5d7ff"
 ];
+function getHeroTopic(topic, fallback) {
+    const normalized = typeof topic === "string" ? topic.trim() : "";
+    return normalized || fallback;
+}
 function isToolType(value) {
     return ["seat-draw", "vote", "wheel", "lottery"].includes(value);
 }
@@ -207,7 +211,7 @@ function buildToolHeroView(pageData) {
     if (pageData.toolType === "seat-draw" && pageData.seatDrawDetail) {
         return {
             eyebrowText: "本次主题",
-            titleText: pageData.seatDrawDetail.topic,
+            titleText: getHeroTopic(pageData.seatDrawDetail.topic, "随机抽"),
             subtitleText: `要求:${pageData.seatDrawDetail.drawCount}人`,
             illustrationSrc: TOOL_HERO_ILLUSTRATIONS["seat-draw"],
             illustrationClassName: "tool-hero-illustration tool-hero-illustration--seat-draw",
@@ -218,7 +222,7 @@ function buildToolHeroView(pageData) {
         const detail = pageData.voteDetail;
         return {
             eyebrowText: "本次主题",
-            titleText: detail.topic,
+            titleText: getHeroTopic(detail.topic, "做选择"),
             subtitleText: `要求:${detail.maxSelections}项`,
             illustrationSrc: TOOL_HERO_ILLUSTRATIONS.vote,
             illustrationClassName: "tool-hero-illustration tool-hero-illustration--icon",
@@ -228,7 +232,7 @@ function buildToolHeroView(pageData) {
     if (pageData.toolType === "wheel" && pageData.wheelDetail) {
         return {
             eyebrowText: "本次主题",
-            titleText: pageData.wheelDetail.topic,
+            titleText: getHeroTopic(pageData.wheelDetail.topic, "大转盘"),
             subtitleText: `奖项:${pageData.wheelDetail.items.length}项`,
             illustrationSrc: TOOL_HERO_ILLUSTRATIONS.wheel,
             illustrationClassName: "tool-hero-illustration tool-hero-illustration--icon",
@@ -238,7 +242,7 @@ function buildToolHeroView(pageData) {
     if (pageData.toolType === "lottery" && pageData.lotteryDetail) {
         return {
             eyebrowText: "本次主题",
-            titleText: pageData.lotteryDetail.topic,
+            titleText: getHeroTopic(pageData.lotteryDetail.topic, "幸运签"),
             subtitleText: `次数:${pageData.lotteryDetail.drawLimitPerUser}次`,
             illustrationSrc: TOOL_HERO_ILLUSTRATIONS.lottery,
             illustrationClassName: "tool-hero-illustration tool-hero-illustration--icon",

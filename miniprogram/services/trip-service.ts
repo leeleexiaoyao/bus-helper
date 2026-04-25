@@ -103,34 +103,39 @@ const TOOL_PAGE_META: Record<
   }
 > = {
   vote: {
-    displayTitle: "投票",
-    displayDescription: "一起选出最佳方案",
+    displayTitle: "做选择",
+    displayDescription: "选出最佳方案",
     imageUrl: "/assets/icons/icon_tools_投票.png",
     ctaLabel: "去使用",
     sortOrder: 2
   },
   "seat-draw": {
-    displayTitle: "随机抽号",
-    displayDescription: "公平随机不偏心",
+    displayTitle: "随机抽",
+    displayDescription: "公平随机抽号",
     imageUrl: "/assets/icons/icon_tools_随机选号.png",
     ctaLabel: "去使用",
     sortOrder: 1
   },
   lottery: {
-    displayTitle: "抽签",
-    displayDescription: "神秘配对等你揭晓",
+    displayTitle: "幸运签",
+    displayDescription: "抽好签配好运",
     imageUrl: "/assets/icons/icon_tools_抽签.png",
     ctaLabel: "去使用",
     sortOrder: 4
   },
   wheel: {
-    displayTitle: "幸运大转盘",
-    displayDescription: "转出你的幸运",
+    displayTitle: "大转盘",
+    displayDescription: "大风车转啊转",
     imageUrl: "/assets/icons/icon_tools_幸运大转盘.png",
     ctaLabel: "去使用",
     sortOrder: 3
   }
 };
+
+function getFallbackTopic(topic: string | null | undefined, fallback: string): string {
+  const normalized = typeof topic === "string" ? topic.trim() : "";
+  return normalized || fallback;
+}
 
 function assertTripName(tripName: string): void {
   if (!tripName.trim()) {
@@ -991,7 +996,7 @@ export class TripService {
     if (this.getPublishedToolState(context.trip, "wheel")) {
       throw new BusinessError("TOOL_ALREADY_STARTED", "玩法已创建，不能再次修改，请使用重置。");
     }
-    const topic = assertWheelTopic(typeof input.topic === "string" ? input.topic : "幸运转盘");
+    const topic = assertWheelTopic(typeof input.topic === "string" ? input.topic : "大转盘");
     const items = assertWheelItems(input.items);
     const permissionConfig = this.resolveWheelPermissionConfig(context.tripId, input);
 
@@ -1017,7 +1022,9 @@ export class TripService {
   recreateWheelTool(input: WheelPublishInput): ToolDetailViewModel {
     const context = this.requireAdminTripContext();
     const toolState = this.requireStartedTool(context.trip, "wheel") as PublishedWheelToolState;
-    const topic = assertWheelTopic(typeof input.topic === "string" ? input.topic : toolState.topic);
+    const topic = assertWheelTopic(
+      typeof input.topic === "string" ? input.topic : getFallbackTopic(toolState.topic, "大转盘")
+    );
     const items = assertWheelItems(input.items);
     const permissionConfig = this.resolveWheelPermissionConfig(context.tripId, input);
     const previousResultLabel =
@@ -1091,7 +1098,7 @@ export class TripService {
     if (this.getPublishedToolState(context.trip, "lottery")) {
       throw new BusinessError("TOOL_ALREADY_STARTED", "玩法已创建，不能再次修改，请使用重置。");
     }
-    const topic = assertLotteryTopic(typeof input.topic === "string" ? input.topic : "抓阄");
+    const topic = assertLotteryTopic(typeof input.topic === "string" ? input.topic : "幸运签");
     const answers = assertLotteryAnswers(input.answers);
     const drawLimitPerUser = assertLotteryDrawLimit(input.drawLimitPerUser);
     const permissionConfig = this.resolveLotteryPermissionConfig(context.tripId, context.currentUser.id, input);
@@ -1118,7 +1125,7 @@ export class TripService {
   recreateLotteryTool(input: LotteryPublishInput): ToolDetailViewModel {
     const context = this.requireAdminTripContext();
     this.requireStartedTool(context.trip, "lottery");
-    const topic = assertLotteryTopic(typeof input.topic === "string" ? input.topic : "抓阄");
+    const topic = assertLotteryTopic(typeof input.topic === "string" ? input.topic : "幸运签");
     const answers = assertLotteryAnswers(input.answers);
     const drawLimitPerUser = assertLotteryDrawLimit(input.drawLimitPerUser);
     const permissionConfig = this.resolveLotteryPermissionConfig(context.tripId, context.currentUser.id, input);
@@ -2332,7 +2339,7 @@ export class TripService {
 
     return {
       phase: toolState?.phase ?? "draft",
-      topic: toolState?.topic ?? "幸运转盘",
+      topic: getFallbackTopic(toolState?.topic, "大转盘"),
       items: toolState?.items ?? [],
       viewerCanSpin: toolState ? this.canViewerSpinWheel(toolState, viewerId, viewerRole) : false,
       allowAssignedUser: Boolean(toolState?.allowAssignedUser),
@@ -2459,7 +2466,7 @@ export class TripService {
 
     return {
       phase: toolState?.phase ?? "active",
-      topic: toolState?.topic ?? "抓阄",
+      topic: getFallbackTopic(toolState?.topic, "幸运签"),
       answers: toolState?.answers ?? [],
       cardCount: toolState?.cards.length ?? 0,
       claimedCardCount: (toolState?.cards.length ?? 0) - remainingCardCount,
