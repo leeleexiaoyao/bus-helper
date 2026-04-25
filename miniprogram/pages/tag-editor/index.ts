@@ -1,6 +1,7 @@
 import type { HomePersonaOption, TagEditorViewModel } from "../../shared/types";
 import { HOME_PERSONA_OPTIONS } from "../../shared/constants";
 import { tripService } from "../../services/trip-service";
+import { waitForCloudReady } from "../../utils/cloud-ready";
 import { showErrorToast, showSuccessToast } from "../../utils/feedback";
 import { parseTags } from "../../utils/format";
 
@@ -32,11 +33,15 @@ const DEFAULT_AGE = 18;
 
 function resolveAgePickerIndex(age: string): number {
   const numericAge = Number(age);
+  if (!Number.isInteger(numericAge)) {
+    return 0;
+  }
+
   const targetAge =
-    Number.isInteger(numericAge) && numericAge >= AGE_OPTIONS[0] && numericAge <= AGE_OPTIONS[AGE_OPTIONS.length - 1]
+    numericAge >= AGE_OPTIONS[0] && numericAge <= AGE_OPTIONS[AGE_OPTIONS.length - 1]
       ? numericAge
       : DEFAULT_AGE;
-  return AGE_OPTIONS.indexOf(targetAge);
+  return Math.max(0, AGE_OPTIONS.indexOf(targetAge));
 }
 
 Page({
@@ -57,14 +62,21 @@ Page({
     hometownRegion: [] as string[],
     ageOptions: AGE_OPTIONS,
     agePickerIndex: resolveAgePickerIndex(""),
-    age: String(DEFAULT_AGE),
+    age: "",
     tagsInput: "",
     previewTags: [] as string[],
     submitting: false
   } as TagEditorPageData,
   personaSheetCloseTimer: 0,
 
-  onShow() {
+  async onShow() {
+    try {
+      await waitForCloudReady();
+    } catch (error) {
+      showErrorToast(error);
+      return;
+    }
+
     this.refreshPage();
   },
 
@@ -101,7 +113,7 @@ Page({
       hometown: viewModel.hometown,
       hometownRegion: viewModel.hometownRegion,
       agePickerIndex: resolveAgePickerIndex(viewModel.age),
-      age: viewModel.age || String(DEFAULT_AGE),
+      age: viewModel.age,
       tagsInput: viewModel.tagsInput,
       previewTags: viewModel.previewTags
     });

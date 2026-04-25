@@ -1,5 +1,5 @@
 {
-  "navigationBarTitleText": "创建车次",
-  "navigationStyle": "custom",
-  "backgroundColor": "#f3f4f6"
+  "navigationBarTitleText": "巴士设置",
+  "navigationBarBackgroundColor": "#f4f4f3",
+  "backgroundColor": "#f4f4f3"
 }

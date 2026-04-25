@@ -41,8 +41,9 @@ function buildSeatRows(seatCodes, seatMap, viewerId) {
     return Object.entries(grouped)
         .map(([rowNumber, rowSeats]) => {
         const slots = [];
-        const seatCount = rowSeats.length;
-        rowSeats.forEach((seatCode, index) => {
+        const orderedRowSeats = reorderRowSeats(rowSeats);
+        const seatCount = orderedRowSeats.length;
+        orderedRowSeats.forEach((seatCode, index) => {
             if (seatCount === 4 && index === 2) {
                 slots.push(null);
             }
@@ -111,4 +112,14 @@ function sortMembers(left, right) {
 }
 function roleScore(role) {
     return role === "admin" ? 2 : 1;
+}
+function reorderRowSeats(rowSeats) {
+    if (rowSeats.length !== 5) {
+        return rowSeats;
+    }
+    const findSeat = (letter) => rowSeats.find((seatCode) => seatCode.endsWith(letter));
+    const orderedSeats = ["A", "B", "E", "C", "D"]
+        .map((letter) => findSeat(letter))
+        .filter((seatCode) => Boolean(seatCode));
+    return orderedSeats.length === rowSeats.length ? orderedSeats : rowSeats;
 }

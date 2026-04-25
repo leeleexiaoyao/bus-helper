@@ -1,0 +1,91 @@
+.tool-hero-card {
+  position: relative;
+  margin-top: 14rpx;
+  padding: 32rpx 24rpx 32rpx;
+  border-radius: 32rpx;
+  background: linear-gradient(180deg, #fbfee9 0%, #ffffff 100%);
+  box-shadow: 0 8rpx 20rpx rgba(148, 163, 184, 0.08);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.tool-hero-copy {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+}
+
+.tool-hero-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 20rpx;
+}
+
+.tool-hero-card--seat-draw {
+  min-height: 672rpx;
+}
+
+.tool-hero-eyebrow {
+  color: #7d7d7d;
+  font-size: 24rpx;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.tool-hero-title {
+  margin-top: 8rpx;
+  color: #171720;
+  font-size: 40rpx;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.tool-hero-subtitle {
+  margin-top: 24rpx;
+  color: #808089;
+  font-size: 24rpx;
+  line-height: 1.4;
+  text-align: right;
+  flex: 0 0 auto;
+}
+
+.tool-hero-illustration {
+  position: absolute;
+  top: -26rpx;
+  right: -14rpx;
+  z-index: 1;
+}
+
+.tool-hero-illustration--seat-draw {
+  width: 298rpx;
+  height: 310rpx;
+}
+
+.tool-hero-illustration--icon {
+  top: 24rpx;
+  right: 24rpx;
+  width: 132rpx;
+  height: 132rpx;
+  padding: 14rpx;
+  border-radius: 28rpx;
+  background: rgba(255, 255, 255, 0.52);
+  box-sizing: border-box;
+}
+
+.tool-hero-body {
+  position: relative;
+  z-index: 2;
+  margin-top: 34rpx;
+}
+
+.tool-hero-body--seat-draw {
+  margin-top: 48rpx;
+  text-align: center;
+}
+
+.tool-hero-footer {
+  position: relative;
+  z-index: 2;
+  margin-top: 76rpx;
+}

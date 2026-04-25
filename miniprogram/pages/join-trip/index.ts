@@ -1,14 +1,23 @@
 import { tripService } from "../../services/trip-service";
+import { waitForCloudReady } from "../../utils/cloud-ready";
 import { showErrorToast, showSuccessToast } from "../../utils/feedback";
+
+const PASSWORD_LENGTH = 6;
+
+function sanitizeDigits(value: string): string {
+  return value.replace(/\D/g, "");
+}
 
 Page({
   data: {
-    password: "",
+    passwordDigits: Array.from({ length: PASSWORD_LENGTH }, () => ""),
+    focusIndex: 0,
     submitting: false
   },
 
-  onShow() {
+  async onShow() {
     try {
+      await waitForCloudReady();
       tripService.ensureAuthorizedAccess();
     } catch (error) {
       showErrorToast(error);
@@ -18,9 +27,36 @@ Page({
     }
   },
 
-  handlePasswordInput(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+  handleDigitFocus(event: WechatMiniprogram.CustomEvent) {
     this.setData({
-      password: event.detail.value
+      focusIndex: Number(event.currentTarget.dataset.index) || 0
+    });
+  },
+
+  handleDigitInput(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    const index = Number(event.currentTarget.dataset.index) || 0;
+    const inputValue = sanitizeDigits(event.detail.value);
+    const passwordDigits = [...this.data.passwordDigits];
+
+    if (!inputValue) {
+      passwordDigits[index] = "";
+      this.setData({
+        passwordDigits,
+        focusIndex: index > 0 ? index - 1 : 0
+      });
+      return;
+    }
+
+    inputValue
+      .slice(0, PASSWORD_LENGTH - index)
+      .split("")
+      .forEach((digit, offset) => {
+        passwordDigits[index + offset] = digit;
+      });
+
+    this.setData({
+      passwordDigits,
+      focusIndex: Math.min(index + inputValue.length, PASSWORD_LENGTH - 1)
     });
   },
 
@@ -34,11 +70,13 @@ Page({
     });
 
     try {
-      tripService.joinTripByPassword(this.data.password);
+      tripService.joinTripByPassword(this.data.passwordDigits.join(""));
       showSuccessToast("加入成功");
-      wx.switchTab({
-        url: "/pages/home/index"
-      });
+      setTimeout(() => {
+        wx.reLaunch({
+          url: "/pages/home/index"
+        });
+      }, 450);
     } catch (error) {
       showErrorToast(error);
     } finally {

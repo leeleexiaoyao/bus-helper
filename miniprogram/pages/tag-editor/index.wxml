@@ -27,7 +27,7 @@
           <view class="editor-row editor-row--action">
             <text class="editor-row-label">居住</text>
             <view class="editor-row-main">
-              <view class="editor-row-value-wrap editor-row-value-wrap--raised">
+              <view class="editor-row-value-wrap editor-row-value-wrap--lifted">
                 <text class="editor-row-value {{livingCity ? '' : 'editor-row-value--placeholder'}}">
                   {{livingCity ? livingCity : "请选择居住地"}}
                 </text>
@@ -43,7 +43,7 @@
           <view class="editor-row editor-row--action">
             <text class="editor-row-label">来自</text>
             <view class="editor-row-main">
-              <view class="editor-row-value-wrap editor-row-value-wrap--raised">
+              <view class="editor-row-value-wrap editor-row-value-wrap--lifted">
                 <text class="editor-row-value {{hometown ? '' : 'editor-row-value--placeholder'}}">
                   {{hometown ? hometown : "请选择省市"}}
                 </text>
@@ -59,32 +59,26 @@
           <view class="editor-row editor-row--action">
             <text class="editor-row-label">年龄</text>
             <view class="editor-row-main">
-              <text class="editor-row-value">{{age}}岁</text>
+              <view class="editor-row-value-wrap">
+                <text class="editor-row-value {{age ? '' : 'editor-row-value--placeholder'}}">
+                  {{age ? age + "岁" : "请选择年龄"}}
+                </text>
+              </view>
               <view class="editor-row-caret"></view>
             </view>
           </view>
         </picker>
 
-        <view class="editor-divider"></view>
-
-        <view class="editor-row" bindtap="handleOpenPersonaSheet">
-          <text class="editor-row-label">我的形象</text>
-          <view class="editor-row-main editor-row-main--avatar">
-            <image wx:if="{{currentPersonaImageUrl}}" class="editor-persona-thumb" src="{{currentPersonaImageUrl}}" mode="aspectFill" />
-            <text wx:else class="editor-row-value editor-row-value--placeholder">去选择</text>
-            <view class="editor-row-caret"></view>
-          </view>
-        </view>
       </view>
     </view>
 
     <view class="editor-section">
-      <view class="editor-section-title">个人签名</view>
+      <view class="editor-section-title">有话要说</view>
       <textarea
         class="editor-textarea"
         value="{{bio}}"
         maxlength="40"
-        placeholder="请输入签名信息，不超过40字"
+        placeholder="请输入你想说的话"
         placeholder-style="color: #c7c7c7; font-size: 26rpx;"
         auto-height
         data-field="bio"
@@ -93,12 +87,12 @@
     </view>
 
     <view class="editor-section">
-      <view class="editor-section-title">标签</view>
+      <view class="editor-section-title">Tips</view>
       <textarea
         class="editor-textarea"
         value="{{tagsInput}}"
         maxlength="80"
-        placeholder="每个标签不超过6个字，最多4个，以换行分割"
+        placeholder="每个Tips不超过6个字,最多4个,以换行分割"
         placeholder-style="color: #c7c7c7; font-size: 26rpx;"
         auto-height
         bindinput="handleTagsInput"
@@ -112,14 +106,4 @@
   <view class="editor-save-bar">
     <button class="editor-save-btn" loading="{{submitting}}" bindtap="handleSave">保存</button>
   </view>
-
-  <persona-sheet
-    visible="{{showPersonaSheet}}"
-    active="{{personaSheetActive}}"
-    options="{{personaOptions}}"
-    selectedId="{{personaDraftId}}"
-    bindselect="handlePersonaSelect"
-    bindcancel="handlePersonaCancel"
-    bindconfirm="handlePersonaConfirm"
-  />
 </view>

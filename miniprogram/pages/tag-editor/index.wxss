@@ -1,8 +1,8 @@
 .tag-editor-page {
   min-height: 100vh;
-  padding: 24rpx 24rpx calc(env(safe-area-inset-bottom) + 132rpx);
+  padding: 24rpx 32rpx calc(env(safe-area-inset-bottom) + 132rpx);
   box-sizing: border-box;
-  background: #f3f3f3;
+  background: #f4f4f3;
 }
 
 picker {
@@ -12,7 +12,7 @@ picker {
 .tag-editor-content {
   display: flex;
   flex-direction: column;
-  gap: 32rpx;
+  gap: 28rpx;
 }
 
 .editor-section-title {
@@ -24,22 +24,27 @@ picker {
 }
 
 .editor-card {
-  border-radius: 24rpx;
-  background: #ffffff;
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
 }
 
 .editor-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 96rpx;
-  padding: 0 24rpx;
+  min-height: 128rpx;
+  padding: 0 32rpx;
+  border-radius: 24rpx;
+  background: #ffffff;
   box-sizing: border-box;
 }
 
 .editor-row--avatar {
-  min-height: 136rpx;
+  min-height: 144rpx;
 }
 
 .editor-row-label {
@@ -54,9 +59,8 @@ picker {
   align-items: center;
   justify-content: flex-end;
   gap: 10rpx;
-  width: 430rpx;
-  min-width: 430rpx;
-  flex: 0 0 430rpx;
+  flex: 1;
+  min-width: 0;
   margin-left: 24rpx;
 }
 
@@ -65,19 +69,19 @@ picker {
 }
 
 .editor-row-value-wrap {
-  width: 392rpx;
-  max-width: 392rpx;
   display: flex;
   align-items: center;
   justify-content: flex-end;
+  flex: 1;
+  min-width: 0;
 }
 
-.editor-row-value-wrap--raised {
-  margin-top: -8rpx;
+.editor-row-value-wrap--lifted {
+  transform: translateY(-12rpx);
 }
 
 .editor-row-value {
-  width: 100%;
+  max-width: 100%;
   color: #111111;
   font-size: 26rpx;
   line-height: 1.4;
@@ -102,9 +106,7 @@ picker {
 }
 
 .editor-divider {
-  height: 1rpx;
-  margin: 0 24rpx;
-  background: #f0f0f0;
+  display: none;
 }
 
 .editor-avatar {
@@ -130,8 +132,8 @@ picker {
 .editor-textarea {
   width: 100%;
   min-height: 144rpx;
-  padding: 24rpx;
-  border-radius: 16rpx;
+  padding: 28rpx 32rpx;
+  border-radius: 24rpx;
   background: #ffffff;
   box-sizing: border-box;
   color: #111111;
@@ -153,8 +155,8 @@ picker {
 
 .editor-save-bar {
   position: fixed;
-  left: 24rpx;
-  right: 24rpx;
+  left: 32rpx;
+  right: 32rpx;
   bottom: calc(env(safe-area-inset-bottom) + 24rpx);
   z-index: 10;
 }
@@ -164,9 +166,9 @@ picker {
   height: 92rpx;
   margin: 0;
   padding: 0;
-  border-radius: 16rpx;
-  background: #3788e8;
-  color: #ffffff;
+  border-radius: 999rpx;
+  background: #d8f940;
+  color: #111111;
   display: flex;
   align-items: center;
   justify-content: center;

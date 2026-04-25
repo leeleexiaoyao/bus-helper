@@ -1,3 +1,5 @@
 {
-  "navigationBarTitleText": "加入车次"
+  "navigationBarTitleText": "加入车次",
+  "navigationBarBackgroundColor": "#f4f4f3",
+  "backgroundColor": "#f4f4f3"
 }

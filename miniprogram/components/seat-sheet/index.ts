@@ -18,6 +18,8 @@ Component({
     }
   },
   data: {
+    renderVisible: false,
+    panelActive: false,
     isEmptyConfirmMode: false,
     isSelfDetailMode: false,
     isMemberDetailMode: false,
@@ -39,7 +41,9 @@ Component({
     } as LocationDisplay,
     detailAgeText: "未填写",
     detailPersonaImageUrl: "",
-    showAdminBadge: false
+    showAdminBadge: false,
+    showFavoriteAction: false,
+    favoriteButtonText: "标记"
   },
   observers: {
     "visible, mode, member": function (
@@ -53,10 +57,13 @@ Component({
         hometownLocationDisplay?: LocationDisplay;
         age?: string;
         homePersonaImageUrl?: string;
+        isFavoritedByViewer?: boolean;
       } | null
     ) {
-      if (!visible) {
-        return;
+      if (visible) {
+        this.showSheet();
+      } else {
+        this.hideSheet();
       }
       this.setData({
         isEmptyConfirmMode: mode === "empty-confirm",
@@ -81,11 +88,67 @@ Component({
         },
         detailAgeText: member?.age?.trim() || "未填写",
         detailPersonaImageUrl: member?.homePersonaImageUrl ?? "",
-        showAdminBadge: Boolean(member?.isAdmin)
+        showAdminBadge: Boolean(member?.isAdmin),
+        showFavoriteAction: mode === "member-detail" || mode === "admin-member-detail",
+        favoriteButtonText: member?.isFavoritedByViewer ? "取消标记" : "标记"
       });
     }
   },
+  lifetimes: {
+    attached() {
+      if (this.properties.visible) {
+        this.showSheet();
+      }
+    },
+    detached() {
+      this.clearVisibilityTimer();
+    }
+  },
   methods: {
+    getVisibilityTimer(): number {
+      return ((this as unknown as { visibilityTimer?: number }).visibilityTimer ?? 0) as number;
+    },
+    setVisibilityTimer(timer: number) {
+      (this as unknown as { visibilityTimer?: number }).visibilityTimer = timer;
+    },
+    showSheet() {
+      this.clearVisibilityTimer();
+      if (!this.data.renderVisible) {
+        this.setData({
+          renderVisible: true
+        });
+      }
+      wx.nextTick(() => {
+        this.setData({
+          panelActive: true
+        });
+      });
+    },
+    hideSheet() {
+      this.clearVisibilityTimer();
+      if (!this.data.renderVisible) {
+        return;
+      }
+      this.setData({
+        panelActive: false
+      });
+      this.setVisibilityTimer(
+        setTimeout(() => {
+          this.setData({
+            renderVisible: false
+          });
+          this.setVisibilityTimer(0);
+        }, 220) as unknown as number
+      );
+    },
+    clearVisibilityTimer() {
+      const visibilityTimer = this.getVisibilityTimer();
+      if (!visibilityTimer) {
+        return;
+      }
+      clearTimeout(visibilityTimer);
+      this.setVisibilityTimer(0);
+    },
     stopPropagation() {},
     stopTouchMove() {},
     handleMaskTap() {
@@ -102,6 +165,9 @@ Component({
     },
     handleAdminRelease() {
       this.triggerEvent("adminrelease");
+    },
+    handleToggleFavorite() {
+      this.triggerEvent("togglefavorite");
     },
     handleClose() {
       this.triggerEvent("close");

@@ -1,0 +1,9 @@
+<view class="tool-result-card {{cardClassName}}">
+  <view class="tool-result-heading">
+    <view class="tool-result-title">{{title}}</view>
+    <image class="tool-result-title-accent" src="/assets/icons/icon_tools_history.svg" mode="aspectFit" />
+  </view>
+
+  <view wx:if="{{showEmpty}}" class="result-empty">{{emptyText}}</view>
+  <slot wx:else />
+</view>

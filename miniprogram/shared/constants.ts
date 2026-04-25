@@ -9,8 +9,9 @@ import type {
   User
 } from "./types";
 
-export const APP_STATE_VERSION = 9;
+export const APP_STATE_VERSION = 10;
 export const APP_STATE_STORAGE_KEY = "bus-seat-buddy-state";
+export const MAX_MEMBER_FAVORITES_PER_TRIP = 2;
 
 export const DEFAULT_TRIP_NAME = "未命名车次";
 export const DEFAULT_DEPARTURE_TIME = "待定";
@@ -104,7 +105,7 @@ export const DEMO_USERS: User[] = [
   }
 ];
 
-export const DEMO_SWITCHABLE_USER_IDS = DEMO_USERS.map((user) => user.id);
+export const DEMO_SWITCHABLE_USER_IDS = DEMO_USERS.slice(0, 2).map((user) => user.id);
 
 export const TOOL_TYPES: ToolType[] = ["seat-draw", "vote", "wheel", "lottery"];
 
@@ -164,14 +165,15 @@ export function createInitialAppState(): AppState {
     }, {}),
     trips: {},
     tripMembers: [],
+    tripFavorites: [],
     activeUserId: DEMO_USERS[0].id
   };
 }
 
 const SEED_TRIP_ID = "trip-demo-default";
 const SEED_TRIP_PASSWORD = "204900";
-const SEED_ACTIVE_USER_ID = "user-3";
-const SEED_OCCUPIED_USER_COUNT = 45;
+const SEED_ACTIVE_USER_ID = "user-2";
+const SEED_OCCUPIED_USER_COUNT = 40;
 const SEED_CREATED_AT = 1712803200000;
 const SEAT_LETTERS = ["A", "B", "C", "D", "E"];
 
@@ -290,6 +292,7 @@ function buildSeedTripTools(occupiedUsers: User[]): TripToolsState {
       publishedAt: SEED_CREATED_AT,
       publishedByUserId: "user-1",
       phase: "draft",
+      topic: "幸运转盘",
       items: wheelItems,
       allowAssignedUser: false,
       assignedUserId: null,
@@ -302,6 +305,7 @@ function buildSeedTripTools(occupiedUsers: User[]): TripToolsState {
       publishedAt: SEED_CREATED_AT,
       publishedByUserId: "user-1",
       phase: "active",
+      topic: "抓阄",
       answers: ["去前排", "唱首歌", "请大家喝饮料"],
       cards: ["请大家喝饮料", "去前排", "唱首歌"].map((answer, index) => ({
         id: `seed-lottery-card-${index + 1}`,
@@ -344,6 +348,16 @@ export function createSeededDemoAppState(): AppState {
       [seededTrip.id]: seededTrip
     },
     tripMembers: seededTripMembers,
+    tripFavorites: [],
     activeUserId: SEED_ACTIVE_USER_ID
   };
+}
+
+export function isSeededDemoAppState(state: AppState | null): boolean {
+  if (!state) {
+    return false;
+  }
+
+  const trip = state.trips[SEED_TRIP_ID];
+  return Boolean(trip && trip.status === "active");
 }

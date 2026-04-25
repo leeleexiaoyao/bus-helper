@@ -80,6 +80,7 @@ export interface PublishedVoteToolState extends PublishedToolBaseState {
 export interface PublishedWheelToolState extends PublishedToolBaseState {
   type: "wheel";
   phase: WheelPhase;
+  topic: string;
   items: string[];
   allowAssignedUser: boolean;
   assignedUserId: string | null;
@@ -106,6 +107,7 @@ export interface LotteryClaimRecord {
 export interface PublishedLotteryToolState extends PublishedToolBaseState {
   type: "lottery";
   phase: LotteryPhase;
+  topic: string;
   answers: string[];
   cards: LotteryCard[];
   allowAssignedUser: boolean;
@@ -154,11 +156,19 @@ export interface TripMember {
   joinedAt: number;
 }
 
+export interface TripFavoriteRelation {
+  tripId: string;
+  sourceUserId: string;
+  targetUserId: string;
+  createdAt: number;
+}
+
 export interface AppState {
   version: number;
   users: Record<string, User>;
   trips: Record<string, Trip>;
   tripMembers: TripMember[];
+  tripFavorites: TripFavoriteRelation[];
   activeUserId: string;
 }
 
@@ -168,6 +178,7 @@ export interface DemoUserOption {
   avatarUrl: string;
   initial: string;
   isActive: boolean;
+  roleLabel: string;
   currentTripName: string;
   switchLabel: string;
 }
@@ -216,12 +227,18 @@ export interface MemberView {
   age: string;
   homePersonaImageUrl: string;
   tags: string[];
+  tagViews: Array<{
+    label: string;
+    style: string;
+  }>;
   role: MemberRole;
   isAdmin: boolean;
   showMeta: boolean;
   seatCode: string | null;
   seatLabel: string;
   isSelf: boolean;
+  isFavoritedByViewer: boolean;
+  isMutualFavoriteWithViewer: boolean;
 }
 
 export interface SeatOccupantView {
@@ -385,6 +402,7 @@ export interface VoteDetailView {
 
 export interface WheelDetailView {
   phase: WheelPhase;
+  topic: string;
   items: string[];
   viewerCanSpin: boolean;
   allowAssignedUser: boolean;
@@ -413,6 +431,7 @@ export interface LotteryClaimRecordView {
 
 export interface LotteryDetailView {
   phase: LotteryPhase;
+  topic: string;
   answers: string[];
   cardCount: number;
   claimedCardCount: number;
@@ -467,12 +486,14 @@ export interface VoteSubmitInput {
 }
 
 export interface WheelPublishInput {
+  topic?: string;
   items: string[];
   allowAssignedUser?: boolean;
   assignedUserId?: string | null;
 }
 
 export interface LotteryPublishInput {
+  topic?: string;
   answers: string[];
   drawLimitPerUser: number;
   allowAssignedUser?: boolean;
@@ -483,6 +504,7 @@ export type ProfilePrimaryActionKind = "leave" | "dissolve" | "none";
 
 export interface ProfilePageViewModel extends AccessStateViewModel {
   demoUsers: DemoUserOption[];
+  seedDemoEnabled: boolean;
   currentUserInitial: string;
   currentTripTitle: string;
   currentSeatLabel: string;
@@ -495,6 +517,42 @@ export interface ProfilePageViewModel extends AccessStateViewModel {
   showPrimaryAction: boolean;
   primaryActionKind: ProfilePrimaryActionKind;
   primaryActionLabel: string;
+}
+
+export interface FavoriteMemberCardView {
+  userId: string;
+  nickname: string;
+  avatarUrl: string;
+  initial: string;
+  seatLabel: string;
+  isAdmin: boolean;
+  tags: string[];
+  tagViews: Array<{
+    label: string;
+    style: string;
+  }>;
+  isMutualFavoriteWithViewer: boolean;
+}
+
+export interface FavoriteRankingItemView {
+  userId: string;
+  nickname: string;
+  avatarUrl: string;
+  initial: string;
+  seatLabel: string;
+  isAdmin: boolean;
+  favoriteCount: number;
+}
+
+export interface FavoritePageViewModel extends AccessStateViewModel {
+  tripName: string;
+  viewerRoleLabel: string;
+  isAdmin: boolean;
+  favoriteLimit: number;
+  favoriteCount: number;
+  showRankingTab: boolean;
+  favorites: FavoriteMemberCardView[];
+  ranking: FavoriteRankingItemView[];
 }
 
 export interface TagEditorViewModel {

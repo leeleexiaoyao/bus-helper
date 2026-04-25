@@ -1,18 +1,23 @@
 import type { ToolType, ToolsPageViewModel } from "../../shared/types";
 import { tripService } from "../../services/trip-service";
-import { showErrorToast, showSuccessToast } from "../../utils/feedback";
+import { waitForCloudReady } from "../../utils/cloud-ready";
+import { showErrorToast } from "../../utils/feedback";
 
 Page({
   data: {
     pageData: null as ToolsPageViewModel | null,
-    showAuthGate: true,
     showToolsContent: false,
-    navProgress: 0,
-    authPresetNickname: "",
-    authPresetAvatarUrl: ""
+    navProgress: 0
   },
 
-  onShow() {
+  async onShow() {
+    try {
+      await waitForCloudReady();
+    } catch (error) {
+      showErrorToast(error);
+      return;
+    }
+
     this.refreshPage();
   },
 
@@ -31,24 +36,9 @@ Page({
       const pageData = tripService.getToolsPageData();
       this.setData({
         pageData,
-        showAuthGate: !pageData.isAuthorized,
-        showToolsContent: pageData.isAuthorized,
-        navProgress: 0,
-        authPresetNickname: pageData.currentUser.nickname,
-        authPresetAvatarUrl: pageData.currentUser.avatarUrl
+        showToolsContent: pageData.isAuthorized && pageData.hasCurrentTrip,
+        navProgress: 0
       });
-    } catch (error) {
-      showErrorToast(error);
-    }
-  },
-
-  handleAuthorizeProfile(
-    event: WechatMiniprogram.CustomEvent<{ nickname: string; avatarUrl: string }>
-  ) {
-    try {
-      tripService.authorizeProfile(event.detail);
-      this.refreshPage();
-      showSuccessToast("授权成功");
     } catch (error) {
       showErrorToast(error);
     }

@@ -13,7 +13,23 @@ function displayTripName(tripName) {
     return tripName.trim() || constants_1.DEFAULT_TRIP_NAME;
 }
 function displayDepartureTime(departureTime) {
-    return departureTime.trim() || constants_1.DEFAULT_DEPARTURE_TIME;
+    const trimmed = departureTime.trim();
+    if (!trimmed) {
+        return constants_1.DEFAULT_DEPARTURE_TIME;
+    }
+    const standardMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})$/);
+    if (standardMatch) {
+        const [, , month, day, hour, minute] = standardMatch;
+        return `${month}月${day}日 ${hour}:${minute}`;
+    }
+    const legacyMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2}) (\d{2}):(\d{2})$/);
+    if (legacyMatch) {
+        const [, monthText, dayText, hour, minute] = legacyMatch;
+        const month = monthText.padStart(2, "0");
+        const day = dayText.padStart(2, "0");
+        return `${month}月${day}日 ${hour}:${minute}`;
+    }
+    return trimmed;
 }
 function parseTags(tagsInput) {
     const uniqueTags = Array.from(new Set(tagsInput

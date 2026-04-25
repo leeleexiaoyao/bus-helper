@@ -1,0 +1,101 @@
+<view class="page-shell favorites-page">
+  <page-navbar title="" progress="{{navProgress}}" />
+
+  <block wx:if="{{showAuthGate}}">
+    <auth-gate
+      title="先完成模拟授权"
+      subtitle="先用演示身份完成模拟授权，后面才能标记成员并查看标记关系。"
+      presetNickname="{{authPresetNickname}}"
+      presetAvatarUrl="{{authPresetAvatarUrl}}"
+      bindauthorized="handleAuthorizeProfile"
+    />
+  </block>
+
+  <block wx:if="{{showPageContent && pageData}}">
+    <view wx:if="{{showEmptyState}}" class="favorites-empty favorites-empty--solo">
+      <view class="favorites-empty-title">暂无标记</view>
+    </view>
+
+    <block wx:else>
+      <view class="favorites-header">
+        <view class="favorites-title">标记</view>
+        <view class="favorites-subtitle">{{pageData.tripName}}</view>
+      </view>
+
+      <view class="favorites-summary">
+        <view class="favorites-summary-card">
+          <view class="summary-label">我的标记</view>
+          <view class="summary-value">{{pageData.favoriteCount}} / {{pageData.favoriteLimit}}</view>
+        </view>
+        <view wx:if="{{pageData.isAdmin}}" class="favorites-summary-card">
+          <view class="summary-label">当前身份</view>
+          <view class="summary-value">{{pageData.viewerRoleLabel}}</view>
+        </view>
+      </view>
+
+      <view wx:if="{{pageData.showRankingTab}}" class="favorites-tabs">
+        <view class="favorites-tab {{isMineTab ? 'is-active' : ''}}" data-tab="mine" bindtap="handleTabChange">
+          我的标记
+        </view>
+        <view class="favorites-tab {{isRankingTab ? 'is-active' : ''}}" data-tab="ranking" bindtap="handleTabChange">
+          标记单
+        </view>
+      </view>
+
+      <block wx:if="{{isMineTab}}">
+        <view class="favorites-list">
+          <view class="favorite-card" wx:for="{{pageData.favorites}}" wx:key="userId">
+            <image wx:if="{{item.avatarUrl}}" class="favorite-avatar" src="{{item.avatarUrl}}" mode="aspectFill" />
+            <view wx:else class="favorite-avatar favorite-avatar--fallback avatar-fallback">{{item.initial}}</view>
+
+            <view class="favorite-main">
+              <view class="favorite-title-row">
+                <view class="favorite-name">{{item.nickname}}</view>
+                <view wx:if="{{item.isAdmin}}" class="favorite-badge">管</view>
+                <view wx:if="{{item.isMutualFavoriteWithViewer}}" class="favorite-mutual-tag">互相标记</view>
+              </view>
+
+              <view class="favorite-tags" wx:if="{{item.tagViews.length}}">
+                <view
+                  wx:for="{{item.tagViews}}"
+                  wx:key="label"
+                  wx:for-item="tag"
+                  class="favorite-tag-chip"
+                  style="{{tag.style}}"
+                >
+                  {{tag.label}}
+                </view>
+              </view>
+            </view>
+
+            <view class="favorite-seat">{{item.seatLabel}}</view>
+          </view>
+        </view>
+      </block>
+
+      <block wx:else>
+        <view class="ranking-list">
+          <view class="ranking-card" wx:for="{{pageData.ranking}}" wx:key="userId">
+            <view class="ranking-index">{{index + 1}}</view>
+
+            <image wx:if="{{item.avatarUrl}}" class="ranking-avatar" src="{{item.avatarUrl}}" mode="aspectFill" />
+            <view wx:else class="ranking-avatar ranking-avatar--fallback avatar-fallback">{{item.initial}}</view>
+
+            <view class="ranking-main">
+              <view class="ranking-title-row">
+                <view class="ranking-name">{{item.nickname}}</view>
+                <view wx:if="{{item.isAdmin}}" class="favorite-badge">管</view>
+              </view>
+              <view class="ranking-seat">{{item.seatLabel}}</view>
+            </view>
+
+            <view class="ranking-count">
+              <view class="ranking-count-value">{{item.favoriteCount}}</view>
+              <view class="ranking-count-label">被标记</view>
+            </view>
+          </view>
+        </view>
+      </block>
+    </block>
+  </block>
+</view>

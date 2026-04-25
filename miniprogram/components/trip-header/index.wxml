@@ -28,7 +28,7 @@
 
   <view class="meta-row">
     <view class="pill">模板 {{templateLabel}}</view>
-    <view class="pill" wx:if="{{showAdminActions}}">密码 {{tripMeta.password}}</view>
+    <view class="pill" wx:if="{{showAdminActions}}">口令 {{tripMeta.password}}</view>
   </view>
 
   <button

@@ -4,7 +4,7 @@
   <view class="custom-nav" style="height: {{navTotalHeight}}px; padding-top: {{statusBarHeight}}px;">
     <view class="custom-nav-inner" style="height: {{navHeight}}px; padding-left: {{navRightPadding}}px; padding-right: {{navRightPadding}}px;">
       <view class="custom-back" bindtap="handleBack">
-        <text class="custom-back-icon">‹</text>
+        <view class="custom-back-icon"></view>
       </view>
       <view class="custom-nav-title">{{toolTitle}}</view>
     </view>
@@ -13,10 +13,6 @@
   <view class="page-shell tool-detail-content">
     <block wx:if="{{pageData}}">
       <block wx:if="{{pageData.toolType === 'seat-draw'}}">
-        <view class="seat-draw-top-hint" wx:if="{{pageData.isStarted || !pageData.isAdmin || isDraftEditing}}">
-          随机从车上成员里抽取1位或多位小伙伴
-        </view>
-
         <block wx:if="{{!pageData.isStarted && pageData.isAdmin && !isDraftEditing}}">
           <view class="seat-draw-empty-wrap seat-draw-empty-wrap--admin">
             <view class="seat-draw-empty-hint">随机从车上成员里抽取1位或多位小伙伴</view>
@@ -33,12 +29,12 @@
         <block wx:elif="{{pageData.isAdmin && isDraftEditing}}">
           <view class="card seat-draw-editor-card">
             <view class="seat-draw-editor-row">
-              <view class="seat-draw-editor-label">主题</view>
+              <view class="seat-draw-editor-label">主题名称</view>
               <input
                 class="seat-draw-editor-input"
                 value="{{seatDrawTopicInput}}"
                 maxlength="20"
-                placeholder="请输入主题，20个字以内"
+                placeholder="请输入主题名称，20个字以内"
                 placeholder-class="field-placeholder"
                 bindinput="handleSeatDrawTopicInput"
               />
@@ -69,68 +65,88 @@
         </block>
 
         <block wx:elif="{{pageData.isStarted && pageData.seatDrawDetail}}">
-          <view class="card seat-draw-stage-panel">
-            <view class="seat-draw-stage-topic">{{pageData.seatDrawDetail.topic}}</view>
-            <view class="seat-draw-stage-meta">人数:{{pageData.seatDrawDetail.drawCount}}人</view>
-
-            <view class="seat-draw-slots-wrap">
-              <view class="seat-draw-slots">
-                <view class="seat-draw-slot" wx:for="{{pageData.seatDrawDetail.displaySlots}}" wx:key="id">
-                  <text class="{{item.isPlaceholder ? 'seat-draw-slot-text seat-draw-slot-text--placeholder' : 'seat-draw-slot-text'}}">{{item.label}}</text>
+          <tool-hero-shell
+            cardClassName="tool-hero-card--seat-draw"
+            bodyClassName="tool-hero-body--seat-draw"
+            eyebrowText="{{heroView.eyebrowText}}"
+            titleText="{{heroView.titleText}}"
+            subtitleText="{{heroView.subtitleText}}"
+            illustrationSrc="{{heroView.illustrationSrc}}"
+            illustrationClassName="{{heroView.illustrationClassName}}"
+          >
+            <view class="{{seatDrawMachineClass}}">
+              <view class="seat-draw-machine-handle seat-draw-machine-handle--left"></view>
+              <view class="seat-draw-machine-shell">
+                <view class="seat-draw-machine-window">
+                  <view class="seat-draw-slot seat-draw-slot--machine" wx:for="{{pageData.seatDrawDetail.displaySlots}}" wx:key="id">
+                    <text class="{{item.isPlaceholder ? 'seat-draw-slot-text seat-draw-slot-text--placeholder' : 'seat-draw-slot-text'}}">{{item.label}}</text>
+                  </view>
                 </view>
               </view>
+              <view class="seat-draw-machine-handle seat-draw-machine-handle--right"></view>
             </view>
 
-            <block wx:if="{{pageData.isAdmin}}">
-              <button
-                wx:if="{{pageData.seatDrawDetail.phase === 'ready'}}"
-                class="primary-btn detail-btn seat-draw-primary-btn seat-draw-panel-btn"
-                bindtap="handleSeatDrawRun"
-                disabled="{{pageData.seatDrawDetail.remainingCount === 0}}"
-              >
-                开始抽号
-              </button>
-
-              <block wx:elif="{{pageData.seatDrawDetail.phase === 'rolling'}}">
-                <button class="disabled-btn detail-btn seat-draw-disabled-btn seat-draw-panel-btn" disabled>抽号中...</button>
-                <button class="primary-btn detail-btn seat-draw-primary-btn seat-draw-panel-btn seat-draw-panel-btn--secondary" hover-class="none">
-                  再抽一次
+            <view slot="footer">
+              <block wx:if="{{pageData.isAdmin}}">
+                <button
+                  wx:if="{{pageData.seatDrawDetail.phase === 'ready'}}"
+                  class="detail-btn tool-hero-btn tool-hero-btn--primary"
+                  bindtap="handleSeatDrawRun"
+                  disabled="{{pageData.seatDrawDetail.remainingCount === 0}}"
+                >
+                  开始抽号
                 </button>
+
+                <block wx:elif="{{pageData.seatDrawDetail.phase === 'rolling'}}">
+                  <button class="detail-btn tool-hero-btn tool-hero-btn--disabled" disabled>抽号中...</button>
+                  <button class="detail-btn tool-hero-btn tool-hero-btn--primary tool-hero-btn--secondary" hover-class="none">再抽一次</button>
+                </block>
+
+                <block wx:else>
+                  <button class="detail-btn tool-hero-btn tool-hero-btn--disabled" disabled>抽号已结束</button>
+                  <button class="detail-btn tool-hero-btn tool-hero-btn--primary tool-hero-btn--secondary" bindtap="handleSeatDrawRun" disabled="{{!pageData.seatDrawDetail.canDrawAgain}}">
+                    再抽一次
+                  </button>
+                </block>
               </block>
 
               <block wx:else>
-                <button class="disabled-btn detail-btn seat-draw-disabled-btn seat-draw-panel-btn" disabled>抽号已结束</button>
-                <button class="primary-btn detail-btn seat-draw-primary-btn seat-draw-panel-btn seat-draw-panel-btn--secondary" bindtap="handleSeatDrawRun" disabled="{{!pageData.seatDrawDetail.canDrawAgain}}">
-                  再抽一次
-                </button>
+                <view class="tool-hero-status" wx:if="{{pageData.seatDrawDetail.phase === 'ready'}}">抽号即将开始</view>
+                <view class="tool-hero-status" wx:elif="{{pageData.seatDrawDetail.phase === 'rolling'}}">抽号即将开始</view>
+                <view class="tool-hero-status tool-hero-status--ended" wx:else>已结束</view>
               </block>
-            </block>
+            </view>
+          </tool-hero-shell>
 
-            <block wx:else>
-              <view class="seat-draw-stage-tip" wx:if="{{pageData.seatDrawDetail.phase === 'ready'}}">抽号即将开始</view>
-              <view class="seat-draw-stage-tip" wx:elif="{{pageData.seatDrawDetail.phase === 'rolling'}}">抽号即将开始</view>
-              <view class="seat-draw-stage-tip seat-draw-stage-tip--ended" wx:else>已结束</view>
-            </block>
+          <view
+            wx:if="{{pageData.isAdmin && pageData.seatDrawDetail.phase === 'rolling'}}"
+            class="seat-draw-more-action seat-draw-more-action--disabled"
+          >
+            更多操作
+          </view>
+          <view
+            wx:elif="{{pageData.isAdmin}}"
+            class="seat-draw-more-action"
+            bindtap="handleOpenActionSheet"
+          >
+            更多操作
           </view>
 
-          <view class="seat-draw-more-action" wx:if="{{pageData.isAdmin && pageData.seatDrawDetail.phase === 'rolling'}}">更多操作</view>
-          <view class="seat-draw-more-action" wx:elif="{{pageData.isAdmin}}" bindtap="handleOpenActionSheet">更多操作</view>
-
-          <view class="card seat-draw-result-card" wx:if="{{pageData.seatDrawDetail.resultRounds.length}}">
-            <view class="section-title">结果</view>
+          <tool-result-shell
+            cardClassName="seat-draw-result-card"
+            title="{{heroView.resultTitle}}"
+            showEmpty="{{!pageData.seatDrawDetail.resultRounds.length}}"
+            emptyText="暂无记录"
+          >
             <view class="seat-draw-result-item" wx:for="{{pageData.seatDrawDetail.resultRounds}}" wx:key="id">
               <text class="seat-draw-result-index">{{index + 1}}.</text>
               <text class="seat-draw-result-value">{{item.displayText}}</text>
             </view>
-          </view>
+          </tool-result-shell>
         </block>
       </block>
 
       <block wx:if="{{pageData.toolType === 'vote'}}">
-        <view class="tool-top-hint" wx:if="{{pageData.isStarted || !pageData.isAdmin || isDraftEditing}}">
-          发起全员投票，支持单选、多选和最多可选项设置。
-        </view>
-
         <block wx:if="{{!pageData.isStarted && pageData.isAdmin && !isDraftEditing}}">
           <view class="tool-empty-wrap tool-empty-wrap--admin">
             <view class="tool-empty-copy">发起全员投票，支持单选、多选和最多可选项设置。</view>
@@ -147,12 +163,12 @@
         <block wx:elif="{{pageData.isAdmin && isDraftEditing}}">
           <view class="tool-editor-panel">
             <view class="tool-editor-row">
-              <view class="tool-editor-label">主题</view>
+              <view class="tool-editor-label">主题名称</view>
               <input
                 class="tool-editor-input"
                 value="{{voteTopicInput}}"
                 maxlength="30"
-                placeholder="请输入投票主题"
+                placeholder="请输入主题名称"
                 placeholder-class="field-placeholder"
                 bindinput="handleVoteTopicInput"
               />
@@ -202,58 +218,79 @@
         </block>
 
         <block wx:elif="{{pageData.isStarted && pageData.voteDetail}}">
-          <view class="play-card">
-            <view class="topic-card">{{pageData.voteDetail.topic}}</view>
-            <view class="vote-meta-row">
-              <view class="pill">{{voteModeLabel}}</view>
-              <view class="pill" wx:if="{{pageData.voteDetail.selectionMode === 'multiple'}}">最多选 {{pageData.voteDetail.maxSelections}} 项</view>
-              <view class="vote-progress">已投 {{pageData.voteDetail.submittedCount}} / {{pageData.voteDetail.participantCount}}</view>
-            </view>
+          <tool-hero-shell
+            eyebrowText="{{heroView.eyebrowText}}"
+            titleText="{{heroView.titleText}}"
+            subtitleText="{{heroView.subtitleText}}"
+            illustrationSrc="{{heroView.illustrationSrc}}"
+            illustrationClassName="{{heroView.illustrationClassName}}"
+          >
+            <view>
+              <view class="vote-meta-row vote-meta-row--hero vote-meta-row--progress">
+                <view class="vote-progress">已投 {{pageData.voteDetail.submittedCount}} / {{pageData.voteDetail.participantCount}}</view>
+              </view>
 
-            <view class="vote-options">
-              <view
-                class="{{item.className}}"
-                wx:for="{{voteOptionCards}}"
-                wx:key="id"
-                data-option-id="{{item.id}}"
-                bindtap="handleVoteOptionSelect"
-              >
-                <view class="vote-option-label">{{item.label}}</view>
-                <view class="vote-option-count" wx:if="{{pageData.voteDetail.phase === 'ended' || (pageData.voteDetail.phase === 'active' && pageData.voteDetail.viewerHasSubmitted)}}">
-                  {{item.supportCount}} 票
+              <view class="vote-options vote-options--hero">
+                <view
+                  class="{{item.className}}"
+                  wx:for="{{voteOptionCards}}"
+                  wx:key="id"
+                  data-option-id="{{item.id}}"
+                  bindtap="handleVoteOptionSelect"
+                >
+                  <view class="vote-option-copy">
+                    <view class="vote-option-title">{{item.title}}</view>
+                    <view class="vote-option-label">{{item.label}}</view>
+                  </view>
+                  <view class="{{item.checkboxClassName}}" wx:if="{{item.showCheckbox}}">
+                    <text class="vote-option-checkmark">✓</text>
+                  </view>
+                  <view class="vote-option-result" wx:if="{{item.showResult}}">
+                    <view class="vote-option-result-count">
+                      <text class="vote-option-result-number">{{item.supportCountText}}</text>
+                      <text class="vote-option-result-unit">票</text>
+                    </view>
+                    <view class="vote-option-result-rate">{{item.supportRateText}}</view>
+                  </view>
                 </view>
               </view>
             </view>
-          </view>
+
+            <view slot="footer" wx:if="{{pageData.isAdmin || pageData.voteDetail.viewerEligible}}">
+              <button
+                wx:if="{{pageData.isAdmin}}"
+                class="detail-btn tool-hero-btn {{pageData.voteDetail.phase === 'active' ? 'tool-hero-btn--ghost' : 'tool-hero-btn--disabled'}}"
+                bindtap="handleVoteEnd"
+                disabled="{{pageData.voteDetail.phase !== 'active'}}"
+              >
+                {{pageData.voteDetail.phase === 'active' ? '终止' : '已结束'}}
+              </button>
+              <button
+                wx:if="{{pageData.voteDetail.viewerEligible}}"
+                class="detail-btn tool-hero-btn {{voteApproveDisabled ? 'tool-hero-btn--disabled' : 'tool-hero-btn--primary'}} {{pageData.isAdmin ? 'tool-hero-btn--secondary' : ''}}"
+                data-choice="approve"
+                bindtap="handleVoteSubmit"
+                disabled="{{voteApproveDisabled || pageData.voteDetail.phase !== 'active'}}"
+              >
+                {{pageData.voteDetail.viewerHasSubmitted ? '已投' : pageData.voteDetail.phase === 'ended' ? '已结束' : '确定'}}
+              </button>
+            </view>
+          </tool-hero-shell>
 
           <view class="seat-draw-more-action" wx:if="{{pageData.isAdmin}}" bindtap="handleOpenActionSheet">更多操作</view>
 
-          <view class="card result-card">
-            <view class="section-title">结果区</view>
-
+          <tool-result-shell
+            title="{{heroView.resultTitle}}"
+            showEmpty="{{pageData.voteDetail.phase !== 'ended'}}"
+            emptyText="暂无记录"
+          >
             <view class="vote-final-list" wx:if="{{pageData.voteDetail.phase === 'ended'}}">
               <view class="vote-final-item" wx:for="{{pageData.voteDetail.resultOptions}}" wx:key="id">
                 <view class="vote-final-label">{{index + 1}}. {{item.label}}</view>
                 <view class="vote-final-count">{{item.supportCount}} 票</view>
               </view>
             </view>
-          </view>
-
-          <view class="action-card">
-            <button
-              wx:if="{{pageData.isAdmin && pageData.voteDetail.phase === 'active'}}"
-              class="ghost-btn detail-btn vote-end-btn"
-              bindtap="handleVoteEnd"
-            >
-              结束投票
-            </button>
-            <view class="result-empty" wx:if="{{pageData.voteDetail.phase === 'active' && pageData.voteDetail.viewerEligible}}">
-              {{voteViewerResultLabel || '请选择选项后提交。'}}
-            </view>
-            <view class="vote-choice-row" wx:if="{{pageData.voteDetail.viewerEligible && pageData.voteDetail.phase === 'active'}}">
-              <button class="primary-btn vote-choice-btn" data-choice="approve" bindtap="handleVoteSubmit" disabled="{{voteApproveDisabled}}">投票</button>
-            </view>
-          </view>
+          </tool-result-shell>
         </block>
       </block>
 
@@ -272,6 +309,18 @@
 
         <block wx:elif="{{pageData.isAdmin && isDraftEditing}}">
           <view class="tool-editor-panel">
+            <view class="tool-editor-row">
+              <view class="tool-editor-label">主题名称</view>
+              <input
+                class="tool-editor-input"
+                value="{{wheelTopicInput}}"
+                maxlength="30"
+                placeholder="请输入主题名称"
+                placeholder-class="field-placeholder"
+                bindinput="handleWheelTopicInput"
+              />
+            </view>
+
             <view class="tool-editor-field">
               <view class="tool-editor-label">奖品项</view>
               <textarea
@@ -304,69 +353,68 @@
         </block>
 
         <block wx:elif="{{pageData.isStarted && pageData.wheelDetail}}">
-          <view class="play-card">
-            <view class="wheel-stage">
-              <view class="wheel-shell">
-                <view class="wheel-focus-beam"></view>
-                <view class="wheel-pointer">
-                  <view class="wheel-pointer-arrow"></view>
-                </view>
+          <tool-hero-shell
+            eyebrowText="{{heroView.eyebrowText}}"
+            titleText="{{heroView.titleText}}"
+            subtitleText="{{heroView.subtitleText}}"
+            illustrationSrc="{{heroView.illustrationSrc}}"
+            illustrationClassName="{{heroView.illustrationClassName}}"
+          >
+            <view>
+              <view class="wheel-current-result">
+                <view class="wheel-current-result-label">本轮结果</view>
+                <view class="wheel-current-result-value">{{wheelSpinning ? '正在转动' : (wheelShowResult && pageData.wheelDetail.resultLabel ? pageData.wheelDetail.resultLabel : '-')}}</view>
+              </view>
+              <view class="wheel-stage">
+                <view class="wheel-shell">
+                  <view class="wheel-frame">
+                    <image class="wheel-ring-image" src="../../assets/icons/pic_tools_zhuanpan_ring.svg" mode="aspectFit" />
 
-                <view class="wheel-frame">
-                  <view class="wheel-light-track">
-                    <view class="wheel-light" wx:for="{{wheelLights}}" wx:key="index" style="{{item}}"></view>
-                  </view>
-
-                  <view
-                    class="wheel-disc {{wheelSpinning ? 'is-spinning' : ''}}"
-                    style="transform: rotate({{wheelRotation}}deg); transition-duration: {{wheelTransitionMs}}ms;"
-                  >
-                    <view class="wheel-disc-outer"></view>
-                    <view class="wheel-disc-middle"></view>
-                    <view class="wheel-disc-bg" style="{{wheelBackgroundStyle}}">
-                      <view class="wheel-divider" wx:for="{{wheelSlices}}" wx:key="id" style="{{item.dividerStyle}}"></view>
-                      <view class="{{item.sliceClassName}}" wx:for="{{wheelSlices}}" wx:key="id" style="{{item.style}}">
-                        <view class="wheel-slice-label" style="{{item.innerStyle}}; {{item.labelStyle}}">{{item.label}}</view>
+                    <view
+                      class="wheel-disc {{wheelSpinning ? 'is-spinning' : ''}}"
+                      style="transform: rotate({{wheelRotation}}deg); transition-duration: {{wheelTransitionMs}}ms;"
+                    >
+                      <view class="wheel-disc-surface">
+                        <view class="wheel-disc-bg" style="{{wheelBackgroundStyle}}">
+                          <view class="{{item.sliceClassName}}" wx:for="{{wheelSlices}}" wx:key="id" style="{{item.style}}">
+                            <view class="wheel-slice-label" style="{{item.innerStyle}}; {{item.labelStyle}}">{{item.label}}</view>
+                          </view>
+                        </view>
                       </view>
                     </view>
-                  </view>
 
-                  <view
-                    class="wheel-center-button {{pageData.wheelDetail.viewerCanSpin ? 'is-actionable' : 'is-disabled'}}"
-                    bindtap="handleWheelCenterTap"
-                  >
-                    <view class="wheel-center-button-ring"></view>
-                    <view class="wheel-center-button-text wheel-center-button-text--large">开始</view>
+                    <button
+                      class="wheel-center-button {{pageData.wheelDetail.viewerCanSpin ? 'is-actionable' : 'is-disabled'}}"
+                      bindtap="handleWheelCenterTap"
+                      disabled="{{!pageData.wheelDetail.viewerCanSpin || wheelSpinning}}"
+                      hover-class="none"
+                    >
+                      <image class="wheel-center-button-image" src="../../assets/icons/pic_tools_zhuanpan_btn.png" mode="aspectFit" />
+                      <view class="wheel-center-button-text wheel-center-button-text--large">开始</view>
+                    </button>
                   </view>
                 </view>
               </view>
             </view>
-          </view>
+          </tool-hero-shell>
 
           <view class="seat-draw-more-action" wx:if="{{pageData.isAdmin}}" bindtap="handleOpenActionSheet">更多操作</view>
 
-          <view class="wheel-result-hero">
-            <view class="wheel-result-hero-label">本轮结果</view>
-            <view class="wheel-result-hero-value">{{wheelShowResult && pageData.wheelDetail.resultLabel ? pageData.wheelDetail.resultLabel : '-'}}</view>
-          </view>
-
-          <view class="card result-card" wx:if="{{wheelVisibleHistoryLabels.length}}">
-            <view class="section-title">结果</view>
-            <view class="wheel-result-empty" wx:if="{{!wheelVisibleHistoryLabels.length}}">暂未抽出结果</view>
-            <view class="wheel-result-list" wx:else>
+          <tool-result-shell
+            title="{{heroView.resultTitle}}"
+            showEmpty="{{!wheelVisibleHistoryLabels.length}}"
+            emptyText="暂无记录"
+          >
+            <view class="wheel-result-list" wx:if="{{wheelVisibleHistoryLabels.length}}">
               <view class="wheel-result-item" wx:for="{{wheelVisibleHistoryLabels}}" wx:key="index">
-                <text>{{index + 1}}.{{item}}</text>
+                <text>{{index + 1}}. {{item}}</text>
               </view>
             </view>
-          </view>
+          </tool-result-shell>
         </block>
       </block>
 
       <block wx:if="{{pageData.toolType === 'lottery'}}">
-        <view class="tool-top-hint" wx:if="{{pageData.isStarted || !pageData.isAdmin || isDraftEditing}}">
-          卡片结果仅自己可见，抽取次数用完后将停止翻卡。
-        </view>
-
         <block wx:if="{{!pageData.isStarted && pageData.isAdmin && !isDraftEditing}}">
           <view class="tool-empty-wrap tool-empty-wrap--admin">
             <view class="tool-empty-copy">管理员录入答案后，使用人点击卡片翻出自己的结果。</view>
@@ -382,6 +430,18 @@
 
         <block wx:elif="{{pageData.isAdmin && isDraftEditing}}">
           <view class="tool-editor-panel">
+            <view class="tool-editor-row">
+              <view class="tool-editor-label">主题名称</view>
+              <input
+                class="tool-editor-input"
+                value="{{lotteryTopicInput}}"
+                maxlength="30"
+                placeholder="请输入主题名称"
+                placeholder-class="field-placeholder"
+                bindinput="handleLotteryTopicInput"
+              />
+            </view>
+
             <view class="tool-editor-field">
               <view class="tool-editor-label">答案</view>
               <textarea
@@ -424,44 +484,51 @@
         </block>
 
         <block wx:elif="{{pageData.isStarted && pageData.lotteryDetail}}">
-          <view class="lottery-card-panel">
-            <view class="section-title">卡片区</view>
-            <view class="lottery-card-grid">
-              <view
-                class="lottery-card {{item.state === 'viewer' ? 'is-revealed' : ''}} {{item.state === 'claimed' ? 'is-claimed' : ''}} {{item.canClaim ? 'is-actionable' : 'is-disabled'}}"
-                wx:for="{{pageData.lotteryDetail.cards}}"
-                wx:key="id"
-                data-card-id="{{item.id}}"
-                bindtap="handleLotteryCardTap"
-              >
-                <view class="lottery-card-inner">
-                  <view class="lottery-card-face lottery-card-face--back">
-                    <view class="lottery-card-order">{{item.order}}</view>
-                    <view class="lottery-card-sign">{{item.state === 'claimed' ? '已被抽取' : '签'}}</view>
-                  </view>
-                  <view class="lottery-card-face lottery-card-face--front">
-                    <view class="lottery-card-front-label">第 {{item.order}} 签</view>
-                    <view class="lottery-card-answer">{{item.answer}}</view>
+          <tool-hero-shell
+            eyebrowText="{{heroView.eyebrowText}}"
+            titleText="{{heroView.titleText}}"
+            subtitleText="{{heroView.subtitleText}}"
+            illustrationSrc="{{heroView.illustrationSrc}}"
+            illustrationClassName="{{heroView.illustrationClassName}}"
+          >
+            <view>
+              <view class="lottery-card-grid lottery-card-grid--hero">
+                <view
+                  class="lottery-card {{item.state === 'viewer' ? 'is-revealed' : ''}} {{item.state === 'claimed' ? 'is-claimed' : ''}} {{item.canClaim ? 'is-actionable' : 'is-disabled'}}"
+                  wx:for="{{pageData.lotteryDetail.cards}}"
+                  wx:key="id"
+                  data-card-id="{{item.id}}"
+                  bindtap="handleLotteryCardTap"
+                >
+                  <view class="lottery-card-inner">
+                    <view class="lottery-card-face lottery-card-face--back">
+                      <view class="lottery-card-order">{{item.order}}</view>
+                      <view class="lottery-card-sign">{{item.state === 'claimed' ? '已被抽取' : '签'}}</view>
+                    </view>
+                    <view class="lottery-card-face lottery-card-face--front">
+                      <view class="lottery-card-front-label">第 {{item.order}} 签</view>
+                      <view class="lottery-card-answer">{{item.answer}}</view>
+                    </view>
                   </view>
                 </view>
               </view>
             </view>
-          </view>
+          </tool-hero-shell>
 
           <view class="seat-draw-more-action" wx:if="{{pageData.isAdmin}}" bindtap="handleOpenActionSheet">更多操作</view>
 
-          <view class="card result-card">
-            <view class="section-title">我的结果</view>
-            <view class="lottery-result-empty" wx:if="{{!pageData.lotteryDetail.viewerClaimRecords.length}}">
-              {{pageData.lotteryDetail.viewerEligible ? '你还没有翻开任何卡片。' : '当前由其他成员使用这组卡片。'}}
-            </view>
-            <view class="lottery-result-list" wx:else>
+          <tool-result-shell
+            title="{{heroView.resultTitle}}"
+            showEmpty="{{!pageData.lotteryDetail.viewerClaimRecords.length}}"
+            emptyText="暂无记录"
+          >
+            <view class="lottery-result-list" wx:if="{{pageData.lotteryDetail.viewerClaimRecords.length}}">
               <view class="lottery-result-item" wx:for="{{pageData.lotteryDetail.viewerClaimRecords}}" wx:key="cardId">
                 <view class="lottery-result-order">第 {{item.order}} 签</view>
                 <view class="lottery-result-answer">{{item.answer}}</view>
               </view>
             </view>
-          </view>
+          </tool-result-shell>
         </block>
       </block>
     </block>
@@ -471,16 +538,16 @@
     <view class="{{showActionSheet ? 'action-sheet-panel is-visible' : 'action-sheet-panel'}}" catchtap="handleSheetPanelTap">
       <button class="action-sheet-btn" bindtap="handleReset">
         <view class="action-sheet-row">
-          <view class="action-sheet-icon action-sheet-icon--reset">✎</view>
+          <image class="action-sheet-icon" src="/assets/icons/icon_tools_reset.svg" mode="aspectFit" />
           <view class="action-sheet-copy">
             <view class="action-sheet-title">重置</view>
-            <view class="action-sheet-desc">清除所有结果</view>
+            <view class="action-sheet-desc">清除所有历史结果</view>
           </view>
         </view>
       </button>
       <button class="action-sheet-btn" bindtap="handleRecreateDraft">
         <view class="action-sheet-row">
-          <view class="action-sheet-icon action-sheet-icon--recreate">▣</view>
+          <image class="action-sheet-icon" src="/assets/icons/icon_tools_recreat.svg" mode="aspectFit" />
           <view class="action-sheet-copy">
             <view class="action-sheet-title">重新创建</view>
             <view class="action-sheet-desc">清除所有内容</view>
@@ -489,7 +556,7 @@
       </button>
       <button class="action-sheet-btn action-sheet-btn--danger" bindtap="handleCloseTool">
         <view class="action-sheet-row">
-          <view class="action-sheet-icon action-sheet-icon--danger">✕</view>
+          <image class="action-sheet-icon" src="/assets/icons/icon_tools_close.svg" mode="aspectFit" />
           <view class="action-sheet-copy">
             <view class="action-sheet-title">关闭玩法</view>
           </view>

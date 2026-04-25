@@ -1,5 +1,5 @@
 import { BusinessError } from "../shared/errors";
-import type { MemberRole, Trip, TripMember } from "../shared/types";
+import type { MemberRole, Trip, TripFavoriteRelation, TripMember } from "../shared/types";
 import { AppStateRepository } from "./app-state-repository";
 
 export class TripRepository {
@@ -44,7 +44,7 @@ export class TripRepository {
   ensurePasswordAvailable(password: string): void {
     const existing = this.findActiveTripByPassword(password);
     if (existing) {
-      throw new BusinessError("PASSWORD_CONFLICT", "这个 6 位密码已经被其他车次占用。");
+      throw new BusinessError("PASSWORD_CONFLICT", "这个 6 位口令已经被其他车次占用。");
     }
   }
 
@@ -52,8 +52,19 @@ export class TripRepository {
     return this.appStateRepository.read().tripMembers.filter((member) => member.tripId === tripId);
   }
 
+  listTripFavorites(tripId: string): TripFavoriteRelation[] {
+    return this.appStateRepository.read().tripFavorites.filter((favorite) => favorite.tripId === tripId);
+  }
+
   getTripMember(tripId: string, userId: string): TripMember | null {
     return this.listTripMembers(tripId).find((member) => member.userId === userId) ?? null;
+  }
+
+  hasTripFavorite(tripId: string, sourceUserId: string, targetUserId: string): boolean {
+    return this.listTripFavorites(tripId).some(
+      (favorite) =>
+        favorite.sourceUserId === sourceUserId && favorite.targetUserId === targetUserId
+    );
   }
 
   addTripMember(tripId: string, userId: string, role: MemberRole, joinedAt: number): TripMember {
@@ -76,6 +87,34 @@ export class TripRepository {
     });
   }
 
+  addTripFavorite(
+    tripId: string,
+    sourceUserId: string,
+    targetUserId: string,
+    createdAt: number
+  ): TripFavoriteRelation {
+    return this.appStateRepository.update((state) => {
+      const exists = state.tripFavorites.find(
+        (favorite) =>
+          favorite.tripId === tripId &&
+          favorite.sourceUserId === sourceUserId &&
+          favorite.targetUserId === targetUserId
+      );
+      if (exists) {
+        return exists;
+      }
+
+      const nextFavorite: TripFavoriteRelation = {
+        tripId,
+        sourceUserId,
+        targetUserId,
+        createdAt
+      };
+      state.tripFavorites.push(nextFavorite);
+      return nextFavorite;
+    });
+  }
+
   removeTripMember(tripId: string, userId: string): void {
     this.appStateRepository.update((state) => {
       state.tripMembers = state.tripMembers.filter(
@@ -87,6 +126,35 @@ export class TripRepository {
   removeAllTripMembers(tripId: string): void {
     this.appStateRepository.update((state) => {
       state.tripMembers = state.tripMembers.filter((member) => member.tripId !== tripId);
+    });
+  }
+
+  removeTripFavorite(tripId: string, sourceUserId: string, targetUserId: string): void {
+    this.appStateRepository.update((state) => {
+      state.tripFavorites = state.tripFavorites.filter(
+        (favorite) =>
+          !(
+            favorite.tripId === tripId &&
+            favorite.sourceUserId === sourceUserId &&
+            favorite.targetUserId === targetUserId
+          )
+      );
+    });
+  }
+
+  removeTripFavoritesByTrip(tripId: string): void {
+    this.appStateRepository.update((state) => {
+      state.tripFavorites = state.tripFavorites.filter((favorite) => favorite.tripId !== tripId);
+    });
+  }
+
+  removeTripFavoritesByUserInTrip(tripId: string, userId: string): void {
+    this.appStateRepository.update((state) => {
+      state.tripFavorites = state.tripFavorites.filter(
+        (favorite) =>
+          favorite.tripId !== tripId ||
+          (favorite.sourceUserId !== userId && favorite.targetUserId !== userId)
+      );
     });
   }
 }

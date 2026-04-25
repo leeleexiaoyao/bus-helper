@@ -1,40 +1,63 @@
 <view class="seat-grid">
-  <view class="seat-rows">
-    <view class="seat-row" wx:for="{{rows}}" wx:key="rowNumber" wx:for-item="row" wx:for-index="rowIndex">
-      <view class="row-slots">
-        <block wx:for="{{row.slots}}" wx:key="*this" wx:for-item="slot" wx:for-index="slotIndex">
-          <view
-            wx:if="{{slot}}"
-            class="seat-card {{slot.className}}"
-            style="border-radius: 24rpx; overflow: hidden;"
-            data-row="{{rowIndex}}"
-            data-slot="{{slotIndex}}"
-            bindtap="handleSeatTap"
-          >
-            <block wx:if="{{slot.isEmpty}}">
-              <view class="seat-avatar-shell seat-avatar-shell--empty"></view>
-              <view class="seat-name seat-empty-text">空位</view>
-              <view class="seat-code seat-code--empty">{{slot.label}}</view>
-            </block>
-            <block wx:else>
-              <view class="seat-avatar-shell">
-                <image
-                  wx:if="{{slot.occupant.avatarUrl}}"
-                  class="seat-avatar"
-                  src="{{slot.occupant.avatarUrl}}"
-                  mode="aspectFill"
-                />
-                <view wx:else class="seat-avatar seat-avatar--fallback avatar-fallback">{{slot.occupant.initial}}</view>
-              </view>
-              <view wx:if="{{slot.showAdminBadge || slot.showMineBadge}}" class="seat-badge {{slot.showAdminBadge ? 'is-admin' : 'is-self'}}">
-                {{slot.showAdminBadge ? "管理" : "我"}}
-              </view>
-              <view class="seat-name">{{slot.occupant.nickname}}</view>
+  <view class="seat-grid-frame">
+    <view class="seat-grid-aisle-overlay">
+      <view class="seat-grid-aisle-line seat-grid-aisle-line--left"></view>
+      <view class="seat-grid-aisle-line seat-grid-aisle-line--right"></view>
+    </view>
+
+    <view class="seat-rows">
+      <view class="seat-row" wx:for="{{rows}}" wx:key="rowNumber" wx:for-item="row" wx:for-index="rowIndex">
+        <view class="row-slots">
+          <block wx:for="{{row.slots}}" wx:key="*this" wx:for-item="slot" wx:for-index="slotIndex">
+            <view
+              wx:if="{{slot}}"
+              class="seat-card {{slot.className}}"
+              data-row="{{rowIndex}}"
+              data-slot="{{slotIndex}}"
+              bindtap="handleSeatTap"
+            >
+              <image
+                wx:if="{{slot.isEmpty}}"
+                class="seat-shell-image"
+                src="/assets/icons/icon_homepage_空座位.svg"
+                mode="aspectFit"
+              />
+              <image
+                wx:elif="{{slot.isMine || slot.isAdmin}}"
+                class="seat-shell-image"
+                src="/assets/icons/icon_homepage_我的座位.svg"
+                mode="aspectFit"
+              />
+              <image
+                wx:else
+                class="seat-shell-image"
+                src="/assets/icons/icon_homepage_已入座.svg"
+                mode="aspectFit"
+              />
+
+              <block wx:if="{{!slot.isEmpty}}">
+                <view wx:if="{{slot.showMineBadge || slot.showAdminBadge}}" class="seat-badge">
+                  {{slot.showAdminBadge ? "管" : "我"}}
+                </view>
+
+                <view wx:else class="seat-avatar-badge">
+                  <image
+                    wx:if="{{slot.occupant.avatarUrl}}"
+                    class="seat-avatar"
+                    src="{{slot.occupant.avatarUrl}}"
+                    mode="aspectFill"
+                  />
+                  <view wx:else class="seat-avatar seat-avatar--fallback avatar-fallback">{{slot.occupant.initial}}</view>
+                </view>
+              </block>
+
               <view class="seat-code">{{slot.label}}</view>
-            </block>
-          </view>
-          <view wx:else class="aisle"></view>
-        </block>
+            </view>
+            <view wx:else class="aisle">
+              <view class="aisle-label">{{row.rowNumber < 10 ? '0' + row.rowNumber : row.rowNumber}}</view>
+            </view>
+          </block>
+        </view>
       </view>
     </view>
   </view>

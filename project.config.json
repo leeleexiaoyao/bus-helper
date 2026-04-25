@@ -1,8 +1,9 @@
 {
-  "appid": "wxe8f8834a3c0135cd",
+  "appid": "wx93deec67f61a71ad",
   "projectname": "bus-seat-buddy",
   "compileType": "miniprogram",
   "miniprogramRoot": "miniprogram/",
+  "cloudfunctionRoot": "cloudfunctions/",
   "setting": {
     "es6": true,
     "enhance": true,

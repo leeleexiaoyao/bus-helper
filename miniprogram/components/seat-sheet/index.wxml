@@ -1,4 +1,9 @@
-<view wx:if="{{visible}}" class="sheet-mask" bindtap="handleMaskTap" catchtouchmove="stopTouchMove">
+<view
+  wx:if="{{renderVisible}}"
+  class="sheet-mask {{panelActive ? 'is-active' : ''}}"
+  bindtap="handleMaskTap"
+  catchtouchmove="stopTouchMove"
+>
   <view
     class="sheet-panel {{showDetailCard ? 'sheet-panel--detail' : ''}}"
     style="border-radius: 32rpx; overflow: hidden; background: #ffffff;"
@@ -33,12 +38,15 @@
               <view class="detail-line">
                 <view class="mini-tag" wx:if="{{member.isSelf}}">我</view>
                 <view class="mini-tag mini-tag--admin" wx:if="{{showAdminBadge}}">管理</view>
+                <view class="mini-tag mini-tag--mutual" wx:if="{{member.isMutualFavoriteWithViewer}}">互相标记</view>
               </view>
 
               <view class="detail-bio">{{detailBioText}}</view>
 
-              <view class="tag-list detail-tags" wx:if="{{member.tags.length}}">
-                <view class="tag-chip detail-tag-chip" wx:for="{{member.tags}}" wx:key="*this">{{item}}</view>
+              <view class="tag-list detail-tags" wx:if="{{member.tagViews.length}}">
+                <block wx:for="{{member.tagViews}}" wx:key="label" wx:for-item="tag">
+                  <view class="detail-tag-chip" style="{{tag.style}}">{{tag.label}}</view>
+                </block>
               </view>
             </view>
           </view>
@@ -73,17 +81,37 @@
         </view>
       </view>
 
-      <view class="sheet-actions-row" wx:if="{{isSelfDetailMode}}">
+      <view class="sheet-actions-row" wx:if="{{isMemberDetailMode}}">
+        <button
+          class="sheet-footer-btn sheet-footer-btn--primary sheet-footer-btn--strong"
+          bindtap="handleToggleFavorite"
+        >
+          {{favoriteButtonText}}
+        </button>
+        <button class="sheet-footer-btn sheet-footer-btn--cancel sheet-footer-btn--strong" bindtap="handleClose">好的</button>
+      </view>
+
+      <block wx:elif="{{isAdminMemberDetailMode}}">
+        <view class="sheet-actions-row">
+          <button
+            class="sheet-footer-btn sheet-footer-btn--primary sheet-footer-btn--strong"
+            bindtap="handleToggleFavorite"
+          >
+            {{favoriteButtonText}}
+          </button>
+          <button class="sheet-footer-btn sheet-footer-btn--cancel sheet-footer-btn--strong" bindtap="handleClose">好的</button>
+        </view>
+        <view class="sheet-actions-row">
+          <button class="sheet-footer-btn sheet-footer-btn--danger sheet-footer-btn--full" bindtap="handleAdminRelease">解除他的座位</button>
+        </view>
+      </block>
+
+      <view class="sheet-actions-row" wx:elif="{{isSelfDetailMode}}">
         <button class="sheet-footer-btn sheet-footer-btn--cancel" bindtap="handleClose">取消</button>
         <button class="sheet-footer-btn sheet-footer-btn--danger" bindtap="handleReleaseMine">解除座位</button>
       </view>
 
-      <view class="sheet-actions-row" wx:elif="{{isAdminMemberDetailMode}}">
-        <button class="sheet-footer-btn sheet-footer-btn--cancel" bindtap="handleClose">取消</button>
-        <button class="sheet-footer-btn sheet-footer-btn--danger" bindtap="handleAdminRelease">解除他的座位</button>
-      </view>
-
-      <button wx:else class="sheet-footer-btn sheet-footer-btn--primary detail-close-btn" bindtap="handleClose">好的</button>
+      <button wx:else class="sheet-footer-btn sheet-footer-btn--cancel detail-close-btn" bindtap="handleClose">好的</button>
     </block>
   </view>
 </view>

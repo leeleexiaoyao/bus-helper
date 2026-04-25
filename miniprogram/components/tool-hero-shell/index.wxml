@@ -1,0 +1,17 @@
+<view class="tool-hero-card {{cardClassName}}">
+  <view class="tool-hero-copy">
+    <view class="tool-hero-head">
+      <view class="tool-hero-eyebrow">{{eyebrowText}}</view>
+      <view class="tool-hero-subtitle">{{subtitleText}}</view>
+    </view>
+    <view class="tool-hero-title">{{titleText}}</view>
+  </view>
+
+  <view class="tool-hero-body {{bodyClassName}}">
+    <slot />
+  </view>
+
+  <view class="tool-hero-footer {{footerClassName}}">
+    <slot name="footer" />
+  </view>
+</view>

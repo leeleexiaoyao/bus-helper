@@ -1,73 +1,89 @@
-<page-meta page-style="{{sheetVisible || showPersonaSheet ? 'height: 100vh; overflow: hidden;' : ''}}" />
+<page-meta page-style="{{sheetVisible || showPersonaSheet || showAuthGate ? 'height: 100vh; overflow: hidden;' : ''}}" />
 <view class="page-shell home-page">
-  <view class="home-page-bg"></view>
-  <page-navbar title="{{navTitle}}" progress="{{navProgress}}" theme="light" leftPadding="{{12}}" titleFontSize="{{18}}" />
+  <page-navbar title="{{navTitle}}" progress="{{navProgress}}" theme="dark" leftPadding="{{32}}" titleFontSize="{{20}}" />
 
-  <block wx:if="{{showAuthGate}}">
-    <auth-gate
-      title="先授权头像和昵称"
-      subtitle="首次使用前，先用演示身份完成一次模拟授权。授权成功后才能创建车次、加入车次和查看成员信息。"
-      presetNickname="{{authPresetNickname}}"
-      presetAvatarUrl="{{authPresetAvatarUrl}}"
-      bindauthorized="handleAuthorizeProfile"
-    />
-  </block>
+  <view class="home-bg-hero"></view>
 
   <block wx:if="{{showTripContent}}">
-    <view class="home-hero">
-      <view class="viewer-row">
-        <view class="viewer-meta">
-          <view class="viewer-profile">
-            <image
-              wx:if="{{currentUser.avatarUrl}}"
-              class="viewer-avatar"
-              src="{{currentUser.avatarUrl}}"
-              mode="aspectFill"
-            />
-            <view wx:else class="viewer-avatar viewer-avatar--fallback avatar-fallback">{{currentUserInitial}}</view>
+    <view class="home-header">
+      <view class="home-header-copy">
+        <view class="home-title">{{navTitle}}</view>
+        <view class="home-subtitle">{{currentTrip.tripMeta.departureTime}}出发~</view>
+      </view>
+      <image class="home-header-figure" src="/assets/icons/pic_homepage_chufa.png" mode="widthFix" />
+    </view>
 
-            <view class="viewer-copy">
-              <view class="viewer-name">{{currentUser.nickname}}</view>
-              <view class="viewer-seat">座位号:{{viewerSeatText}}</view>
-            </view>
-          </view>
-        </view>
+    <view class="home-user-card">
+      <view class="home-user-main">
+        <image
+          wx:if="{{currentUser.avatarUrl}}"
+          class="home-user-avatar"
+          src="{{currentUser.avatarUrl}}"
+          mode="aspectFill"
+        />
+        <view wx:else class="home-user-avatar avatar-fallback">{{currentUserInitial}}</view>
 
-        <view class="viewer-persona-action" bindtap="handleOpenPersonaSheet">
-          <image wx:if="{{currentPersonaImageUrl}}" class="viewer-persona-image" src="{{currentPersonaImageUrl}}" mode="widthFix" />
-          <view wx:else class="viewer-persona-button">添加形象</view>
+        <view class="home-user-copy">
+          <view class="home-user-greeting">👋 Hi，{{currentUser.nickname}}</view>
+          <view class="home-user-wish">旅途愉快~</view>
         </view>
+      </view>
+
+      <view class="home-seat-summary">
+        <view class="home-seat-tag">我的座位</view>
+        <view class="home-seat-value {{viewerSeatText === '请选择您的座位' ? 'is-placeholder' : ''}}">{{viewerSeatText}}</view>
       </view>
     </view>
 
     <view class="trip-panel">
       <view class="trip-tabs">
         <view class="tabs-left">
-          <view class="{{seatsTabClassName}}" data-tab="seats" bindtap="handleTabChange">座位图</view>
-          <view class="{{membersTabClassName}}" data-tab="members" bindtap="handleTabChange">成员列表</view>
+          <view class="{{seatsTabClassName}}" data-tab="seats" bindtap="handleTabChange">
+            <text>座位图</text>
+            <image wx:if="{{isSeatsTab}}" class="home-tab-line" src="/assets/icons/pic_tabbar_selectedline.svg" mode="widthFix" />
+          </view>
+          <view class="{{membersTabClassName}}" data-tab="members" bindtap="handleTabChange">
+            <text>成员列表</text>
+            <image wx:if="{{isMembersTab}}" class="home-tab-line" src="/assets/icons/pic_tabbar_selectedline.svg" mode="widthFix" />
+          </view>
         </view>
-        <view class="tabs-stat">已入座{{currentTrip.tripMeta.seatedCount}}/{{currentTrip.tripMeta.seatCount}}</view>
+        <view class="tabs-stat">已入座 {{currentTrip.tripMeta.seatedCount}} / {{currentTrip.tripMeta.seatCount}}</view>
       </view>
 
-      <seat-grid wx:if="{{isSeatsTab}}" rows="{{currentTrip.seatRows}}" bindseattap="handleSeatTap" />
-      <member-list wx:else members="{{seatedMembers}}" bindmembertap="handleMemberTap" />
+      <view class="trip-content-card">
+        <seat-grid wx:if="{{isSeatsTab}}" rows="{{currentTrip.seatRows}}" bindseattap="handleSeatTap" />
+        <member-list wx:else members="{{seatedMembers}}" bindmembertap="handleMemberTap" />
+      </view>
     </view>
   </block>
 
   <block wx:if="{{showTripEntry}}">
-    <view class="entry-card card" style="border-radius: 32rpx; overflow: hidden; background: #ffffff;">
-      <view class="section-title">先创建或加入一个车次</view>
-      <view class="section-subtitle">
-        授权完成后，你就可以开始认座、查看成员列表，并在“我的”页维护自己的标签信息。
-      </view>
+    <view class="entry-card">
+      <view class="entry-title">请先创建或加入车次</view>
+      <view class="entry-copy">完成授权后即可使用小程序</view>
 
       <view class="entry-actions">
-        <button class="primary-btn" bindtap="goCreateTrip">创建车次</button>
-        <button class="secondary-btn" bindtap="goJoinTrip">加入车次</button>
+        <button class="entry-primary-btn" bindtap="goCreateTrip">创建车次</button>
+        <button class="entry-secondary-btn" bindtap="goJoinTrip">加入车次</button>
       </view>
     </view>
   </block>
 </view>
+
+<block wx:if="{{showAuthGate}}">
+  <view class="home-auth-mask" bindtap="handleCloseAuthGate"></view>
+  <view class="home-auth-sheet">
+    <auth-gate
+      displayMode="sheet"
+      title="获取你的头像、昵称"
+      subtitle="用于生成账号信息"
+      buttonText="保存"
+      presetNickname="{{authPresetNickname}}"
+      presetAvatarUrl="{{authPresetAvatarUrl}}"
+      bindauthorized="handleAuthorizeProfile"
+    />
+  </view>
+</block>
 
 <persona-sheet
   visible="{{showPersonaSheet}}"
@@ -88,4 +104,5 @@
   bindconfirmclaim="handleClaimConfirm"
   bindreleasemine="handleReleaseMine"
   bindadminrelease="handleAdminRelease"
+  bindtogglefavorite="handleToggleFavorite"
 />

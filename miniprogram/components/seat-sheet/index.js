@@ -18,6 +18,8 @@ Component({
         }
     },
     data: {
+        renderVisible: false,
+        panelActive: false,
         isEmptyConfirmMode: false,
         isSelfDetailMode: false,
         isMemberDetailMode: false,
@@ -39,13 +41,18 @@ Component({
         },
         detailAgeText: "未填写",
         detailPersonaImageUrl: "",
-        showAdminBadge: false
+        showAdminBadge: false,
+        showFavoriteAction: false,
+        favoriteButtonText: "标记"
     },
     observers: {
         "visible, mode, member": function (visible, mode, member) {
             var _a, _b, _c, _d, _e, _f;
-            if (!visible) {
-                return;
+            if (visible) {
+                this.showSheet();
+            }
+            else {
+                this.hideSheet();
             }
             this.setData({
                 isEmptyConfirmMode: mode === "empty-confirm",
@@ -69,11 +76,66 @@ Component({
                 },
                 detailAgeText: ((_e = member === null || member === void 0 ? void 0 : member.age) === null || _e === void 0 ? void 0 : _e.trim()) || "未填写",
                 detailPersonaImageUrl: (_f = member === null || member === void 0 ? void 0 : member.homePersonaImageUrl) !== null && _f !== void 0 ? _f : "",
-                showAdminBadge: Boolean(member === null || member === void 0 ? void 0 : member.isAdmin)
+                showAdminBadge: Boolean(member === null || member === void 0 ? void 0 : member.isAdmin),
+                showFavoriteAction: mode === "member-detail" || mode === "admin-member-detail",
+                favoriteButtonText: (member === null || member === void 0 ? void 0 : member.isFavoritedByViewer) ? "取消标记" : "标记"
             });
         }
     },
+    lifetimes: {
+        attached() {
+            if (this.properties.visible) {
+                this.showSheet();
+            }
+        },
+        detached() {
+            this.clearVisibilityTimer();
+        }
+    },
     methods: {
+        getVisibilityTimer() {
+            var _a;
+            return ((_a = this.visibilityTimer) !== null && _a !== void 0 ? _a : 0);
+        },
+        setVisibilityTimer(timer) {
+            this.visibilityTimer = timer;
+        },
+        showSheet() {
+            this.clearVisibilityTimer();
+            if (!this.data.renderVisible) {
+                this.setData({
+                    renderVisible: true
+                });
+            }
+            wx.nextTick(() => {
+                this.setData({
+                    panelActive: true
+                });
+            });
+        },
+        hideSheet() {
+            this.clearVisibilityTimer();
+            if (!this.data.renderVisible) {
+                return;
+            }
+            this.setData({
+                panelActive: false
+            });
+            this.setVisibilityTimer(setTimeout(() => {
+                this.setData({
+                    renderVisible: false
+                });
+                this.setVisibilityTimer(0);
+            }, 220));
+        },
+        clearVisibilityTimer() {
+            const visibilityTimer = this.getVisibilityTimer();
+            if (!visibilityTimer) {
+                return;
+            }
+            clearTimeout(visibilityTimer);
+            this.setVisibilityTimer(0);
+        },
         stopPropagation() { },
         stopTouchMove() { },
         handleMaskTap() {
@@ -90,6 +152,9 @@ Component({
         },
         handleAdminRelease() {
             this.triggerEvent("adminrelease");
+        },
+        handleToggleFavorite() {
+            this.triggerEvent("togglefavorite");
         },
         handleClose() {
             this.triggerEvent("close");

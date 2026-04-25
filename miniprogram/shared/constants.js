@@ -1,11 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.TOOL_META = exports.TOOL_TYPES = exports.DEMO_SWITCHABLE_USER_IDS = exports.DEMO_USERS = exports.TRIP_TEMPLATES = exports.HOME_PERSONA_OPTIONS = exports.DEFAULT_WHEEL_ITEMS = exports.WHEEL_MAX_ITEMS = exports.HOME_PERSONA_IMAGE_URL = exports.DEFAULT_AVATAR_URL = exports.DEFAULT_DEPARTURE_TIME = exports.DEFAULT_TRIP_NAME = exports.APP_STATE_STORAGE_KEY = exports.APP_STATE_VERSION = void 0;
+exports.TOOL_META = exports.TOOL_TYPES = exports.DEMO_SWITCHABLE_USER_IDS = exports.DEMO_USERS = exports.TRIP_TEMPLATES = exports.HOME_PERSONA_OPTIONS = exports.DEFAULT_WHEEL_ITEMS = exports.WHEEL_MAX_ITEMS = exports.HOME_PERSONA_IMAGE_URL = exports.DEFAULT_AVATAR_URL = exports.DEFAULT_DEPARTURE_TIME = exports.DEFAULT_TRIP_NAME = exports.MAX_MEMBER_FAVORITES_PER_TRIP = exports.APP_STATE_STORAGE_KEY = exports.APP_STATE_VERSION = void 0;
 exports.createEmptyTripTools = createEmptyTripTools;
 exports.createInitialAppState = createInitialAppState;
 exports.createSeededDemoAppState = createSeededDemoAppState;
-exports.APP_STATE_VERSION = 9;
+exports.isSeededDemoAppState = isSeededDemoAppState;
+exports.APP_STATE_VERSION = 10;
 exports.APP_STATE_STORAGE_KEY = "bus-seat-buddy-state";
+exports.MAX_MEMBER_FAVORITES_PER_TRIP = 2;
 exports.DEFAULT_TRIP_NAME = "未命名车次";
 exports.DEFAULT_DEPARTURE_TIME = "待定";
 exports.DEFAULT_AVATAR_URL = "";
@@ -90,7 +92,7 @@ exports.DEMO_USERS = [
         isAuthorized: false
     }
 ];
-exports.DEMO_SWITCHABLE_USER_IDS = exports.DEMO_USERS.map((user) => user.id);
+exports.DEMO_SWITCHABLE_USER_IDS = exports.DEMO_USERS.slice(0, 2).map((user) => user.id);
 exports.TOOL_TYPES = ["seat-draw", "vote", "wheel", "lottery"];
 exports.TOOL_META = {
     "seat-draw": {
@@ -138,13 +140,14 @@ function createInitialAppState() {
         }, {}),
         trips: {},
         tripMembers: [],
+        tripFavorites: [],
         activeUserId: exports.DEMO_USERS[0].id
     };
 }
 const SEED_TRIP_ID = "trip-demo-default";
 const SEED_TRIP_PASSWORD = "204900";
-const SEED_ACTIVE_USER_ID = "user-3";
-const SEED_OCCUPIED_USER_COUNT = 45;
+const SEED_ACTIVE_USER_ID = "user-2";
+const SEED_OCCUPIED_USER_COUNT = 40;
 const SEED_CREATED_AT = 1712803200000;
 const SEAT_LETTERS = ["A", "B", "C", "D", "E"];
 function buildSeedSeatCodes(templateId) {
@@ -296,6 +299,14 @@ function createSeededDemoAppState() {
             [seededTrip.id]: seededTrip
         },
         tripMembers: seededTripMembers,
+        tripFavorites: [],
         activeUserId: SEED_ACTIVE_USER_ID
     };
+}
+function isSeededDemoAppState(state) {
+    if (!state) {
+        return false;
+    }
+    const trip = state.trips[SEED_TRIP_ID];
+    return Boolean(trip && trip.status === "active");
 }

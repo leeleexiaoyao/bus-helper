@@ -1,31 +1,64 @@
 .page-shell.tools-page {
   min-height: 100vh;
-  padding: 0 24rpx 24rpx;
-  background: #ffffff;
+  position: relative;
+  padding: 0 32rpx calc(env(safe-area-inset-bottom) + 48rpx);
+  background: #f4f4f3;
   box-sizing: border-box;
+  overflow-x: hidden;
 }
 
-auth-gate {
-  display: block;
-  margin-top: 24rpx;
+.tools-bg-hero {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 454rpx;
+  background: linear-gradient(180deg, #ecfbbb 0%, #f4f4f3 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.tools-header {
+  margin-top: -44rpx;
+  position: relative;
+  z-index: 1;
+}
+
+.tools-title {
+  color: #111111;
+  font-size: 56rpx;
+  line-height: 1.18;
+  font-weight: 900;
+}
+
+.tools-subtitle {
+  margin-top: 10rpx;
+  color: #6f7783;
+  font-size: 24rpx;
+  line-height: 1.38;
 }
 
 .tool-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-template-rows: repeat(2, fit-content(100%));
-  gap: 24rpx;
-  margin-top: 24rpx;
+  grid-template-columns: repeat(2, 310rpx);
+  gap: 32rpx;
+  margin-top: 78rpx;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
 }
 
 .tool-card {
   position: relative;
-  min-height: 222rpx;
-  padding: 24rpx;
+  width: 310rpx;
+  height: 440rpx;
+  padding: 32rpx;
   border-radius: 40rpx;
-  border: 2rpx solid transparent;
+  border: 4rpx solid transparent;
   overflow: hidden;
   box-sizing: border-box;
+  background-origin: padding-box, border-box;
+  background-clip: padding-box, border-box;
 }
 
 .tool-card.is-clickable {
@@ -34,77 +67,125 @@ auth-gate {
 
 .tool-card-body {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  min-height: 100%;
 }
 
 .tool-title {
-  color: #000000;
-  font-size: 32rpx;
+  color: #111111;
+  font-size: 36rpx;
   font-weight: 700;
   line-height: 1.2;
+  white-space: nowrap;
 }
 
 .tool-description {
-  margin-top: 12rpx;
-  max-width: 180rpx;
-  color: #666666;
+  margin-top: 8rpx;
+  max-width: 240rpx;
+  color: #6f7783;
   font-size: 24rpx;
-  line-height: 1.5;
+  line-height: 1.35;
+  white-space: nowrap;
 }
 
 .tool-cta {
-  margin-top: auto;
-  padding: 10rpx 20rpx;
-  border-radius: 999rpx;
-  background: #ffffff;
-  font-size: 22rpx;
+  position: absolute;
+  left: 16rpx;
+  right: 16rpx;
+  bottom: 16rpx;
+  z-index: 3;
+  height: 68rpx;
+  border-radius: 20rpx;
+  border: 2rpx solid #ffffff;
+  color: #2f2f2f;
+  font-size: 24rpx;
   line-height: 1.2;
+  font-weight: 700;
+  display: flex;
+  gap: 8rpx;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  -webkit-backdrop-filter: blur(32rpx);
+  backdrop-filter: blur(32rpx);
+}
+
+.tool-cta-icon {
+  width: 32rpx;
+  height: 32rpx;
+  flex-shrink: 0;
 }
 
 .tool-image {
   position: absolute;
   right: 0;
-  bottom: -40rpx;
-  width: 144rpx;
-  z-index: 0;
+  top: 156rpx;
+  width: 284rpx;
+  z-index: 1;
+  pointer-events: none;
 }
 
 .tool-card--vote {
-  background: #fef3d1;
-  border-color: #ffe3aa;
+  background-image:
+    linear-gradient(180deg, #ffebb5 0%, #ffffff 100%),
+    linear-gradient(180deg, #ffffff 0%, #ffffff 42%, #fffaf0 66%, #fcf3db 100%);
 }
 
 .tool-card--vote .tool-cta {
-  color: #cd9c05;
+  background: rgba(255, 239, 196, 0.6);
 }
 
 .tool-card--seat-draw {
-  background: #d3eafd;
-  border-color: #b6deff;
+  background-image:
+    linear-gradient(180deg, #eaffba 0%, #fefefe 100%),
+    linear-gradient(180deg, #ffffff 0%, #ffffff 42%, #f8fce8 66%, #eff9cc 100%);
 }
 
 .tool-card--seat-draw .tool-cta {
-  color: #2e84cb;
+  background: rgba(248, 255, 218, 0.6);
 }
 
 .tool-card--lottery {
-  background: #daf9f1;
-  border-color: #c0f8ed;
+  background-image:
+    linear-gradient(180deg, #ddf2fb 0%, #e8f6fc 47%, #ffffff 100%),
+    linear-gradient(180deg, #ffffff 0%, #ffffff 42%, #f2fbfe 66%, #e2f6fd 100%);
 }
 
 .tool-card--lottery .tool-cta {
-  color: #369c82;
+  background: rgba(212, 241, 255, 0.6);
 }
 
 .tool-card--wheel {
-  background: #fee2f4;
-  border-color: #f5cfec;
+  background-image:
+    linear-gradient(180deg, #efe8f9 0%, #ffffff 100%),
+    linear-gradient(180deg, #ffffff 0%, #ffffff 42%, #faf6ff 66%, #f2eafb 100%);
 }
 
 .tool-card--wheel .tool-cta {
-  color: #d42a97;
+  background: rgba(238, 222, 255, 0.6);
+}
+
+.tools-empty-state {
+  margin-top: 96rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20rpx;
+  position: relative;
+  z-index: 1;
+}
+
+.tools-empty-illustration {
+  width: 320rpx;
+}
+
+.tools-empty-label {
+  color: #2a3234;
+  font-size: 28rpx;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: center;
 }

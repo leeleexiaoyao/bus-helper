@@ -1,11 +1,62 @@
-<view class="auth-gate card" style="border-radius: 32rpx; overflow: hidden; background: #ffffff;">
-  <view class="auth-badge">演示授权</view>
+<view class="auth-gate {{displayMode === 'sheet' ? 'auth-gate--sheet' : 'auth-gate--card'}}">
+  <view wx:if="{{displayMode !== 'sheet'}}" class="auth-badge">微信授权</view>
   <view class="auth-title">{{title}}</view>
   <view class="auth-subtitle">{{subtitle}}</view>
 
-  <view class="auth-note">
-    当前先用本地模拟身份授权跑通主流程。确认后会使用当前演示身份的头像和昵称进入小程序，后续再切换到真实微信授权。
+  <view wx:if="{{displayMode !== 'sheet'}}" class="auth-note">
+    先填写昵称并选择头像。头像会上传到当前云开发环境，授权完成后会同步到你的用户资料。
   </view>
 
-  <button class="primary-btn auth-btn" bindtap="handleAuthorize">{{buttonText}}</button>
+  <block wx:if="{{displayMode === 'sheet'}}">
+    <view class="auth-sheet-list">
+      <view class="auth-sheet-row">
+        <view class="auth-sheet-label">头像</view>
+        <button
+          class="auth-sheet-avatar-trigger"
+          open-type="chooseAvatar"
+          bindchooseavatar="handleChooseAvatar"
+          bindtap="handleAvatarRowTap"
+        >
+          <image wx:if="{{avatarUrl}}" class="auth-sheet-avatar" src="{{avatarUrl}}" mode="aspectFill" />
+          <text class="auth-sheet-value {{avatarUrl ? 'is-filled' : ''}}">
+            {{avatarUrl ? '重新选择头像' : '点击获取头像'}}
+          </text>
+        </button>
+      </view>
+
+      <view class="auth-sheet-divider"></view>
+
+      <view class="auth-sheet-row">
+        <view class="auth-sheet-label">昵称</view>
+        <input
+          class="auth-sheet-input"
+          type="nickname"
+          placeholder="点击获取昵称"
+          maxlength="20"
+          value="{{nickname}}"
+          bindinput="handleNicknameInput"
+        />
+      </view>
+    </view>
+  </block>
+
+  <block wx:else>
+    <view class="auth-form">
+      <button class="auth-avatar-picker" open-type="chooseAvatar" bindchooseavatar="handleChooseAvatar">
+        <image wx:if="{{avatarUrl}}" class="auth-avatar-image" src="{{avatarUrl}}" mode="aspectFill" />
+        <view wx:else class="auth-avatar-placeholder">选头像</view>
+      </button>
+
+      <input
+        class="auth-input"
+        type="nickname"
+        placeholder="请输入昵称"
+        maxlength="20"
+        value="{{nickname}}"
+        bindinput="handleNicknameInput"
+      />
+    </view>
+  </block>
+
+  <button class="primary-btn auth-btn" loading="{{submitting}}" bindtap="handleAuthorize">{{buttonText}}</button>
 </view>

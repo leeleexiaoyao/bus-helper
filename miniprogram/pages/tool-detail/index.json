@@ -1,4 +1,8 @@
 {
   "navigationBarTitleText": "玩法详情",
-  "navigationStyle": "custom"
+  "navigationStyle": "custom",
+  "usingComponents": {
+    "tool-hero-shell": "/components/tool-hero-shell/index",
+    "tool-result-shell": "/components/tool-result-shell/index"
+  }
 }

@@ -1,22 +1,25 @@
-<view class="page-shell">
-  <view class="card join-card" style="border-radius: 32rpx; overflow: hidden; background: #ffffff;">
-    <view class="section-title">输入 6 位密码加入车次</view>
-    <view class="section-subtitle">密码正确后，你会直接回到首页并看到当前车次内容。</view>
+<view class="page-shell join-trip-page">
+  <view class="join-title">请输入6位口令</view>
 
-    <view class="form-block">
-      <view class="field-label">车次密码</view>
+  <view class="form-block">
+    <view class="code-input-list">
       <input
-        class="field-input password-input"
-        value="{{password}}"
+        wx:for="{{passwordDigits}}"
+        wx:key="index"
+        class="code-input {{focusIndex === index ? 'is-active' : ''}}"
+        value="{{item}}"
+        data-index="{{index}}"
         maxlength="6"
         type="number"
-        placeholder="请输入 6 位数字密码"
-        bindinput="handlePasswordInput"
+        focus="{{focusIndex === index}}"
+        cursor-spacing="24"
+        bindfocus="handleDigitFocus"
+        bindinput="handleDigitInput"
       />
     </view>
-
-    <button class="primary-btn submit-btn" loading="{{submitting}}" bindtap="handleSubmit">
-      加入车次
-    </button>
   </view>
+
+  <button class="join-submit-btn" loading="{{submitting}}" bindtap="handleSubmit">
+    加入车次
+  </button>
 </view>

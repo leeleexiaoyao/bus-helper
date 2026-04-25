@@ -1,12 +1,14 @@
 import { TOOL_META } from "../../shared/constants";
 import { BusinessError } from "../../shared/errors";
 import type {
+  SeatDrawDisplaySlotView,
   ToolDetailViewModel,
   ToolType,
   VoteChoice,
   VoteSelectionMode
 } from "../../shared/types";
 import { tripService } from "../../services/trip-service";
+import { waitForCloudReady } from "../../utils/cloud-ready";
 import { showErrorToast, showSuccessToast } from "../../utils/feedback";
 
 type WheelSliceView = {
@@ -14,23 +16,55 @@ type WheelSliceView = {
   label: string;
   style: string;
   innerStyle: string;
-  dividerStyle: string;
   sliceClassName: string;
   labelStyle: string;
 };
 
 type VoteOptionCardView = {
   id: string;
+  title: string;
   label: string;
   supportCount: number;
+  supportCountText: string;
+  supportRateText: string;
   isSelected: boolean;
+  showCheckbox: boolean;
+  checkboxClassName: string;
+  showResult: boolean;
   className: string;
+};
+
+type ToolHeroView = {
+  eyebrowText: string;
+  titleText: string;
+  subtitleText: string;
+  illustrationSrc: string;
+  illustrationClassName: string;
+  resultTitle: string;
 };
 
 let seatDrawRollingSyncTimer: number | null = null;
 let voteRefreshTimer: number | null = null;
 
 const VOTE_REFRESH_INTERVAL_MS = 10000;
+const TOOL_HERO_ILLUSTRATIONS: Record<ToolType, string> = {
+  "seat-draw": "/assets/icons/pic_tools_seatdraw_star.png",
+  vote: "/assets/icons/icon_tools_投票.png",
+  wheel: "/assets/icons/icon_tools_幸运大转盘.png",
+  lottery: "/assets/icons/icon_tools_抽签.png"
+};
+const WHEEL_SLICE_COLORS = [
+  "#fff0b7",
+  "#ffd4de",
+  "#d8c8ff",
+  "#c9f2c2",
+  "#bfe6ff",
+  "#ffe1b2",
+  "#ffd7b8",
+  "#c8f3ec",
+  "#d4e4ff",
+  "#f5d7ff"
+] as const;
 
 function isToolType(value: string): value is ToolType {
   return ["seat-draw", "vote", "wheel", "lottery"].includes(value);
@@ -60,17 +94,16 @@ function parseLotteryAnswers(input: string): string[] {
 function buildWheelSlices(items: string[]): WheelSliceView[] {
   const safeItems = items.slice(0, 10);
   const step = safeItems.length ? 360 / safeItems.length : 360;
-  const radius = safeItems.length > 8 ? 142 : safeItems.length > 6 ? 152 : 160;
+  const radius = safeItems.length > 8 ? 144 : safeItems.length > 6 ? 154 : 164;
   const densityClassName = safeItems.length > 8 ? "wheel-slice is-tight" : "wheel-slice";
   const labelWidth = safeItems.length > 8 ? 122 : safeItems.length > 6 ? 132 : 142;
   return safeItems.map((item, index) => {
-    const angle = Number((index * step + step / 2).toFixed(2));
+    const angle = Number((index * step).toFixed(2));
     return {
       id: `slice-${index}`,
       label: item,
       style: `transform: translate(-50%, -50%) rotate(${angle}deg) translateY(-${radius}rpx);`,
-      innerStyle: "transform: rotate(180deg);",
-      dividerStyle: `transform: translate(-50%, -100%) rotate(${Number((index * step).toFixed(2))}deg);`,
+      innerStyle: "transform: translateX(24rpx);",
       sliceClassName: densityClassName,
       labelStyle: `width: ${labelWidth}rpx;`
     };
@@ -78,8 +111,23 @@ function buildWheelSlices(items: string[]): WheelSliceView[] {
 }
 
 function buildWheelBackgroundStyle(items: string[]): string {
-  void items;
-  return "background: radial-gradient(circle at center, #fffdf8 0%, #fff6ec 58%, #ffe7cf 100%);";
+  const safeItems = items.slice(0, 10);
+  if (!safeItems.length) {
+    return "background: #ffffff;";
+  }
+
+  const step = 360 / safeItems.length;
+  const startOffset = -step / 2;
+  const segments = safeItems
+    .map((_, index) => {
+      const start = index * step;
+      const end = start + step;
+      const color = WHEEL_SLICE_COLORS[index % WHEEL_SLICE_COLORS.length];
+      return `${color} ${start.toFixed(2)}deg ${end.toFixed(2)}deg`;
+    })
+    .join(", ");
+
+  return `background: conic-gradient(from ${startOffset.toFixed(2)}deg, ${segments});`;
 }
 
 function buildWheelLights(count = 14): string[] {
@@ -100,7 +148,7 @@ function getWheelTargetRotation(itemCount: number, resultIndex: number): number 
   }
 
   const step = 360 / itemCount;
-  const targetAngle = resultIndex * step + step / 2;
+  const targetAngle = resultIndex * step;
   return 360 - targetAngle;
 }
 
@@ -164,24 +212,10 @@ function buildVoteInteractionState(
   const currentSelectedIds = Array.from(new Set(selectedIds)).filter((optionId) =>
     validOptionIds.has(optionId)
   );
-  const persistedOptionIds = new Set(detail.viewerSelectedOptionIds);
-  const pendingOptionCount = currentSelectedIds.filter((optionId) => !persistedOptionIds.has(optionId)).length;
-  const allOptionsSelected =
-    detail.selectionMode === "multiple" &&
-    detail.maxSelections > 0 &&
-    detail.viewerSelectedOptionIds.length >= detail.maxSelections;
 
   let viewerResultLabel = "";
   if (detail.viewerChoice === "approve") {
-    if (
-      detail.selectionMode === "multiple" &&
-      detail.viewerSelectedOptionIds.length > 0 &&
-      detail.viewerSelectedOptionIds.length < detail.maxSelections
-    ) {
-      viewerResultLabel = `你已投 ${detail.viewerSelectedOptionIds.length} / ${detail.maxSelections} 项，还可继续投票。`;
-    } else {
-      viewerResultLabel = "你已完成投票。";
-    }
+    viewerResultLabel = "你已完成投票。";
   } else if (detail.viewerChoice === "abstain") {
     viewerResultLabel = "你已完成弃权。";
   } else if (detail.viewerChoice === "reject") {
@@ -189,24 +223,43 @@ function buildVoteInteractionState(
   }
 
   return {
-    approveDisabled:
-      detail.selectionMode === "single"
-        ? detail.viewerHasSubmitted || currentSelectedIds.length === 0
-        : detail.viewerChoice === "abstain" || allOptionsSelected || pendingOptionCount === 0,
+    approveDisabled: detail.viewerHasSubmitted || currentSelectedIds.length === 0,
     abstainDisabled: detail.viewerHasSubmitted,
     viewerResultLabel
   };
 }
 
 function buildVoteOptionCards(pageData: ToolDetailViewModel | null, selectedIds: string[]): VoteOptionCardView[] {
+  const detail = pageData?.voteDetail;
   const selectedIdSet = new Set(selectedIds);
-  return (pageData?.voteDetail?.options ?? []).map((option) => ({
-    id: option.id,
-    label: option.label,
-    supportCount: option.supportCount,
-    isSelected: option.selectedByViewer || selectedIdSet.has(option.id),
-    className: option.selectedByViewer || selectedIdSet.has(option.id) ? "vote-option-card is-selected" : "vote-option-card"
-  }));
+  const shouldShowResult = Boolean(
+    detail && (detail.phase === "ended" || (detail.phase === "active" && detail.viewerHasSubmitted))
+  );
+  const shouldShowCheckbox = Boolean(
+    detail && detail.phase === "active" && detail.viewerEligible && !detail.viewerHasSubmitted
+  );
+
+  return (detail?.options ?? []).map((option, index) => {
+    const isSelected = option.selectedByViewer || selectedIdSet.has(option.id);
+    const supportRate =
+      detail && detail.participantCount > 0
+        ? Math.round((option.supportCount / detail.participantCount) * 100)
+        : 0;
+
+    return {
+      id: option.id,
+      title: `选项${index + 1}`,
+      label: option.label,
+      supportCount: option.supportCount,
+      supportCountText: String(option.supportCount),
+      supportRateText: `${supportRate}%`,
+      isSelected,
+      showCheckbox: shouldShowCheckbox,
+      checkboxClassName: isSelected ? "vote-option-check is-selected" : "vote-option-check",
+      showResult: shouldShowResult,
+      className: isSelected ? "vote-option-card is-selected" : "vote-option-card"
+    };
+  });
 }
 
 function clearSeatDrawRollingTimer(): void {
@@ -223,6 +276,71 @@ function clearVoteRefreshTimer(): void {
   }
 }
 
+function buildToolHeroView(pageData: ToolDetailViewModel): ToolHeroView | null {
+  if (!pageData.isStarted) {
+    return null;
+  }
+
+  if (pageData.toolType === "seat-draw" && pageData.seatDrawDetail) {
+    return {
+      eyebrowText: "本次主题",
+      titleText: pageData.seatDrawDetail.topic,
+      subtitleText: `要求:${pageData.seatDrawDetail.drawCount}人`,
+      illustrationSrc: TOOL_HERO_ILLUSTRATIONS["seat-draw"],
+      illustrationClassName: "tool-hero-illustration tool-hero-illustration--seat-draw",
+      resultTitle: "历史记录"
+    };
+  }
+
+  if (pageData.toolType === "vote" && pageData.voteDetail) {
+    const detail = pageData.voteDetail;
+    return {
+      eyebrowText: "本次主题",
+      titleText: detail.topic,
+      subtitleText: `要求:${detail.maxSelections}项`,
+      illustrationSrc: TOOL_HERO_ILLUSTRATIONS.vote,
+      illustrationClassName: "tool-hero-illustration tool-hero-illustration--icon",
+      resultTitle: "历史记录"
+    };
+  }
+
+  if (pageData.toolType === "wheel" && pageData.wheelDetail) {
+    return {
+      eyebrowText: "本次主题",
+      titleText: pageData.wheelDetail.topic,
+      subtitleText: `奖项:${pageData.wheelDetail.items.length}项`,
+      illustrationSrc: TOOL_HERO_ILLUSTRATIONS.wheel,
+      illustrationClassName: "tool-hero-illustration tool-hero-illustration--icon",
+      resultTitle: "历史记录"
+    };
+  }
+
+  if (pageData.toolType === "lottery" && pageData.lotteryDetail) {
+    return {
+      eyebrowText: "本次主题",
+      titleText: pageData.lotteryDetail.topic,
+      subtitleText: `次数:${pageData.lotteryDetail.drawLimitPerUser}次`,
+      illustrationSrc: TOOL_HERO_ILLUSTRATIONS.lottery,
+      illustrationClassName: "tool-hero-illustration tool-hero-illustration--icon",
+      resultTitle: "历史记录"
+    };
+  }
+
+  return null;
+}
+
+function buildSeatDrawMachineClass(slots: SeatDrawDisplaySlotView[]): string {
+  if (slots.length >= 5) {
+    return "seat-draw-machine is-compact";
+  }
+
+  if (slots.length === 4) {
+    return "seat-draw-machine is-medium";
+  }
+
+  return "seat-draw-machine is-large";
+}
+
 Page({
   data: {
     statusBarHeight: 20,
@@ -233,6 +351,8 @@ Page({
     toolType: "" as ToolType | "",
     toolTitle: "",
     pageData: null as ToolDetailViewModel | null,
+    heroView: null as ToolHeroView | null,
+    seatDrawMachineClass: "seat-draw-machine is-large",
     isDraftEditing: false,
     isRecreateMode: false,
     showActionSheet: false,
@@ -256,6 +376,7 @@ Page({
     voteViewerResultLabel: "",
     voteApproveDisabled: true,
     voteAbstainDisabled: true,
+    wheelTopicInput: "",
     wheelItemsInput: "",
     wheelRotation: 0,
     wheelTransitionMs: 0,
@@ -269,6 +390,7 @@ Page({
     wheelAssignedUserIndex: 0,
     wheelEligibleUserLabels: [] as string[],
     wheelShowResult: false,
+    lotteryTopicInput: "",
     lotteryAnswersInput: "",
     lotteryDrawLimitInput: "1",
     lotteryAllowAssignedUser: false,
@@ -305,7 +427,14 @@ Page({
     });
   },
 
-  onShow() {
+  async onShow() {
+    try {
+      await waitForCloudReady();
+    } catch (error) {
+      showErrorToast(error);
+      return;
+    }
+
     this.refreshPage();
   },
 
@@ -377,8 +506,11 @@ Page({
       0,
       lotteryEligibleUsers.findIndex((member) => member.userId === lotteryAssignedUserId)
     );
+    const heroView = buildToolHeroView(pageData);
     this.setData({
       pageData,
+      heroView,
+      seatDrawMachineClass: buildSeatDrawMachineClass(pageData.seatDrawDetail?.displaySlots ?? []),
       toolTitle: pageData.toolTitle,
       isDraftEditing: false,
       isRecreateMode: false,
@@ -404,6 +536,7 @@ Page({
       voteViewerResultLabel: voteInteraction.viewerResultLabel,
       voteApproveDisabled: voteInteraction.approveDisabled,
       voteAbstainDisabled: voteInteraction.abstainDisabled,
+      wheelTopicInput: pageData.wheelDetail?.topic ?? "",
       wheelItemsInput: pageData.wheelDetail?.items.join("\n") ?? "",
       wheelRotation:
         pageData.wheelDetail?.resultIndex != null && pageData.wheelDetail.items.length
@@ -423,6 +556,7 @@ Page({
       wheelShowResult: Boolean(
         pageData.wheelDetail?.resultLabel || pageData.wheelDetail?.resultHistoryLabels.length
       ),
+      lotteryTopicInput: pageData.lotteryDetail?.topic ?? "",
       lotteryAnswersInput: pageData.lotteryDetail?.answers.join("\n") ?? "",
       lotteryDrawLimitInput: String(pageData.lotteryDetail?.drawLimitPerUser ?? 1),
       lotteryAllowAssignedUser: pageData.lotteryDetail?.allowAssignedUser ?? false,
@@ -546,6 +680,7 @@ Page({
       this.setData({
         isDraftEditing: true,
         isRecreateMode: false,
+        wheelTopicInput: "",
         wheelItemsInput: "",
         wheelAllowAssignedUser: false,
         wheelAssignedUserId: defaultAssignedUserId,
@@ -565,6 +700,7 @@ Page({
       this.setData({
         isDraftEditing: true,
         isRecreateMode: false,
+        lotteryTopicInput: "",
         lotteryAnswersInput: "",
         lotteryDrawLimitInput: "1",
         lotteryAllowAssignedUser: false,
@@ -621,6 +757,7 @@ Page({
         isDraftEditing: true,
         isRecreateMode: true,
         showActionSheet: false,
+        lotteryTopicInput: this.data.pageData?.lotteryDetail?.topic ?? "",
         lotteryAnswersInput: this.data.pageData?.lotteryDetail?.answers.join("\n") ?? "",
         lotteryDrawLimitInput: String(this.data.pageData?.lotteryDetail?.drawLimitPerUser ?? 1),
         lotteryAllowAssignedUser: this.data.pageData?.lotteryDetail?.allowAssignedUser ?? false,
@@ -877,6 +1014,12 @@ Page({
     });
   },
 
+  handleWheelTopicInput(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    this.setData({
+      wheelTopicInput: event.detail.value
+    });
+  },
+
   handleWheelAllowAssignedUserChange(event: WechatMiniprogram.CustomEvent<{ value: boolean }>) {
     this.setData({
       wheelAllowAssignedUser: Boolean(event.detail.value)
@@ -898,11 +1041,13 @@ Page({
       const isRecreateMode = this.data.isRecreateMode;
       const pageData = this.data.isRecreateMode
         ? tripService.recreateWheelTool({
+            topic: this.data.wheelTopicInput,
             items: parseWheelItems(this.data.wheelItemsInput),
             allowAssignedUser: this.data.wheelAllowAssignedUser,
             assignedUserId: this.data.wheelAllowAssignedUser ? this.data.wheelAssignedUserId : null
           })
         : tripService.publishWheelTool({
+            topic: this.data.wheelTopicInput,
             items: parseWheelItems(this.data.wheelItemsInput),
             allowAssignedUser: this.data.wheelAllowAssignedUser,
             assignedUserId: this.data.wheelAllowAssignedUser ? this.data.wheelAssignedUserId : null
@@ -971,6 +1116,12 @@ Page({
     });
   },
 
+  handleLotteryTopicInput(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    this.setData({
+      lotteryTopicInput: event.detail.value
+    });
+  },
+
   handleLotteryDrawLimitInput(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
     this.setData({
       lotteryDrawLimitInput: event.detail.value
@@ -998,12 +1149,14 @@ Page({
       const isRecreateMode = this.data.isRecreateMode;
       const pageData = this.data.isRecreateMode
         ? tripService.recreateLotteryTool({
+            topic: this.data.lotteryTopicInput,
             answers: parseLotteryAnswers(this.data.lotteryAnswersInput),
             drawLimitPerUser: Number(this.data.lotteryDrawLimitInput),
             allowAssignedUser: this.data.lotteryAllowAssignedUser,
             assignedUserId: this.data.lotteryAllowAssignedUser ? this.data.lotteryAssignedUserId : null
           })
         : tripService.publishLotteryTool({
+            topic: this.data.lotteryTopicInput,
             answers: parseLotteryAnswers(this.data.lotteryAnswersInput),
             drawLimitPerUser: Number(this.data.lotteryDrawLimitInput),
             allowAssignedUser: this.data.lotteryAllowAssignedUser,

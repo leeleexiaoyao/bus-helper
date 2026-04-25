@@ -6,12 +6,13 @@
     <view class="member-main">
       <view class="member-title-row">
         <view class="member-name">{{member.nickname}}</view>
-        <view wx:if="{{member.isAdmin}}" class="member-role-pill">管理</view>
+        <view wx:if="{{member.isSelf}}" class="member-role-badge">我</view>
+        <view wx:if="{{member.isAdmin}}" class="member-role-badge">管</view>
       </view>
 
-      <view class="tag-list" wx:if="{{member.tags.length}}">
-        <block wx:for="{{member.tags}}" wx:key="*this" wx:for-item="tag" wx:for-index="tagIndex">
-          <view class="member-tag-chip" wx:if="{{tagIndex < 2}}">{{tag}}</view>
+      <view class="tag-list" wx:if="{{member.tagViews.length}}">
+        <block wx:for="{{member.tagViews}}" wx:key="label" wx:for-item="tag">
+          <view class="member-tag-chip" style="{{tag.style}}">{{tag.label}}</view>
         </block>
       </view>
     </view>

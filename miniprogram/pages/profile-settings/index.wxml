@@ -1,0 +1,20 @@
+<view class="page-shell profile-settings-page">
+  <view class="settings-about-card">
+    <view class="settings-page-title">关于小程序</view>
+    <view class="settings-page-copy">
+      巴士认座助手用于在出发前快速确认车次、座位和成员信息，降低上车前后的沟通成本。
+    </view>
+    <view class="settings-page-copy">
+      当前版本支持授权登录、创建或加入车次、认座换座、成员资料、趣味工具和管理员清座等流程。
+    </view>
+  </view>
+
+  <view wx:if="{{showAction}}" class="settings-action-card">
+    <button
+      class="{{isDissolveAction ? 'danger-btn' : 'secondary-btn'}} settings-trip-action"
+      bindtap="handlePrimaryAction"
+    >
+      {{primaryActionLabel}}
+    </button>
+  </view>
+</view>
