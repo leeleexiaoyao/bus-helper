@@ -1,0 +1,56 @@
+<view class="page-shell boarding-records-page" wx:if="{{pageData}}">
+  <block wx:if="{{pageData.isAdmin}}">
+    <view class="record-filter-row">
+      <view
+        wx:for="{{pageData.tripFilterOptions}}"
+        wx:key="value"
+        class="record-filter-chip {{pageData.selectedTripFilter === item.value ? 'is-active' : ''}}"
+        data-filter="{{item.value}}"
+        bindtap="handleTripFilterTap"
+      >
+        {{item.label}}
+      </view>
+    </view>
+
+    <view class="record-group" wx:for="{{pageData.memberGroups}}" wx:key="userId">
+      <view class="record-member-head">
+        <view class="record-seat">{{item.seatLabel}}</view>
+        <image
+          wx:if="{{item.avatarUrl}}"
+          class="record-avatar"
+          src="{{item.avatarUrl}}"
+          mode="aspectFill"
+        />
+        <view wx:else class="record-avatar avatar-fallback">{{item.initial}}</view>
+        <view class="record-member-copy">
+          <view class="record-name">{{item.nickname}}</view>
+          <view class="record-trip">{{item.tripLabel}}</view>
+        </view>
+      </view>
+
+      <view class="record-entry" wx:for="{{item.records}}" wx:key="id">
+        <view class="record-entry-status">已打卡</view>
+        <view class="record-entry-time">{{item.formattedTime}}</view>
+      </view>
+    </view>
+  </block>
+
+  <block wx:else>
+    <view class="record-item" wx:for="{{pageData.flatRecords}}" wx:key="id">
+      <image
+        wx:if="{{item.avatarUrl}}"
+        class="record-avatar"
+        src="{{item.avatarUrl}}"
+        mode="aspectFill"
+      />
+      <view wx:else class="record-avatar avatar-fallback">{{item.initial}}</view>
+      <view class="record-item-copy">
+        <view class="record-name">{{item.nickname}}</view>
+        <view class="record-entry-status">已打卡</view>
+      </view>
+      <view class="record-item-time">{{item.formattedTime}}</view>
+    </view>
+  </block>
+
+  <view class="record-empty" wx:if="{{!pageData.isAdmin && !pageData.flatRecords.length}}">暂无上车记录</view>
+</view>

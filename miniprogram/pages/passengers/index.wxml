@@ -1,0 +1,44 @@
+<view class="page-shell passengers-page">
+  <page-navbar title="" progress="{{navProgress}}" />
+
+  <block wx:if="{{pageData}}">
+    <view class="passengers-header">
+      <view class="passengers-title">乘客</view>
+      <view class="passengers-subtitle">当前查看 {{pageData.currentTripLabel}}，默认展示全部成员</view>
+    </view>
+
+    <view class="passengers-filters">
+      <view
+        wx:for="{{filterOptions}}"
+        wx:key="id"
+        class="passengers-filter {{item.isSelected ? 'is-active' : ''}}"
+        data-filter-id="{{item.id}}"
+        bindtap="handleFilterChange"
+      >
+        {{item.label}}
+      </view>
+    </view>
+
+    <view class="passengers-groups">
+      <view class="passenger-group" wx:for="{{visibleGroups}}" wx:key="tripId">
+        <view class="passenger-group-head">
+          <view class="passenger-group-title">{{item.tripLabel}}</view>
+          <view class="passenger-group-count">{{item.memberCount}}人</view>
+        </view>
+        <member-list members="{{item.members}}" bindmembertap="handleMemberTap" />
+      </view>
+    </view>
+  </block>
+
+  <seat-sheet
+    visible="{{sheetVisible}}"
+    mode="{{sheetMode}}"
+    seat="{{null}}"
+    member="{{selectedMember}}"
+    tripLabel="{{pageData.currentTripLabel}}"
+    bindclose="handleSheetClose"
+    bindreleasemine="handleReleaseMine"
+    bindadminrelease="handleAdminRelease"
+    bindtogglefavorite="handleToggleFavorite"
+  />
+</view>

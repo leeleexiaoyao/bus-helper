@@ -5,33 +5,32 @@ const constants_1 = require("../../shared/constants");
 const cloud_ready_1 = require("../../utils/cloud-ready");
 const feedback_1 = require("../../utils/feedback");
 const initialData = {
-    showAuthGate: false,
     showTripContent: false,
-    showTripEntry: true,
     hasCurrentTrip: false,
-    pendingAction: null,
-    navTitle: "巴士认座",
+    navTitle: "麒麟之旅",
+    currentTripLabel: "1车",
     navProgress: 0,
-    isSeatsTab: true,
-    isMembersTab: false,
-    seatsTabClassName: "home-tab is-active",
-    membersTabClassName: "home-tab",
     currentUser: null,
     currentUserInitial: "我",
-    authPresetNickname: "",
-    authPresetAvatarUrl: "",
     currentTrip: null,
-    seatedMembers: [],
-    viewerSeatText: "未入座",
+    viewerSeatSummary: "1车 未入座",
+    boardingButton: {
+        label: "上车",
+        isActive: false,
+        isDisabled: true,
+        nextRefreshAt: null,
+        disabledReason: "unseated"
+    },
+    tripSwitchOptions: [],
     currentPersonaId: "",
     currentPersonaImageUrl: "",
     personaOptions: constants_1.HOME_PERSONA_OPTIONS.map((option) => (Object.assign({}, option))),
     showPersonaSheet: false,
     personaSheetActive: false,
     personaDraftId: "",
-    activeTab: "seats",
     sheetVisible: false,
     sheetMode: "member-detail",
+    seatConfirmTitle: "",
     selectedSeat: null,
     selectedMember: null
 };
@@ -45,6 +44,7 @@ function resolveHomePersonaImageUrl(user) {
 Page({
     data: initialData,
     personaSheetCloseTimer: 0,
+    boardingButtonRefreshTimer: 0,
     async onShow() {
         try {
             await (0, cloud_ready_1.waitForCloudReady)();
@@ -54,6 +54,9 @@ Page({
             return;
         }
         this.refreshPage();
+    },
+    onHide() {
+        this.clearBoardingButtonRefreshTimer();
     },
     onPageScroll(event) {
         const navProgress = Math.max(0, Math.min(1, event.scrollTop / 72));
@@ -74,32 +77,25 @@ Page({
         }
     },
     applyBootstrapResult(result, options = {}) {
-        var _a, _b, _c, _d, _e, _f, _g, _h, _j;
-        const hasCurrentTrip = result.currentUser.isAuthorized && Boolean(result.currentTrip);
-        const showTripEntry = !hasCurrentTrip;
-        const activeTab = this.data.activeTab;
+        var _a, _b, _c;
+        const hasCurrentTrip = Boolean(result.currentTrip);
         const currentPersonaId = (_a = result.currentUser.homePersonaAssetId) !== null && _a !== void 0 ? _a : "";
         const currentPersonaImageUrl = resolveHomePersonaImageUrl(result.currentUser);
-        const preservedMember = options.preserveSelectedMemberId && result.currentTrip
+        const preservedMember = options.preserveSelectedMemberId
             ? (_b = result.currentTrip.members.find((member) => member.userId === options.preserveSelectedMemberId)) !== null && _b !== void 0 ? _b : null
             : null;
         this.setData({
             showTripContent: hasCurrentTrip,
-            showTripEntry,
             hasCurrentTrip,
-            navTitle: hasCurrentTrip ? (_d = (_c = result.currentTrip) === null || _c === void 0 ? void 0 : _c.tripMeta.tripName) !== null && _d !== void 0 ? _d : "巴士认座" : "巴士认座",
+            navTitle: result.homeTitle,
+            currentTripLabel: result.currentTripLabel,
             navProgress: 0,
-            isSeatsTab: activeTab === "seats",
-            isMembersTab: activeTab === "members",
-            seatsTabClassName: activeTab === "seats" ? "home-tab is-active" : "home-tab",
-            membersTabClassName: activeTab === "members" ? "home-tab is-active" : "home-tab",
             currentUser: result.currentUser,
             currentUserInitial: result.currentUser.nickname.trim().slice(0, 1) || "我",
-            authPresetNickname: result.currentUser.nickname,
-            authPresetAvatarUrl: result.currentUser.avatarUrl,
-            currentTrip: hasCurrentTrip ? result.currentTrip : null,
-            seatedMembers: ((_f = (_e = result.currentTrip) === null || _e === void 0 ? void 0 : _e.members) !== null && _f !== void 0 ? _f : []).filter((member) => Boolean(member.seatCode)),
-            viewerSeatText: (_h = (_g = result.currentTrip) === null || _g === void 0 ? void 0 : _g.tripMeta.viewerSeatCode) !== null && _h !== void 0 ? _h : "请选择您的座位",
+            currentTrip: result.currentTrip,
+            viewerSeatSummary: result.viewerSeatSummary,
+            boardingButton: result.boardingButton,
+            tripSwitchOptions: result.tripSwitchOptions,
             currentPersonaId,
             currentPersonaImageUrl,
             personaOptions: constants_1.HOME_PERSONA_OPTIONS.map((option) => (Object.assign({}, option))),
@@ -110,81 +106,35 @@ Page({
             sheetMode: preservedMember
                 ? this.resolveMemberSheetMode(preservedMember, result.currentTrip)
                 : "member-detail",
+            seatConfirmTitle: "",
             selectedSeat: preservedMember
-                ? this.findSeatByCode((_j = preservedMember.seatCode) !== null && _j !== void 0 ? _j : null, result.currentTrip)
+                ? this.findSeatByCode((_c = preservedMember.seatCode) !== null && _c !== void 0 ? _c : null, result.currentTrip)
                 : null,
             selectedMember: preservedMember
         });
+        this.syncBoardingButtonRefreshTimer(result.boardingButton);
     },
-    handleAuthorizeProfile(event) {
-        try {
-            const pendingAction = this.data.pendingAction;
-            const result = trip_service_1.tripService.authorizeProfile(event.detail);
-            this.applyBootstrapResult(result);
-            this.setData({
-                showAuthGate: false,
-                pendingAction: null
-            });
-            (0, feedback_1.showSuccessToast)("保存成功");
-            this.continuePendingAction(pendingAction);
-        }
-        catch (error) {
-            (0, feedback_1.showErrorToast)(error);
-        }
-    },
-    goCreateTrip() {
-        var _a;
-        if (!((_a = this.data.currentUser) === null || _a === void 0 ? void 0 : _a.isAuthorized)) {
-            this.openAuthGate("create");
+    handleOpenTripSwitcher() {
+        const options = this.data.tripSwitchOptions;
+        if (!options.length) {
             return;
         }
-        wx.navigateTo({
-            url: "/pages/create-trip/index"
-        });
-    },
-    goJoinTrip() {
-        var _a;
-        if (!((_a = this.data.currentUser) === null || _a === void 0 ? void 0 : _a.isAuthorized)) {
-            this.openAuthGate("join");
-            return;
-        }
-        wx.navigateTo({
-            url: "/pages/join-trip/index"
-        });
-    },
-    openAuthGate(action) {
-        this.setData({
-            showAuthGate: true,
-            pendingAction: action
-        });
-    },
-    handleCloseAuthGate() {
-        this.setData({
-            showAuthGate: false,
-            pendingAction: null
-        });
-    },
-    continuePendingAction(action) {
-        if (action === "create") {
-            wx.navigateTo({
-                url: "/pages/create-trip/index"
-            });
-            return;
-        }
-        if (action === "join") {
-            wx.navigateTo({
-                url: "/pages/join-trip/index"
-            });
-        }
-    },
-    handleTabChange(event) {
-        const nextTab = String(event.currentTarget.dataset.tab);
-        this.setData({
-            activeTab: nextTab,
-            isSeatsTab: nextTab === "seats",
-            isMembersTab: nextTab === "members",
-            seatsTabClassName: nextTab === "seats" ? "home-tab is-active" : "home-tab",
-            membersTabClassName: nextTab === "members" ? "home-tab is-active" : "home-tab"
+        wx.showActionSheet({
+            itemList: options.map((option) => option.label),
+            success: ({ tapIndex }) => {
+                var _a;
+                const selectedOption = options[tapIndex];
+                if (!selectedOption || selectedOption.tripId === ((_a = this.data.currentTrip) === null || _a === void 0 ? void 0 : _a.tripMeta.tripId)) {
+                    return;
+                }
+                try {
+                    const result = trip_service_1.tripService.switchCurrentTrip(selectedOption.tripId);
+                    this.applyBootstrapResult(result);
+                }
+                catch (error) {
+                    (0, feedback_1.showErrorToast)(error);
+                }
+            }
         });
     },
     handleOpenPersonaSheet() {
@@ -237,7 +187,44 @@ Page({
         clearTimeout(this.personaSheetCloseTimer);
         this.personaSheetCloseTimer = 0;
     },
+    syncBoardingButtonRefreshTimer(boardingButton) {
+        this.clearBoardingButtonRefreshTimer();
+        if (!boardingButton.nextRefreshAt) {
+            return;
+        }
+        const delay = Math.max(0, boardingButton.nextRefreshAt - Date.now() + 50);
+        this.boardingButtonRefreshTimer = setTimeout(() => {
+            this.refreshPage();
+        }, delay);
+    },
+    clearBoardingButtonRefreshTimer() {
+        if (!this.boardingButtonRefreshTimer) {
+            return;
+        }
+        clearTimeout(this.boardingButtonRefreshTimer);
+        this.boardingButtonRefreshTimer = 0;
+    },
     noop() { },
+    handleBoardingTap() {
+        if (this.data.boardingButton.isDisabled) {
+            if (this.data.boardingButton.disabledReason === "seat-in-other-trip") {
+                (0, feedback_1.showErrorToast)(new Error("请先释放座位"));
+                return;
+            }
+            if (this.data.boardingButton.disabledReason === "unseated") {
+                (0, feedback_1.showErrorToast)(new Error("请先入座"));
+            }
+            return;
+        }
+        try {
+            const toggleResult = trip_service_1.tripService.toggleBoardingCheckIn();
+            this.applyBootstrapResult(toggleResult.result);
+            (0, feedback_1.showSuccessToast)(toggleResult.action === "checked-in" ? "上车成功" : "已取消上车");
+        }
+        catch (error) {
+            (0, feedback_1.showErrorToast)(error);
+        }
+    },
     getSelfMember() {
         var _a, _b;
         return (_b = (_a = this.data.currentTrip) === null || _a === void 0 ? void 0 : _a.members.find((member) => member.isSelf)) !== null && _b !== void 0 ? _b : null;
@@ -270,21 +257,30 @@ Page({
             : "member-detail";
     },
     handleSeatTap(event) {
-        var _a, _b;
+        var _a, _b, _c, _d;
         const seat = event.detail.seat;
         if (!seat) {
             return;
         }
         if (seat.isEmpty) {
+            if (!((_a = this.data.currentUser) === null || _a === void 0 ? void 0 : _a.isAuthorized)) {
+                (0, feedback_1.showErrorToast)(new Error("请先完成微信授权。"));
+                return;
+            }
+            const userHasGlobalSeat = Boolean((_b = this.data.currentTrip) === null || _b === void 0 ? void 0 : _b.tripMeta.viewerSeatCode) ||
+                !this.data.viewerSeatSummary.endsWith("未入座");
             this.setData({
                 sheetVisible: true,
                 sheetMode: "empty-confirm",
+                seatConfirmTitle: userHasGlobalSeat
+                    ? `是否改到${this.data.currentTripLabel}${seat.label}？`
+                    : `是否入座${this.data.currentTripLabel}${seat.label}？`,
                 selectedSeat: seat,
                 selectedMember: null
             });
             return;
         }
-        const targetMember = (_b = (_a = this.data.currentTrip) === null || _a === void 0 ? void 0 : _a.members.find((member) => { var _a; return member.userId === ((_a = seat.occupant) === null || _a === void 0 ? void 0 : _a.userId); })) !== null && _b !== void 0 ? _b : null;
+        const targetMember = (_d = (_c = this.data.currentTrip) === null || _c === void 0 ? void 0 : _c.members.find((member) => { var _a; return member.userId === ((_a = seat.occupant) === null || _a === void 0 ? void 0 : _a.userId); })) !== null && _d !== void 0 ? _d : null;
         if (seat.isMine) {
             this.setData({
                 sheetVisible: true,
@@ -301,19 +297,10 @@ Page({
             selectedMember: targetMember
         });
     },
-    handleMemberTap(event) {
-        var _a;
-        const member = event.detail.member;
-        this.setData({
-            sheetVisible: true,
-            sheetMode: this.resolveMemberSheetMode(member),
-            selectedMember: member,
-            selectedSeat: this.findSeatByCode((_a = member === null || member === void 0 ? void 0 : member.seatCode) !== null && _a !== void 0 ? _a : null)
-        });
-    },
     handleSheetClose() {
         this.setData({
             sheetVisible: false,
+            seatConfirmTitle: "",
             selectedSeat: null,
             selectedMember: null
         });
@@ -375,6 +362,7 @@ Page({
         }
     },
     onUnload() {
+        this.clearBoardingButtonRefreshTimer();
         this.clearPersonaSheetCloseTimer();
     }
 });

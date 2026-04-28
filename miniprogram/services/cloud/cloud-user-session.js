@@ -35,6 +35,44 @@ function normalizeStringArray(value) {
     }
     return value.filter((entry) => typeof entry === "string");
 }
+function normalizeBoardingRecordsByTripId(value) {
+    if (!isPlainObject(value)) {
+        return {};
+    }
+    return Object.entries(value).reduce((accumulator, [tripId, records]) => {
+        if (!tripId.trim() || !Array.isArray(records)) {
+            return accumulator;
+        }
+        accumulator[tripId] = records.reduce((recordAccumulator, record) => {
+            if (!isPlainObject(record)) {
+                return recordAccumulator;
+            }
+            const id = typeof record.id === "string" ? record.id.trim() : "";
+            const seatCode = typeof record.seatCode === "string" ? record.seatCode.trim() : "";
+            const createdAt = typeof record.createdAt === "number" ? record.createdAt : NaN;
+            const confirmDeadlineAt = typeof record.confirmDeadlineAt === "number" ? record.confirmDeadlineAt : NaN;
+            const resetAt = typeof record.resetAt === "number" ? record.resetAt : NaN;
+            if (!id ||
+                !seatCode ||
+                !Number.isFinite(createdAt) ||
+                !Number.isFinite(confirmDeadlineAt) ||
+                !Number.isFinite(resetAt)) {
+                return recordAccumulator;
+            }
+            recordAccumulator.push({
+                id,
+                tripId,
+                seatCode,
+                createdAt,
+                status: record.status === "confirmed" ? "confirmed" : "pending",
+                confirmDeadlineAt,
+                resetAt
+            });
+            return recordAccumulator;
+        }, []);
+        return accumulator;
+    }, {});
+}
 function getLocalSeedUser() {
     var _a;
     const repository = new app_state_repository_1.AppStateRepository(storage_adapter_1.wxStorageAdapter);
@@ -46,7 +84,7 @@ function getLocalSeedUser() {
     return currentUser;
 }
 function buildDefaultCloudUser(openid, localSeedUser) {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _j;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k;
     const timestamp = Date.now();
     return {
         _id: openid,
@@ -59,8 +97,10 @@ function buildDefaultCloudUser(openid, localSeedUser) {
         hometown: (_f = localSeedUser === null || localSeedUser === void 0 ? void 0 : localSeedUser.hometown) !== null && _f !== void 0 ? _f : "",
         age: (_g = localSeedUser === null || localSeedUser === void 0 ? void 0 : localSeedUser.age) !== null && _g !== void 0 ? _g : "",
         tags: (_h = localSeedUser === null || localSeedUser === void 0 ? void 0 : localSeedUser.tags) !== null && _h !== void 0 ? _h : [],
-        currentTripId: (localSeedUser === null || localSeedUser === void 0 ? void 0 : localSeedUser.id) === openid ? localSeedUser.currentTripId : null,
+        memberTripId: (localSeedUser === null || localSeedUser === void 0 ? void 0 : localSeedUser.id) === openid ? localSeedUser.memberTripId : constants_1.DEFAULT_VIEW_TRIP_ID,
+        currentTripId: (localSeedUser === null || localSeedUser === void 0 ? void 0 : localSeedUser.id) === openid ? localSeedUser.currentTripId : constants_1.DEFAULT_VIEW_TRIP_ID,
         isAuthorized: (_j = localSeedUser === null || localSeedUser === void 0 ? void 0 : localSeedUser.isAuthorized) !== null && _j !== void 0 ? _j : false,
+        boardingRecordsByTripId: (_k = localSeedUser === null || localSeedUser === void 0 ? void 0 : localSeedUser.boardingRecordsByTripId) !== null && _k !== void 0 ? _k : {},
         createdAt: timestamp,
         updatedAt: timestamp
     };
@@ -83,10 +123,14 @@ function normalizeCloudUserDocument(openid, rawDocument, fallbackUser) {
         hometown: normalizeString(rawDocument.hometown, fallbackDocument.hometown),
         age: normalizeString(rawDocument.age, fallbackDocument.age),
         tags: normalizeStringArray(rawDocument.tags),
+        memberTripId: typeof rawDocument.memberTripId === "string" && rawDocument.memberTripId.trim()
+            ? rawDocument.memberTripId
+            : fallbackDocument.memberTripId,
         currentTripId: typeof rawDocument.currentTripId === "string" && rawDocument.currentTripId.trim()
             ? rawDocument.currentTripId
-            : null,
+            : fallbackDocument.currentTripId,
         isAuthorized: Boolean(rawDocument.isAuthorized),
+        boardingRecordsByTripId: normalizeBoardingRecordsByTripId(rawDocument.boardingRecordsByTripId),
         createdAt: typeof rawDocument.createdAt === "number" ? rawDocument.createdAt : fallbackDocument.createdAt,
         updatedAt: typeof rawDocument.updatedAt === "number" ? rawDocument.updatedAt : fallbackDocument.updatedAt
     };
@@ -102,8 +146,10 @@ function toLocalUser(document) {
         hometown: document.hometown,
         age: document.age,
         tags: document.tags,
+        memberTripId: document.memberTripId,
         currentTripId: document.currentTripId,
-        isAuthorized: document.isAuthorized
+        isAuthorized: document.isAuthorized,
+        boardingRecordsByTripId: document.boardingRecordsByTripId
     };
 }
 function toCloudUserDocument(user) {
@@ -119,8 +165,10 @@ function toCloudUserDocument(user) {
         hometown: user.hometown,
         age: user.age,
         tags: user.tags,
+        memberTripId: user.memberTripId,
         currentTripId: user.currentTripId,
         isAuthorized: user.isAuthorized,
+        boardingRecordsByTripId: user.boardingRecordsByTripId,
         createdAt: timestamp,
         updatedAt: timestamp
     };
@@ -157,7 +205,12 @@ async function syncCloudUserToLocalState() {
     let cloudUser = await readCloudUser(identity.openid);
     if (!cloudUser) {
         cloudUser = buildDefaultCloudUser(identity.openid, seedUser);
-        await writeCloudUser(cloudUser);
+        try {
+            await writeCloudUser(cloudUser);
+        }
+        catch (error) {
+            console.warn("[cloud] 用户集合不可用，继续使用本地用户状态", error);
+        }
     }
     repository.update((state) => {
         state.users[identity.openid] = toLocalUser(cloudUser);

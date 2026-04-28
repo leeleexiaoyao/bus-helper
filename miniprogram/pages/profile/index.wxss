@@ -183,8 +183,8 @@ auth-gate {
   height: 32rpx;
   padding: 0 14rpx;
   border-radius: 30rpx;
-  background: rgba(254, 92, 1, 0.1);
-  color: #fe5c01;
+  background: rgba(216, 249, 64, 0.42);
+  color: #111111;
   font-size: 20rpx;
   line-height: 1;
 }

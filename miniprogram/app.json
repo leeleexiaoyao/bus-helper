@@ -1,17 +1,15 @@
 {
   "pages": [
     "pages/home/index",
-    "pages/tools/index",
+    "pages/passengers/index",
     "pages/profile/index",
+    "pages/boarding-records/index",
     "pages/favorites/index",
     "pages/profile-settings/index",
     "pages/tool-detail/index",
-    "pages/create-trip/index",
-    "pages/join-trip/index",
     "pages/tag-editor/index",
     "pages/feedback/index",
-    "pages/about/index",
-    "pages/trip-settings/index"
+    "pages/about/index"
   ],
   "lazyCodeLoading": "requiredComponents",
   "window": {
@@ -22,6 +20,7 @@
     "backgroundTextStyle": "light"
   },
   "tabBar": {
+    "custom": true,
     "color": "#6e7f92",
     "selectedColor": "#ff6b3d",
     "backgroundColor": "#ffffff",
@@ -34,8 +33,8 @@
         "selectedIconPath": "assets/icons/tab-home-active.png"
       },
       {
-        "pagePath": "pages/tools/index",
-        "text": "工具",
+        "pagePath": "pages/passengers/index",
+        "text": "乘客",
         "iconPath": "assets/icons/tab-tools.png",
         "selectedIconPath": "assets/icons/tab-tools-active.png"
       },

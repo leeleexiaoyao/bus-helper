@@ -9,7 +9,7 @@ interface ProfileMenuItem {
   id: string;
   label: string;
   icon: string;
-  action: "favorite" | "share" | "feedback" | "settings" | "about";
+  action: "boarding-records" | "favorite" | "share" | "feedback" | "settings" | "about";
   isShare: boolean;
   showDivider: boolean;
 }
@@ -21,6 +21,14 @@ interface ProfileStatDisplay {
 }
 
 const SETTINGS_ITEMS: ProfileMenuItem[] = [
+  {
+    id: "boarding-records",
+    label: "上车记录",
+    icon: "/assets/icons/me/icon_me_record.svg",
+    action: "boarding-records",
+    isShare: false,
+    showDivider: true
+  },
   {
     id: "favorite",
     label: "标记",
@@ -219,6 +227,7 @@ Page({
       this.setData({
         pageData,
         showProfileContent: pageData.isAuthorized,
+        showSeedDemoEntry: pageData.isAuthorized,
         navProgress: 0,
         authPresetNickname: pageData.currentUser.nickname,
         authPresetAvatarUrl: pageData.currentUser.avatarUrl,
@@ -322,6 +331,12 @@ Page({
     });
   },
 
+  goBoardingRecords() {
+    wx.navigateTo({
+      url: "/pages/boarding-records/index"
+    });
+  },
+
   goSettings() {
     wx.navigateTo({
       url: "/pages/profile-settings/index"
@@ -336,6 +351,11 @@ Page({
 
   handleMenuTap(event: WechatMiniprogram.CustomEvent) {
     const action = String(event.currentTarget.dataset.action || "");
+    if (action === "boarding-records") {
+      this.goBoardingRecords();
+      return;
+    }
+
     if (action === "favorite") {
       this.goFavorite();
       return;

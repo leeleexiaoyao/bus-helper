@@ -36,9 +36,21 @@ replace-with-your-cloud-env-id
 
 完成后重新编译，小程序启动日志会输出当前云环境连接状态。
 
-## 4. 部署第一个云函数
+## 4. 部署云函数
 
-当前仓库已经提供了一个最小可用的 `getOpenid` 云函数，用来验证：
+当前仓库已经提供了两个云函数：
+
+- `getOpenid`
+- `ensureBusBuddyCollections`
+
+其中 `ensureBusBuddyCollections` 会自动补齐当前小程序依赖的云数据库集合：
+
+- `bus_buddy_users`
+- `bus_buddy_runtime_config`
+
+并写入默认的首页标题配置文档。
+
+`getOpenid` 用来验证：
 
 - 小程序已经成功连接云开发环境
 - 云函数部署成功
@@ -46,11 +58,12 @@ replace-with-your-cloud-env-id
 
 部署步骤：
 
-1. 在微信开发者工具左侧找到 `cloudfunctions/getOpenid`。
+1. 在微信开发者工具左侧找到 `cloudfunctions/ensureBusBuddyCollections`。
 2. 右键目录。
 3. 执行“上传并部署：云端安装依赖”。
+4. 对 `cloudfunctions/getOpenid` 重复一次。
 
-部署完成后，这个云函数就可以通过 `wx.cloud.callFunction` 调用了。
+部署完成后，小程序启动时会先尝试调用 `ensureBusBuddyCollections`，集合会自动初始化。
 
 ## 5. 小程序端调用方式
 

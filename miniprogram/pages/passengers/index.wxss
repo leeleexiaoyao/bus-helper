@@ -1,0 +1,77 @@
+.passengers-page {
+  min-height: 100vh;
+  background: #f4f4f3;
+  padding-bottom: calc(env(safe-area-inset-bottom) + 40rpx);
+}
+
+.passengers-header {
+  padding: 40rpx 32rpx 0;
+}
+
+.passengers-title {
+  color: #111111;
+  font-size: 44rpx;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.passengers-subtitle {
+  margin-top: 10rpx;
+  color: #6f7783;
+  font-size: 24rpx;
+  line-height: 1.4;
+}
+
+.passengers-filters {
+  display: flex;
+  gap: 16rpx;
+  padding: 24rpx 32rpx 0;
+}
+
+.passengers-filter {
+  min-width: 132rpx;
+  height: 72rpx;
+  padding: 0 28rpx;
+  border-radius: 999rpx;
+  background: rgba(17, 17, 17, 0.06);
+  color: #6f7783;
+  font-size: 26rpx;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.passengers-filter.is-active {
+  background: #111111;
+  color: #ffffff;
+}
+
+.passengers-groups {
+  padding: 24rpx 32rpx 0;
+}
+
+.passenger-group + .passenger-group {
+  margin-top: 24rpx;
+}
+
+.passenger-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
+.passenger-group-title {
+  color: #111111;
+  font-size: 30rpx;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.passenger-group-count {
+  color: #8c9199;
+  font-size: 22rpx;
+  line-height: 1.2;
+}

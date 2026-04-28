@@ -6,7 +6,6 @@
     "page-navbar": "/components/page-navbar/index",
     "persona-sheet": "/components/persona-sheet/index",
     "seat-grid": "/components/seat-grid/index",
-    "member-list": "/components/member-list/index",
     "seat-sheet": "/components/seat-sheet/index"
   }
 }

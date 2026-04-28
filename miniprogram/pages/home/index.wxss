@@ -104,47 +104,42 @@
 .home-user-wish {
   margin-top: 10rpx;
   color: #8c9199;
-  font-size: 22rpx;
+  font-size: 24rpx;
   line-height: 1.2;
 }
 
-.home-seat-summary {
-  display: flex;
-  flex-direction: column;
+.home-boarding-btn {
+  width: 180rpx;
+  height: 80rpx;
+  margin: 0;
+  padding: 0;
+  border-radius: 999rpx;
+  background: #d8f940;
+  color: #111111;
+  font-size: 28rpx;
+  font-weight: 700;
+  line-height: 1;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 156rpx;
-  min-height: 88rpx;
-  padding: 4rpx 18rpx 6rpx;
-  border-radius: 999rpx;
-  background: #dfff27;
   flex-shrink: 0;
   box-sizing: border-box;
 }
 
-.home-seat-tag {
-  color: #111111;
-  font-size: 18rpx;
-  line-height: 1;
-  padding: 8rpx 16rpx;
-  border-radius: 999rpx;
-  background: rgba(255, 255, 255, 0.88);
-  transform: translateY(-20rpx);
+.home-boarding-btn.is-active {
+  background: rgba(17, 17, 17, 0.08);
+  color: #8c9199;
 }
 
-.home-seat-value {
-  margin-top: -12rpx;
-  max-width: 100%;
-  color: #111111;
-  font-size: 44rpx;
-  line-height: 1;
-  font-weight: 700;
-  text-align: center;
+.home-boarding-btn.is-disabled {
+  opacity: 1;
+  background: rgba(17, 17, 17, 0.08);
+  color: #b6bac1;
 }
 
-.home-seat-value.is-placeholder {
-  font-size: 24rpx;
-  line-height: 1.35;
+.home-boarding-btn.is-active.is-disabled {
+  background: rgba(17, 17, 17, 0.08);
+  color: #8c9199;
 }
 
 .trip-panel {
@@ -162,7 +157,7 @@
   display: flex;
   justify-content: space-between;
   gap: 24rpx;
-  align-items: flex-start;
+  align-items: center;
   padding: 0 24rpx;
 }
 
@@ -204,7 +199,35 @@
   color: #b6bac1;
   font-size: 24rpx;
   line-height: 1.2;
-  transform: translateY(-2rpx);
+}
+
+.trip-meta-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 18rpx;
+  transform: translateY(-12rpx);
+}
+
+.trip-switch-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 10rpx;
+  padding: 10rpx 18rpx;
+  border-radius: 999rpx;
+  background: rgba(17, 17, 17, 0.06);
+}
+
+.trip-switch-trigger-label {
+  color: #111111;
+  font-size: 24rpx;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.trip-switch-trigger-icon {
+  width: 20rpx;
+  height: 20rpx;
 }
 
 .trip-content-card {
@@ -280,19 +303,4 @@
 .entry-primary-btn::after,
 .entry-secondary-btn::after {
   border: none;
-}
-
-.home-auth-mask {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.22);
-  z-index: 20;
-}
-
-.home-auth-sheet {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 21;
 }

@@ -2,11 +2,13 @@ import { tripService } from "../../services/trip-service";
 import { HOME_PERSONA_OPTIONS } from "../../shared/constants";
 import { waitForCloudReady } from "../../utils/cloud-ready";
 import type {
+  BoardingButtonView,
   BootstrapResult,
   CurrentTripViewModel,
   HomePersonaOption,
   MemberView,
   SeatCellView,
+  TripSwitchOption,
   User
 } from "../../shared/types";
 import { showErrorToast, showSuccessToast } from "../../utils/feedback";
@@ -18,33 +20,26 @@ type SheetMode =
   | "admin-member-detail";
 
 interface HomePageData {
-  showAuthGate: boolean;
   showTripContent: boolean;
-  showTripEntry: boolean;
   hasCurrentTrip: boolean;
-  pendingAction: "create" | "join" | null;
   navTitle: string;
+  currentTripLabel: string;
   navProgress: number;
-  isSeatsTab: boolean;
-  isMembersTab: boolean;
-  seatsTabClassName: string;
-  membersTabClassName: string;
   currentUser: User | null;
   currentUserInitial: string;
-  authPresetNickname: string;
-  authPresetAvatarUrl: string;
   currentTrip: CurrentTripViewModel | null;
-  seatedMembers: MemberView[];
-  viewerSeatText: string;
+  viewerSeatSummary: string;
+  boardingButton: BoardingButtonView;
+  tripSwitchOptions: TripSwitchOption[];
   currentPersonaId: string;
   currentPersonaImageUrl: string;
   personaOptions: HomePersonaOption[];
   showPersonaSheet: boolean;
   personaSheetActive: boolean;
   personaDraftId: string;
-  activeTab: "seats" | "members";
   sheetVisible: boolean;
   sheetMode: SheetMode;
+  seatConfirmTitle: string;
   selectedSeat: SeatCellView | null;
   selectedMember: MemberView | null;
 }
@@ -54,24 +49,23 @@ interface ApplyBootstrapOptions {
 }
 
 const initialData: HomePageData = {
-  showAuthGate: false,
   showTripContent: false,
-  showTripEntry: true,
   hasCurrentTrip: false,
-  pendingAction: null,
-  navTitle: "巴士认座",
+  navTitle: "麒麟之旅",
+  currentTripLabel: "1车",
   navProgress: 0,
-  isSeatsTab: true,
-  isMembersTab: false,
-  seatsTabClassName: "home-tab is-active",
-  membersTabClassName: "home-tab",
   currentUser: null,
   currentUserInitial: "我",
-  authPresetNickname: "",
-  authPresetAvatarUrl: "",
   currentTrip: null,
-  seatedMembers: [],
-  viewerSeatText: "未入座",
+  viewerSeatSummary: "1车 未入座",
+  boardingButton: {
+    label: "上车",
+    isActive: false,
+    isDisabled: true,
+    nextRefreshAt: null,
+    disabledReason: "unseated"
+  },
+  tripSwitchOptions: [],
   currentPersonaId: "",
   currentPersonaImageUrl: "",
   personaOptions: HOME_PERSONA_OPTIONS.map((option) => ({
@@ -80,9 +74,9 @@ const initialData: HomePageData = {
   showPersonaSheet: false,
   personaSheetActive: false,
   personaDraftId: "",
-  activeTab: "seats",
   sheetVisible: false,
   sheetMode: "member-detail",
+  seatConfirmTitle: "",
   selectedSeat: null,
   selectedMember: null
 };
@@ -97,6 +91,7 @@ function resolveHomePersonaImageUrl(user: User): string {
 Page({
   data: initialData,
   personaSheetCloseTimer: 0,
+  boardingButtonRefreshTimer: 0,
 
   async onShow() {
     try {
@@ -107,6 +102,10 @@ Page({
     }
 
     this.refreshPage();
+  },
+
+  onHide() {
+    this.clearBoardingButtonRefreshTimer();
   },
 
   onPageScroll(event: WechatMiniprogram.Page.IPageScrollOption) {
@@ -129,33 +128,26 @@ Page({
   },
 
   applyBootstrapResult(result: BootstrapResult, options: ApplyBootstrapOptions = {}) {
-    const hasCurrentTrip = result.currentUser.isAuthorized && Boolean(result.currentTrip);
-    const showTripEntry = !hasCurrentTrip;
-    const activeTab = this.data.activeTab;
+    const hasCurrentTrip = Boolean(result.currentTrip);
     const currentPersonaId = result.currentUser.homePersonaAssetId ?? "";
     const currentPersonaImageUrl = resolveHomePersonaImageUrl(result.currentUser);
     const preservedMember =
-      options.preserveSelectedMemberId && result.currentTrip
+      options.preserveSelectedMemberId
         ? result.currentTrip.members.find((member) => member.userId === options.preserveSelectedMemberId) ?? null
         : null;
 
     this.setData({
       showTripContent: hasCurrentTrip,
-      showTripEntry,
       hasCurrentTrip,
-      navTitle: hasCurrentTrip ? result.currentTrip?.tripMeta.tripName ?? "巴士认座" : "巴士认座",
+      navTitle: result.homeTitle,
+      currentTripLabel: result.currentTripLabel,
       navProgress: 0,
-      isSeatsTab: activeTab === "seats",
-      isMembersTab: activeTab === "members",
-      seatsTabClassName: activeTab === "seats" ? "home-tab is-active" : "home-tab",
-      membersTabClassName: activeTab === "members" ? "home-tab is-active" : "home-tab",
       currentUser: result.currentUser,
       currentUserInitial: result.currentUser.nickname.trim().slice(0, 1) || "我",
-      authPresetNickname: result.currentUser.nickname,
-      authPresetAvatarUrl: result.currentUser.avatarUrl,
-      currentTrip: hasCurrentTrip ? result.currentTrip : null,
-      seatedMembers: (result.currentTrip?.members ?? []).filter((member) => Boolean(member.seatCode)),
-      viewerSeatText: result.currentTrip?.tripMeta.viewerSeatCode ?? "请选择您的座位",
+      currentTrip: result.currentTrip,
+      viewerSeatSummary: result.viewerSeatSummary,
+      boardingButton: result.boardingButton,
+      tripSwitchOptions: result.tripSwitchOptions,
       currentPersonaId,
       currentPersonaImageUrl,
       personaOptions: HOME_PERSONA_OPTIONS.map((option) => ({ ...option })),
@@ -166,90 +158,36 @@ Page({
       sheetMode: preservedMember
         ? this.resolveMemberSheetMode(preservedMember, result.currentTrip)
         : "member-detail",
+      seatConfirmTitle: "",
       selectedSeat: preservedMember
         ? this.findSeatByCode(preservedMember.seatCode ?? null, result.currentTrip)
         : null,
       selectedMember: preservedMember
     });
+    this.syncBoardingButtonRefreshTimer(result.boardingButton);
   },
 
-  handleAuthorizeProfile(
-    event: WechatMiniprogram.CustomEvent<{ nickname: string; avatarUrl: string }>
-  ) {
-    try {
-      const pendingAction = this.data.pendingAction;
-      const result = tripService.authorizeProfile(event.detail);
-      this.applyBootstrapResult(result);
-      this.setData({
-        showAuthGate: false,
-        pendingAction: null
-      });
-      showSuccessToast("保存成功");
-      this.continuePendingAction(pendingAction);
-    } catch (error) {
-      showErrorToast(error);
-    }
-  },
-
-  goCreateTrip() {
-    if (!this.data.currentUser?.isAuthorized) {
-      this.openAuthGate("create");
+  handleOpenTripSwitcher() {
+    const options = this.data.tripSwitchOptions;
+    if (!options.length) {
       return;
     }
 
-    wx.navigateTo({
-      url: "/pages/create-trip/index"
-    });
-  },
+    wx.showActionSheet({
+      itemList: options.map((option) => option.label),
+      success: ({ tapIndex }) => {
+        const selectedOption = options[tapIndex];
+        if (!selectedOption || selectedOption.tripId === this.data.currentTrip?.tripMeta.tripId) {
+          return;
+        }
 
-  goJoinTrip() {
-    if (!this.data.currentUser?.isAuthorized) {
-      this.openAuthGate("join");
-      return;
-    }
-
-    wx.navigateTo({
-      url: "/pages/join-trip/index"
-    });
-  },
-
-  openAuthGate(action: "create" | "join") {
-    this.setData({
-      showAuthGate: true,
-      pendingAction: action
-    });
-  },
-
-  handleCloseAuthGate() {
-    this.setData({
-      showAuthGate: false,
-      pendingAction: null
-    });
-  },
-
-  continuePendingAction(action: "create" | "join" | null) {
-    if (action === "create") {
-      wx.navigateTo({
-        url: "/pages/create-trip/index"
-      });
-      return;
-    }
-
-    if (action === "join") {
-      wx.navigateTo({
-        url: "/pages/join-trip/index"
-      });
-    }
-  },
-
-  handleTabChange(event: WechatMiniprogram.CustomEvent) {
-    const nextTab = String(event.currentTarget.dataset.tab) as "seats" | "members";
-    this.setData({
-      activeTab: nextTab,
-      isSeatsTab: nextTab === "seats",
-      isMembersTab: nextTab === "members",
-      seatsTabClassName: nextTab === "seats" ? "home-tab is-active" : "home-tab",
-      membersTabClassName: nextTab === "members" ? "home-tab is-active" : "home-tab"
+        try {
+          const result = tripService.switchCurrentTrip(selectedOption.tripId);
+          this.applyBootstrapResult(result);
+        } catch (error) {
+          showErrorToast(error);
+        }
+      }
     });
   },
 
@@ -308,7 +246,48 @@ Page({
     this.personaSheetCloseTimer = 0;
   },
 
+  syncBoardingButtonRefreshTimer(boardingButton: BoardingButtonView) {
+    this.clearBoardingButtonRefreshTimer();
+    if (!boardingButton.nextRefreshAt) {
+      return;
+    }
+
+    const delay = Math.max(0, boardingButton.nextRefreshAt - Date.now() + 50);
+    this.boardingButtonRefreshTimer = setTimeout(() => {
+      this.refreshPage();
+    }, delay) as unknown as number;
+  },
+
+  clearBoardingButtonRefreshTimer() {
+    if (!this.boardingButtonRefreshTimer) {
+      return;
+    }
+    clearTimeout(this.boardingButtonRefreshTimer);
+    this.boardingButtonRefreshTimer = 0;
+  },
+
   noop() {},
+
+  handleBoardingTap() {
+    if (this.data.boardingButton.isDisabled) {
+      if (this.data.boardingButton.disabledReason === "seat-in-other-trip") {
+        showErrorToast(new Error("请先释放座位"));
+        return;
+      }
+      if (this.data.boardingButton.disabledReason === "unseated") {
+        showErrorToast(new Error("请先入座"));
+      }
+      return;
+    }
+
+    try {
+      const toggleResult = tripService.toggleBoardingCheckIn();
+      this.applyBootstrapResult(toggleResult.result);
+      showSuccessToast(toggleResult.action === "checked-in" ? "上车成功" : "已取消上车");
+    } catch (error) {
+      showErrorToast(error);
+    }
+  },
 
   getSelfMember(): MemberView | null {
     return this.data.currentTrip?.members.find((member) => member.isSelf) ?? null;
@@ -357,9 +336,19 @@ Page({
     }
 
     if (seat.isEmpty) {
+      if (!this.data.currentUser?.isAuthorized) {
+        showErrorToast(new Error("请先完成微信授权。"));
+        return;
+      }
+      const userHasGlobalSeat =
+        Boolean(this.data.currentTrip?.tripMeta.viewerSeatCode) ||
+        !this.data.viewerSeatSummary.endsWith("未入座");
       this.setData({
         sheetVisible: true,
         sheetMode: "empty-confirm",
+        seatConfirmTitle: userHasGlobalSeat
+          ? `是否改到${this.data.currentTripLabel}${seat.label}？`
+          : `是否入座${this.data.currentTripLabel}${seat.label}？`,
         selectedSeat: seat,
         selectedMember: null
       });
@@ -387,19 +376,10 @@ Page({
     });
   },
 
-  handleMemberTap(event: WechatMiniprogram.CustomEvent<{ member: MemberView }>) {
-    const member = event.detail.member;
-    this.setData({
-      sheetVisible: true,
-      sheetMode: this.resolveMemberSheetMode(member),
-      selectedMember: member,
-      selectedSeat: this.findSeatByCode(member?.seatCode ?? null)
-    });
-  },
-
   handleSheetClose() {
     this.setData({
       sheetVisible: false,
+      seatConfirmTitle: "",
       selectedSeat: null,
       selectedMember: null
     });
@@ -464,6 +444,7 @@ Page({
   },
 
   onUnload() {
+    this.clearBoardingButtonRefreshTimer();
     this.clearPersonaSheetCloseTimer();
   }
 });

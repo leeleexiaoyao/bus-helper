@@ -10,10 +10,10 @@ Component({
                 selectedIconPath: "/assets/icons/tab-home-active.svg"
             },
             {
-                pagePath: "/pages/tools/index",
-                text: "工具",
-                iconPath: "/assets/icons/tab-tools.svg",
-                selectedIconPath: "/assets/icons/tab-tools-active.svg"
+                pagePath: "/pages/passengers/index",
+                text: "乘客",
+                iconPath: "/assets/icons/tab-passengers.svg",
+                selectedIconPath: "/assets/icons/tab-passengers-active.svg"
             },
             {
                 pagePath: "/pages/profile/index",

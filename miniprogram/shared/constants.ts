@@ -1,6 +1,7 @@
 import type {
   AppState,
   HomePersonaOption,
+  RuntimeConfig,
   TemplateId,
   ToolType,
   Trip,
@@ -9,13 +10,14 @@ import type {
   User
 } from "./types";
 
-export const APP_STATE_VERSION = 10;
+export const APP_STATE_VERSION = 14;
 export const APP_STATE_STORAGE_KEY = "bus-seat-buddy-state";
 export const MAX_MEMBER_FAVORITES_PER_TRIP = 2;
 
 export const DEFAULT_TRIP_NAME = "未命名车次";
 export const DEFAULT_DEPARTURE_TIME = "待定";
 export const DEFAULT_AVATAR_URL = "";
+export const DEFAULT_HOME_TITLE = "麒麟之旅";
 export const HOME_PERSONA_IMAGE_URL = "/assets/personas/home-persona.png";
 export const WHEEL_MAX_ITEMS = 10;
 export const DEFAULT_WHEEL_ITEMS = ["免单", "零食礼包", "饮料一杯", "神秘福袋", "再来一次", "感谢参与"];
@@ -23,6 +25,17 @@ export const HOME_PERSONA_OPTIONS: HomePersonaOption[] = Array.from({ length: 9 
   id: `home-persona-${index + 1}`,
   imageUrl: HOME_PERSONA_IMAGE_URL
 }));
+
+export const FIXED_TRIP_IDS = {
+  trip1: "trip-fixed-1",
+  trip2: "trip-fixed-2"
+} as const;
+
+export const DEFAULT_VIEW_TRIP_ID = FIXED_TRIP_IDS.trip1;
+export const FIXED_TRIP_LABELS: Record<string, string> = {
+  [FIXED_TRIP_IDS.trip1]: "1车",
+  [FIXED_TRIP_IDS.trip2]: "2车"
+};
 
 export const TRIP_TEMPLATES: Array<{
   id: TemplateId;
@@ -56,58 +69,76 @@ export const DEMO_USERS: User[] = [
     nickname: "小雨",
     avatarUrl: DEFAULT_AVATAR_URL,
     homePersonaAssetId: null,
-    bio: "",
+    bio: "旅途同行",
     livingCity: "",
     hometown: "",
     age: "",
     tags: ["摄影", "靠窗党"],
-    currentTripId: null,
-    isAuthorized: false
+    memberTripId: FIXED_TRIP_IDS.trip1,
+    currentTripId: FIXED_TRIP_IDS.trip1,
+    isAuthorized: false,
+    boardingRecordsByTripId: {}
   },
   {
     id: "user-2",
     nickname: "阿山",
     avatarUrl: DEFAULT_AVATAR_URL,
     homePersonaAssetId: null,
-    bio: "",
+    bio: "旅途同行",
     livingCity: "",
     hometown: "",
     age: "",
     tags: ["徒步", "社牛"],
-    currentTripId: null,
-    isAuthorized: false
+    memberTripId: FIXED_TRIP_IDS.trip1,
+    currentTripId: FIXED_TRIP_IDS.trip1,
+    isAuthorized: false,
+    boardingRecordsByTripId: {}
   },
   {
     id: "user-3",
     nickname: "Miya",
     avatarUrl: DEFAULT_AVATAR_URL,
     homePersonaAssetId: null,
-    bio: "",
+    bio: "旅途同行",
     livingCity: "",
     hometown: "",
     age: "",
     tags: ["轻装", "周末玩家"],
-    currentTripId: null,
-    isAuthorized: false
+    memberTripId: FIXED_TRIP_IDS.trip2,
+    currentTripId: FIXED_TRIP_IDS.trip2,
+    isAuthorized: false,
+    boardingRecordsByTripId: {}
   },
   {
     id: "user-4",
     nickname: "老周",
     avatarUrl: DEFAULT_AVATAR_URL,
     homePersonaAssetId: null,
-    bio: "",
+    bio: "旅途同行",
     livingCity: "",
     hometown: "",
     age: "",
     tags: ["老司机"],
-    currentTripId: null,
-    isAuthorized: false
+    memberTripId: FIXED_TRIP_IDS.trip2,
+    currentTripId: FIXED_TRIP_IDS.trip2,
+    isAuthorized: false,
+    boardingRecordsByTripId: {}
   }
 ];
 
-export const DEMO_SWITCHABLE_USER_IDS = DEMO_USERS.slice(0, 2).map((user) => user.id);
+export const DEMO_SWITCHABLE_USER_IDS = DEMO_USERS.map((user) => user.id);
 
 export const TOOL_TYPES: ToolType[] = ["seat-draw", "vote", "wheel", "lottery"];
+
+export function createDefaultRuntimeConfig(): RuntimeConfig {
+  return {
+    homeTitle: DEFAULT_HOME_TITLE,
+    tripAdminUserIds: {
+      [FIXED_TRIP_IDS.trip1]: null,
+      [FIXED_TRIP_IDS.trip2]: null
+    }
+  };
+}
 
 export const TOOL_META: Record<
   ToolType,
@@ -144,6 +175,13 @@ export const TOOL_META: Record<
   }
 };
 
+const SEAT_LETTERS = ["A", "B", "C", "D", "E"];
+const BASE_CREATED_AT = 1713571200000;
+const SEEDED_USER_COUNT_BY_TRIP = {
+  [FIXED_TRIP_IDS.trip1]: 12,
+  [FIXED_TRIP_IDS.trip2]: 10
+} as const;
+
 export function createEmptyTripTools(): TripToolsState {
   return TOOL_TYPES.reduce<TripToolsState>((accumulator, toolType) => {
     accumulator[toolType] = null;
@@ -156,200 +194,336 @@ export function createEmptyTripTools(): TripToolsState {
   });
 }
 
-export function createInitialAppState(): AppState {
-  return {
-    version: APP_STATE_VERSION,
-    users: DEMO_USERS.reduce<Record<string, User>>((accumulator, user) => {
-      accumulator[user.id] = { ...user };
-      return accumulator;
-    }, {}),
-    trips: {},
-    tripMembers: [],
-    tripFavorites: [],
-    activeUserId: DEMO_USERS[0].id
-  };
-}
-
-const SEED_TRIP_ID = "trip-demo-default";
-const SEED_TRIP_PASSWORD = "204900";
-const SEED_ACTIVE_USER_ID = "user-2";
-const SEED_OCCUPIED_USER_COUNT = 40;
-const SEED_CREATED_AT = 1712803200000;
-const SEAT_LETTERS = ["A", "B", "C", "D", "E"];
-
-function buildSeedSeatCodes(templateId: TemplateId): string[] {
+function getTemplateConfig(templateId: TemplateId) {
   const template = TRIP_TEMPLATES.find((item) => item.id === templateId);
   if (!template) {
     throw new Error(`Unknown template: ${templateId}`);
   }
+  return template;
+}
 
-  return template.rowSeatCounts.flatMap((seatCount, rowIndex) =>
+function generateSeatCodes(templateId: TemplateId): string[] {
+  return getTemplateConfig(templateId).rowSeatCounts.flatMap((seatCount, rowIndex) =>
     SEAT_LETTERS.slice(0, seatCount).map((letter) => `${rowIndex + 1}${letter}`)
   );
 }
 
-function createSeedSeatMap(seatCodes: string[]): Record<string, string | null> {
+function createSeatMap(seatCodes: string[]): Record<string, string | null> {
   return seatCodes.reduce<Record<string, string | null>>((accumulator, seatCode) => {
     accumulator[seatCode] = null;
     return accumulator;
   }, {});
 }
 
-function buildSeedPassengerUsers(tripId: string): User[] {
-  return Array.from({ length: SEED_OCCUPIED_USER_COUNT - DEMO_USERS.length }, (_, index) => {
-    const userNumber = index + DEMO_USERS.length + 1;
-    return {
-      id: `user-${userNumber}`,
-      nickname: `成员${String(userNumber).padStart(2, "0")}`,
+function buildBaseTrips(): Trip[] {
+  const trips: Trip[] = [
+    {
+      id: FIXED_TRIP_IDS.trip1,
+      tripName: FIXED_TRIP_LABELS[FIXED_TRIP_IDS.trip1],
+      departureTime: "2025-04-25 02:00",
+      password: "110001",
+      templateId: "template-49",
+      creatorUserId: "user-1",
+      status: "active",
+      seatCodes: generateSeatCodes("template-49"),
+      seatMap: {},
+      tools: createEmptyTripTools(),
+      createdAt: BASE_CREATED_AT
+    },
+    {
+      id: FIXED_TRIP_IDS.trip2,
+      tripName: FIXED_TRIP_LABELS[FIXED_TRIP_IDS.trip2],
+      departureTime: "2025-04-25 02:30",
+      password: "220002",
+      templateId: "template-49",
+      creatorUserId: "user-3",
+      status: "active",
+      seatCodes: generateSeatCodes("template-49"),
+      seatMap: {},
+      tools: createEmptyTripTools(),
+      createdAt: BASE_CREATED_AT + 1
+    }
+  ];
+
+  return trips.map((trip) => ({
+    ...trip,
+    seatMap: createSeatMap(trip.seatCodes)
+  }));
+}
+
+function buildBaseTripMembers(): TripMember[] {
+  return [FIXED_TRIP_IDS.trip1, FIXED_TRIP_IDS.trip2].flatMap((tripId, tripIndex) =>
+    DEMO_USERS.map((user, userIndex) => ({
+      tripId,
+      userId: user.id,
+      role: "member" as const,
+      joinedAt: BASE_CREATED_AT + tripIndex * 10 + userIndex
+    }))
+  );
+}
+
+function buildBaseState(): AppState {
+  const trips = buildBaseTrips();
+  trips.find((trip) => trip.id === FIXED_TRIP_IDS.trip1)!.seatMap["1A"] = "user-1";
+  trips.find((trip) => trip.id === FIXED_TRIP_IDS.trip2)!.seatMap["1A"] = "user-3";
+
+  return {
+    version: APP_STATE_VERSION,
+    users: DEMO_USERS.reduce<Record<string, User>>((accumulator, user) => {
+      accumulator[user.id] = { ...user };
+      return accumulator;
+    }, {}),
+    trips: trips.reduce<Record<string, Trip>>((accumulator, trip) => {
+      accumulator[trip.id] = trip;
+      return accumulator;
+    }, {}),
+    tripMembers: buildBaseTripMembers(),
+    tripFavorites: [],
+    runtimeConfig: createDefaultRuntimeConfig(),
+    activeUserId: "user-1"
+  };
+}
+
+function createSeedPassengers(
+  tripId: string,
+  count: number,
+  createdAt: number
+): { users: User[]; members: TripMember[]; seatedUserIds: string[] } {
+  const prefix = tripId === FIXED_TRIP_IDS.trip1 ? "1车" : "2车";
+  const users: User[] = [];
+  const members: TripMember[] = [];
+
+  for (let index = 0; index < count; index += 1) {
+    const userId = `${tripId}-seed-user-${index + 1}`;
+    users.push({
+      id: userId,
+      nickname: `${prefix}成员${String(index + 1).padStart(2, "0")}`,
       avatarUrl: DEFAULT_AVATAR_URL,
       homePersonaAssetId: null,
       bio: "",
       livingCity: "",
       hometown: "",
       age: "",
-      tags: [`乘客${String(userNumber).padStart(2, "0")}`],
+      tags: [prefix, `乘客${index + 1}`],
+      memberTripId: tripId,
       currentTripId: tripId,
-      isAuthorized: false
-    };
-  });
-}
-
-function buildSeedTripMembers(users: User[], tripId: string, joinedAt: number): TripMember[] {
-  return users.map((user, index) => ({
-    tripId,
-    userId: user.id,
-    role: index === 0 ? "admin" : "member",
-    joinedAt: joinedAt + index
-  }));
-}
-
-function buildSeedTrip(users: User[], seatCodes: string[]): Trip {
-  const seatMap = createSeedSeatMap(seatCodes);
-  const occupiedUsers = users.slice(0, SEED_OCCUPIED_USER_COUNT);
-  occupiedUsers.forEach((user, index) => {
-    seatMap[seatCodes[index]] = user.id;
-  });
+      isAuthorized: false,
+      boardingRecordsByTripId: {}
+    });
+    members.push({
+      tripId,
+      userId,
+      role: "member",
+      joinedAt: createdAt + index
+    });
+  }
 
   return {
-    id: SEED_TRIP_ID,
-    tripName: "快乐出发之旅",
-    departureTime: "4/20 07:30",
-    password: SEED_TRIP_PASSWORD,
-    templateId: "template-49",
-    creatorUserId: "user-1",
-    status: "active",
-    seatCodes,
-    seatMap,
-    tools: buildSeedTripTools(occupiedUsers),
-    createdAt: SEED_CREATED_AT
+    users,
+    members,
+    seatedUserIds: users.map((user) => user.id)
   };
 }
 
-function buildSeedTripTools(occupiedUsers: User[]): TripToolsState {
-  const participantUserIds = occupiedUsers.map((user) => user.id);
-  const wheelItems = DEFAULT_WHEEL_ITEMS;
+function fillSeedSeats(trip: Trip, userIds: string[]): void {
+  const seatCodes = trip.seatCodes.slice(0, userIds.length);
+  seatCodes.forEach((seatCode, index) => {
+    trip.seatMap[seatCode] = userIds[index];
+  });
+}
+
+function createSeedTripTools(tripId: string, participantUserIds: string[]): TripToolsState {
+  if (tripId === FIXED_TRIP_IDS.trip1) {
+    return {
+      "seat-draw": {
+        type: "seat-draw",
+        publishedAt: BASE_CREATED_AT,
+        publishedByUserId: "user-1",
+        phase: "ready",
+        topic: "前排互动",
+        config: {
+          drawCount: 2,
+          excludePreviouslyDrawn: false,
+          excludeAdmin: false
+        },
+        rollingDisplayEntries: [],
+        pendingResult: [],
+        drawnEntries: [],
+        resultRounds: [],
+        rollingStartedAt: null,
+        rollingEndsAt: null,
+        lastResult: []
+      },
+      vote: {
+        type: "vote",
+        publishedAt: BASE_CREATED_AT + 10,
+        publishedByUserId: "user-1",
+        phase: "active",
+        topic: "中途停靠吃什么",
+        excludeAdmin: false,
+        selectionMode: "single",
+        maxSelections: 1,
+        options: [
+          { id: "trip-1-vote-1", label: "咖啡" },
+          { id: "trip-1-vote-2", label: "奶茶" },
+          { id: "trip-1-vote-3", label: "便利店" }
+        ],
+        participantUserIds,
+        submissions: {}
+      },
+      wheel: {
+        type: "wheel",
+        publishedAt: BASE_CREATED_AT + 20,
+        publishedByUserId: "user-1",
+        phase: "draft",
+        topic: "破冰小游戏",
+        items: DEFAULT_WHEEL_ITEMS,
+        allowAssignedUser: false,
+        assignedUserId: null,
+        resultIndex: null,
+        resultHistoryLabels: [],
+        spunAt: null
+      },
+      lottery: {
+        type: "lottery",
+        publishedAt: BASE_CREATED_AT + 30,
+        publishedByUserId: "user-1",
+        phase: "active",
+        topic: "幸运签",
+        answers: ["唱歌", "讲笑话", "请喝水"],
+        cards: ["唱歌", "讲笑话", "请喝水"].map((answer, index) => ({
+          id: `trip-1-lottery-${index + 1}`,
+          order: index + 1,
+          answer,
+          claimedByUserId: null,
+          claimedAt: null
+        })),
+        allowAssignedUser: false,
+        assignedUserId: "user-1",
+        drawLimitPerUser: 1,
+        claimsByUserId: {}
+      }
+    };
+  }
 
   return {
     "seat-draw": {
       type: "seat-draw",
-      publishedAt: SEED_CREATED_AT,
-      publishedByUserId: "user-1",
-      phase: "ready",
-      topic: "上台表演节目",
+      publishedAt: BASE_CREATED_AT + 100,
+      publishedByUserId: "user-3",
+      phase: "result",
+      topic: "小游戏抽签",
       config: {
-        drawCount: 2,
+        drawCount: 1,
         excludePreviouslyDrawn: false,
         excludeAdmin: false
       },
       rollingDisplayEntries: [],
       pendingResult: [],
-      drawnEntries: [],
-      resultRounds: [],
+      drawnEntries: [
+        {
+          userId: participantUserIds[0] ?? "user-3",
+          seatCode: "1A"
+        }
+      ],
+      resultRounds: [
+        [
+          {
+            userId: participantUserIds[0] ?? "user-3",
+            seatCode: "1A"
+          }
+        ]
+      ],
       rollingStartedAt: null,
       rollingEndsAt: null,
-      lastResult: [],
+      lastResult: [
+        {
+          userId: participantUserIds[0] ?? "user-3",
+          seatCode: "1A"
+        }
+      ]
     },
-    vote: {
-      type: "vote",
-      publishedAt: SEED_CREATED_AT,
-      publishedByUserId: "user-1",
-      phase: "active",
-      topic: "今晚晚餐吃什么",
-      excludeAdmin: false,
-      selectionMode: "multiple",
-      maxSelections: 4,
-      options: [
-        { id: "seed-vote-option-1", label: "火锅" },
-        { id: "seed-vote-option-2", label: "烧烤" },
-        { id: "seed-vote-option-3", label: "炒菜" },
-        { id: "seed-vote-option-4", label: "面食" }
-      ],
-      participantUserIds,
-      submissions: {}
-    },
+    vote: null,
     wheel: {
       type: "wheel",
-      publishedAt: SEED_CREATED_AT,
-      publishedByUserId: "user-1",
-      phase: "draft",
-      topic: "大转盘",
-      items: wheelItems,
+      publishedAt: BASE_CREATED_AT + 120,
+      publishedByUserId: "user-3",
+      phase: "result",
+      topic: "2车转盘",
+      items: ["发零食", "唱首歌", "回答问题"],
       allowAssignedUser: false,
       assignedUserId: null,
-      resultIndex: null,
-      resultHistoryLabels: [],
-      spunAt: null
+      resultIndex: 1,
+      resultHistoryLabels: ["唱首歌"],
+      spunAt: BASE_CREATED_AT + 121
     },
-    lottery: {
-      type: "lottery",
-      publishedAt: SEED_CREATED_AT,
-      publishedByUserId: "user-1",
-      phase: "active",
-      topic: "幸运签",
-      answers: ["去前排", "唱首歌", "请大家喝饮料"],
-      cards: ["请大家喝饮料", "去前排", "唱首歌"].map((answer, index) => ({
-        id: `seed-lottery-card-${index + 1}`,
-        order: index + 1,
-        answer,
-        claimedByUserId: null,
-        claimedAt: null
-      })),
-      allowAssignedUser: false,
-      assignedUserId: "user-1",
-      drawLimitPerUser: 1,
-      claimsByUserId: {}
-    }
+    lottery: null
   };
 }
 
+export function createInitialAppState(): AppState {
+  return buildBaseState();
+}
+
 export function createSeededDemoAppState(): AppState {
-  const seatCodes = buildSeedSeatCodes("template-49");
-  const switchableUsers = DEMO_USERS.map((user) => ({
-    ...user,
-    currentTripId: SEED_TRIP_ID,
-    isAuthorized: true
-  }));
-  const passengerUsers = buildSeedPassengerUsers(SEED_TRIP_ID);
-  const seededUsers = [...switchableUsers, ...passengerUsers];
-  const seededTrip = buildSeedTrip(seededUsers, seatCodes);
-  const seededTripMembers = buildSeedTripMembers(
-    seededUsers.slice(0, SEED_OCCUPIED_USER_COUNT),
-    SEED_TRIP_ID,
-    seededTrip.createdAt
+  const baseState = buildBaseState();
+  const nextUsers = { ...baseState.users };
+  const nextTrips = { ...baseState.trips };
+  const nextTripMembers = [...baseState.tripMembers];
+
+  const trip1Seed = createSeedPassengers(
+    FIXED_TRIP_IDS.trip1,
+    SEEDED_USER_COUNT_BY_TRIP[FIXED_TRIP_IDS.trip1],
+    BASE_CREATED_AT + 1000
+  );
+  const trip2Seed = createSeedPassengers(
+    FIXED_TRIP_IDS.trip2,
+    SEEDED_USER_COUNT_BY_TRIP[FIXED_TRIP_IDS.trip2],
+    BASE_CREATED_AT + 2000
+  );
+
+  [...trip1Seed.users, ...trip2Seed.users].forEach((user) => {
+    nextUsers[user.id] = user;
+  });
+  nextTripMembers.push(...trip1Seed.members, ...trip2Seed.members);
+
+  const trip1 = {
+    ...nextTrips[FIXED_TRIP_IDS.trip1],
+    seatMap: { ...nextTrips[FIXED_TRIP_IDS.trip1].seatMap }
+  };
+  const trip2 = {
+    ...nextTrips[FIXED_TRIP_IDS.trip2],
+    seatMap: { ...nextTrips[FIXED_TRIP_IDS.trip2].seatMap }
+  };
+
+  fillSeedSeats(trip1, ["user-1", "user-2", ...trip1Seed.seatedUserIds]);
+  fillSeedSeats(trip2, ["user-3", "user-4", ...trip2Seed.seatedUserIds]);
+
+  trip1.tools = createSeedTripTools(
+    FIXED_TRIP_IDS.trip1,
+    nextTripMembers.filter((member) => member.tripId === FIXED_TRIP_IDS.trip1).map((member) => member.userId)
+  );
+  trip2.tools = createSeedTripTools(
+    FIXED_TRIP_IDS.trip2,
+    nextTripMembers.filter((member) => member.tripId === FIXED_TRIP_IDS.trip2).map((member) => member.userId)
   );
 
   return {
-    version: APP_STATE_VERSION,
-    users: seededUsers.reduce<Record<string, User>>((accumulator, user) => {
-      accumulator[user.id] = { ...user };
-      return accumulator;
-    }, {}),
+    ...baseState,
+    users: nextUsers,
     trips: {
-      [seededTrip.id]: seededTrip
+      ...nextTrips,
+      [FIXED_TRIP_IDS.trip1]: trip1,
+      [FIXED_TRIP_IDS.trip2]: trip2
     },
-    tripMembers: seededTripMembers,
-    tripFavorites: [],
-    activeUserId: SEED_ACTIVE_USER_ID
+    tripMembers: nextTripMembers,
+    runtimeConfig: {
+      homeTitle: DEFAULT_HOME_TITLE,
+      tripAdminUserIds: {
+        [FIXED_TRIP_IDS.trip1]: "user-1",
+        [FIXED_TRIP_IDS.trip2]: "user-3"
+      }
+    }
   };
 }
 
@@ -358,6 +532,5 @@ export function isSeededDemoAppState(state: AppState | null): boolean {
     return false;
   }
 
-  const trip = state.trips[SEED_TRIP_ID];
-  return Boolean(trip && trip.status === "active");
+  return Object.keys(state.users).some((userId) => userId.startsWith(`${FIXED_TRIP_IDS.trip1}-seed-user-`));
 }

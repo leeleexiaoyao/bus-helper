@@ -623,7 +623,7 @@ Page({
     ) {
       showErrorToast(error);
       wx.switchTab({
-        url: "/pages/tools/index"
+        url: "/pages/home/index"
       });
       return;
     }
@@ -656,7 +656,7 @@ Page({
     }
 
     wx.switchTab({
-      url: "/pages/tools/index"
+      url: "/pages/home/index"
     });
   },
 

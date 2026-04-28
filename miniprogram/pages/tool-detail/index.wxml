@@ -22,7 +22,7 @@
 
         <block wx:elif="{{!pageData.isStarted && !pageData.isAdmin}}">
           <view class="seat-draw-empty-wrap seat-draw-empty-wrap--viewer">
-            <view class="seat-draw-viewer-empty">🙋‍♀️ 玩法暂未开启</view>
+            <view class="seat-draw-viewer-empty">🙋‍♀️ 暂未开放</view>
           </view>
         </block>
 
@@ -156,7 +156,7 @@
 
         <block wx:elif="{{!pageData.isStarted && !pageData.isAdmin}}">
           <view class="tool-empty-wrap tool-empty-wrap--viewer">
-            <view class="tool-viewer-empty">玩法暂未开启</view>
+            <view class="tool-viewer-empty">暂未开放</view>
           </view>
         </block>
 
@@ -303,7 +303,7 @@
 
         <block wx:elif="{{!pageData.isStarted && !pageData.isAdmin}}">
           <view class="tool-empty-wrap tool-empty-wrap--viewer">
-            <view class="tool-viewer-empty">玩法暂未开启</view>
+            <view class="tool-viewer-empty">暂未开放</view>
           </view>
         </block>
 
@@ -424,7 +424,7 @@
 
         <block wx:elif="{{!pageData.isStarted && !pageData.isAdmin}}">
           <view class="tool-empty-wrap tool-empty-wrap--viewer">
-            <view class="tool-viewer-empty">玩法暂未开启</view>
+            <view class="tool-viewer-empty">暂未开放</view>
           </view>
         </block>
 

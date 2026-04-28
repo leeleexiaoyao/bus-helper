@@ -6,9 +6,8 @@ const feedback_1 = require("../../utils/feedback");
 Page({
     data: {
         pageData: null,
-        showAction: false,
-        isDissolveAction: false,
-        primaryActionLabel: ""
+        draftHomeTitle: "",
+        isSaving: false
     },
     async onShow() {
         try {
@@ -22,49 +21,44 @@ Page({
     },
     refreshPage() {
         try {
-            const pageData = trip_service_1.tripService.getProfilePageData();
+            const pageData = trip_service_1.tripService.getHomeSettingsPageData();
             this.setData({
                 pageData,
-                showAction: pageData.primaryActionKind !== "none",
-                isDissolveAction: pageData.primaryActionKind === "dissolve",
-                primaryActionLabel: pageData.primaryActionLabel
+                draftHomeTitle: pageData.homeTitle,
+                isSaving: false
             });
         }
         catch (error) {
             (0, feedback_1.showErrorToast)(error);
         }
     },
-    handlePrimaryAction() {
-        const pageData = this.data.pageData;
-        if (!pageData || pageData.primaryActionKind === "none") {
+    handleTitleInput(event) {
+        this.setData({
+            draftHomeTitle: String(event.detail.value || "")
+        });
+    },
+    async handleSaveTitle() {
+        var _a;
+        if (!((_a = this.data.pageData) === null || _a === void 0 ? void 0 : _a.canEditHomeTitle) || this.data.isSaving) {
             return;
         }
-        const title = pageData.primaryActionKind === "dissolve" ? "解散车次" : "退出车次";
-        const content = pageData.primaryActionKind === "dissolve"
-            ? "解散后，所有成员都会退出车次并清空座位绑定。"
-            : "退出后会释放你的座位，并回到未加入车次状态。";
-        wx.showModal({
-            title,
-            content,
-            success: ({ confirm }) => {
-                if (!confirm) {
-                    return;
-                }
-                try {
-                    if (pageData.primaryActionKind === "dissolve") {
-                        trip_service_1.tripService.dissolveCurrentTrip();
-                        (0, feedback_1.showSuccessToast)("车次已解散");
-                    }
-                    else {
-                        trip_service_1.tripService.leaveCurrentTrip();
-                        (0, feedback_1.showSuccessToast)("已退出车次");
-                    }
-                    this.refreshPage();
-                }
-                catch (error) {
-                    (0, feedback_1.showErrorToast)(error);
-                }
-            }
+        this.setData({
+            isSaving: true
         });
+        try {
+            const pageData = await trip_service_1.tripService.saveHomeTitle(this.data.draftHomeTitle);
+            this.setData({
+                pageData,
+                draftHomeTitle: pageData.homeTitle,
+                isSaving: false
+            });
+            (0, feedback_1.showSuccessToast)("首页标题已更新");
+        }
+        catch (error) {
+            this.setData({
+                isSaving: false
+            });
+            (0, feedback_1.showErrorToast)(error);
+        }
     }
 });

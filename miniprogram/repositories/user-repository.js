@@ -34,5 +34,10 @@ class UserRepository {
             user.currentTripId = tripId;
         });
     }
+    setMemberTripId(userId, tripId) {
+        return this.updateUser(userId, (user) => {
+            user.memberTripId = tripId;
+        });
+    }
 }
 exports.UserRepository = UserRepository;

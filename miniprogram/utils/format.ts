@@ -28,6 +28,20 @@ export function displayDepartureTime(departureTime: string): string {
   return trimmed;
 }
 
+function padTimeUnit(value: number): string {
+  return String(value).padStart(2, "0");
+}
+
+export function formatBoardingRecordTime(timestamp: number): string {
+  const date = new Date(timestamp);
+  const year = date.getFullYear();
+  const month = padTimeUnit(date.getMonth() + 1);
+  const day = padTimeUnit(date.getDate());
+  const hour = padTimeUnit(date.getHours());
+  const minute = padTimeUnit(date.getMinutes());
+  return `${year}年${month}月${day}日 ${hour}:${minute}`;
+}
+
 export function parseTags(tagsInput: string): string[] {
   const uniqueTags = Array.from(
     new Set(

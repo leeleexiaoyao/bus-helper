@@ -13,7 +13,7 @@
     <view wx:if="{{!showDetailCard}}" class="sheet-handle"></view>
 
     <block wx:if="{{isEmptyConfirmMode}}">
-      <view class="sheet-title sheet-title--compact">是否入座{{seat.label}}？</view>
+      <view class="sheet-title sheet-title--compact">{{confirmTitle || ('是否入座' + tripLabel + seat.label + '？')}}</view>
       <view class="sheet-actions-row">
         <button class="sheet-footer-btn sheet-footer-btn--cancel" bindtap="handleClose">取消</button>
         <button class="sheet-footer-btn sheet-footer-btn--primary" bindtap="handleConfirmClaim">入座</button>

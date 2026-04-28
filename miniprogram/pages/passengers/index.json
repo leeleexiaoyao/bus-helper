@@ -1,0 +1,9 @@
+{
+  "navigationBarTitleText": "乘客",
+  "navigationStyle": "custom",
+  "usingComponents": {
+    "member-list": "/components/member-list/index",
+    "page-navbar": "/components/page-navbar/index",
+    "seat-sheet": "/components/seat-sheet/index"
+  }
+}

@@ -488,7 +488,7 @@ Page({
             (error.code === "AUTH_REQUIRED" || error.code === "TRIP_REQUIRED")) {
             (0, feedback_1.showErrorToast)(error);
             wx.switchTab({
-                url: "/pages/tools/index"
+                url: "/pages/home/index"
             });
             return;
         }
@@ -513,7 +513,7 @@ Page({
             return;
         }
         wx.switchTab({
-            url: "/pages/tools/index"
+            url: "/pages/home/index"
         });
     },
     handleCreateDraft() {

@@ -2,41 +2,12 @@
   <view class="tools-bg-hero"></view>
   <page-navbar title="" progress="{{navProgress}}" />
 
-  <block wx:if="{{showToolsContent}}">
-    <view class="tools-header">
-      <view class="tools-title">工具</view>
-      <view class="tools-subtitle">趣味小工具，让旅途更愉快</view>
-    </view>
+  <view class="tools-header">
+    <view class="tools-title">工具</view>
+    <view class="tools-subtitle">当前已清空</view>
+  </view>
 
-    <view class="tool-grid">
-      <view
-        class="tool-card tool-card--{{item.themeKey}} {{item.canEnter ? 'is-clickable' : ''}}"
-        wx:for="{{pageData.toolCards}}"
-        wx:key="type"
-        data-tool-type="{{item.type}}"
-        bindtap="handleEnterTool"
-      >
-        <view class="tool-card-body">
-          <view class="tool-title">{{item.displayTitle}}</view>
-          <view class="tool-description">{{item.displayDescription}}</view>
-        </view>
-        <view class="tool-cta">
-          <text>{{item.ctaLabel}}</text>
-          <image class="tool-cta-icon" src="/assets/icons/icon_tools_arrow.svg" mode="aspectFit" />
-        </view>
-        <image class="tool-image" src="{{item.imageUrl}}" mode="widthFix" />
-      </view>
-    </view>
-  </block>
-
-  <block wx:else>
-    <view class="tools-header">
-      <view class="tools-title">工具</view>
-      <view class="tools-subtitle">请先创建或加入车次</view>
-    </view>
-
-    <view class="tools-empty-state">
-      <view class="tools-empty-label">暂未开放</view>
-    </view>
-  </block>
+  <view class="tools-empty-state">
+    <view class="tools-empty-label">这个 tab 里的内容已经全部删除。</view>
+  </view>
 </view>

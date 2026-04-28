@@ -17,6 +17,6 @@
       </view>
     </view>
 
-    <view class="member-seat">{{member.seatLabel}}</view>
+    <view class="member-seat">{{member.seatDisplayLabel || member.seatLabel}}</view>
   </view>
 </view>

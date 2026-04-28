@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.displayTripName = displayTripName;
 exports.displayDepartureTime = displayDepartureTime;
+exports.formatBoardingRecordTime = formatBoardingRecordTime;
 exports.parseTags = parseTags;
 exports.getInitial = getInitial;
 exports.splitRegionValue = splitRegionValue;
@@ -30,6 +31,18 @@ function displayDepartureTime(departureTime) {
         return `${month}月${day}日 ${hour}:${minute}`;
     }
     return trimmed;
+}
+function padTimeUnit(value) {
+    return String(value).padStart(2, "0");
+}
+function formatBoardingRecordTime(timestamp) {
+    const date = new Date(timestamp);
+    const year = date.getFullYear();
+    const month = padTimeUnit(date.getMonth() + 1);
+    const day = padTimeUnit(date.getDate());
+    const hour = padTimeUnit(date.getHours());
+    const minute = padTimeUnit(date.getMinutes());
+    return `${year}年${month}月${day}日 ${hour}:${minute}`;
 }
 function parseTags(tagsInput) {
     const uniqueTags = Array.from(new Set(tagsInput

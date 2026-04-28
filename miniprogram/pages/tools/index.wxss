@@ -38,141 +38,15 @@
   line-height: 1.38;
 }
 
-.tool-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 310rpx);
-  gap: 32rpx;
-  margin-top: 78rpx;
-  justify-content: center;
-  position: relative;
-  z-index: 1;
-}
-
-.tool-card {
-  position: relative;
-  width: 310rpx;
-  height: 440rpx;
-  padding: 32rpx;
-  border-radius: 40rpx;
-  border: 4rpx solid transparent;
-  overflow: hidden;
-  box-sizing: border-box;
-  background-origin: padding-box, border-box;
-  background-clip: padding-box, border-box;
-}
-
-.tool-card.is-clickable {
-  cursor: pointer;
-}
-
-.tool-card-body {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-}
-
-.tool-title {
-  color: #111111;
-  font-size: 36rpx;
-  font-weight: 700;
-  line-height: 1.2;
-  white-space: nowrap;
-}
-
-.tool-description {
-  margin-top: 8rpx;
-  max-width: 240rpx;
-  color: #6f7783;
-  font-size: 24rpx;
-  line-height: 1.35;
-  white-space: nowrap;
-}
-
-.tool-cta {
-  position: absolute;
-  left: 16rpx;
-  right: 16rpx;
-  bottom: 16rpx;
-  z-index: 3;
-  height: 68rpx;
-  border-radius: 20rpx;
-  border: 2rpx solid #ffffff;
-  color: #2f2f2f;
-  font-size: 24rpx;
-  line-height: 1.2;
-  font-weight: 700;
-  display: flex;
-  gap: 8rpx;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  -webkit-backdrop-filter: blur(32rpx);
-  backdrop-filter: blur(32rpx);
-}
-
-.tool-cta-icon {
-  width: 32rpx;
-  height: 32rpx;
-  flex-shrink: 0;
-}
-
-.tool-image {
-  position: absolute;
-  right: 0;
-  top: 156rpx;
-  width: 284rpx;
-  z-index: 1;
-  pointer-events: none;
-}
-
-.tool-card--vote {
-  background-image:
-    linear-gradient(180deg, #ffebb5 0%, #ffffff 100%),
-    linear-gradient(180deg, #ffffff 0%, #ffffff 42%, #fffaf0 66%, #fcf3db 100%);
-}
-
-.tool-card--vote .tool-cta {
-  background: rgba(255, 239, 196, 0.6);
-}
-
-.tool-card--seat-draw {
-  background-image:
-    linear-gradient(180deg, #eaffba 0%, #fefefe 100%),
-    linear-gradient(180deg, #ffffff 0%, #ffffff 42%, #f8fce8 66%, #eff9cc 100%);
-}
-
-.tool-card--seat-draw .tool-cta {
-  background: rgba(248, 255, 218, 0.6);
-}
-
-.tool-card--lottery {
-  background-image:
-    linear-gradient(180deg, #ddf2fb 0%, #e8f6fc 47%, #ffffff 100%),
-    linear-gradient(180deg, #ffffff 0%, #ffffff 42%, #f2fbfe 66%, #e2f6fd 100%);
-}
-
-.tool-card--lottery .tool-cta {
-  background: rgba(212, 241, 255, 0.6);
-}
-
-.tool-card--wheel {
-  background-image:
-    linear-gradient(180deg, #efe8f9 0%, #ffffff 100%),
-    linear-gradient(180deg, #ffffff 0%, #ffffff 42%, #faf6ff 66%, #f2eafb 100%);
-}
-
-.tool-card--wheel .tool-cta {
-  background: rgba(238, 222, 255, 0.6);
-}
-
 .tools-empty-state {
   margin-top: 96rpx;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  padding: 80rpx 36rpx;
+  border-radius: 32rpx;
+  background: rgba(255, 255, 255, 0.76);
   position: relative;
   z-index: 1;
 }

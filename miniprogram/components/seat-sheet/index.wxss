@@ -149,8 +149,8 @@
 }
 
 .sheet-footer-btn--primary {
-  background: #ff5336;
-  color: #ffffff;
+  background: #d8f940;
+  color: #111111;
 }
 
 .sheet-footer-btn--danger {
@@ -295,8 +295,8 @@
   height: 42rpx;
   padding: 0 18rpx;
   border-radius: 20rpx;
-  background: rgba(255, 122, 89, 0.14);
-  color: #ff7a59;
+  background: rgba(216, 249, 64, 0.28);
+  color: #111111;
   font-size: 20rpx;
 }
 

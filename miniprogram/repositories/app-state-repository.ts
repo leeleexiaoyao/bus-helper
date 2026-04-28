@@ -1,5 +1,6 @@
 import {
   APP_STATE_VERSION,
+  createDefaultRuntimeConfig,
   DEMO_USERS,
   TOOL_TYPES,
   createEmptyTripTools,
@@ -7,6 +8,7 @@ import {
 } from "../shared/constants";
 import type {
   AppState,
+  BoardingRecord,
   LotteryCard,
   LotteryClaimRecord,
   PublishedLotteryToolState,
@@ -14,6 +16,7 @@ import type {
   PublishedToolState,
   PublishedVoteToolState,
   PublishedWheelToolState,
+  RuntimeConfig,
   TripFavoriteRelation,
   User,
   ToolType,
@@ -439,6 +442,54 @@ function normalizeUser(user: User): User {
   const nextHometown =
     typeof (user as User & { hometown?: unknown }).hometown === "string" ? user.hometown.trim() : "";
   const nextAge = typeof (user as User & { age?: unknown }).age === "string" ? user.age.trim() : "";
+  const rawBoardingRecordsByTripId = isRecord(
+    (user as User & { boardingRecordsByTripId?: unknown }).boardingRecordsByTripId
+  )
+    ? ((user as User & { boardingRecordsByTripId: Record<string, unknown> }).boardingRecordsByTripId)
+    : {};
+  const boardingRecordsByTripId = Object.entries(rawBoardingRecordsByTripId).reduce<Record<string, BoardingRecord[]>>(
+    (accumulator, [tripId, records]) => {
+      if (!tripId.trim() || !Array.isArray(records)) {
+        return accumulator;
+      }
+
+      accumulator[tripId] = records.reduce<BoardingRecord[]>((recordAccumulator, record) => {
+        if (!isRecord(record)) {
+          return recordAccumulator;
+        }
+
+        const id = typeof record.id === "string" ? record.id.trim() : "";
+        const seatCode = typeof record.seatCode === "string" ? record.seatCode.trim() : "";
+        const createdAt = typeof record.createdAt === "number" ? record.createdAt : NaN;
+        const confirmDeadlineAt =
+          typeof record.confirmDeadlineAt === "number" ? record.confirmDeadlineAt : NaN;
+        const resetAt = typeof record.resetAt === "number" ? record.resetAt : NaN;
+
+        if (
+          !id ||
+          !seatCode ||
+          !Number.isFinite(createdAt) ||
+          !Number.isFinite(confirmDeadlineAt) ||
+          !Number.isFinite(resetAt)
+        ) {
+          return recordAccumulator;
+        }
+
+        recordAccumulator.push({
+          id,
+          tripId: tripId.trim(),
+          seatCode,
+          createdAt,
+          status: record.status === "confirmed" ? "confirmed" : "pending",
+          confirmDeadlineAt,
+          resetAt
+        });
+        return recordAccumulator;
+      }, []);
+      return accumulator;
+    },
+    {}
+  );
 
   return {
     ...user,
@@ -447,7 +498,18 @@ function normalizeUser(user: User): User {
     hometown: nextHometown,
     age: nextAge,
     tags: normalizeStringArray(user.tags),
-    homePersonaAssetId: nextHomePersonaAssetId
+    homePersonaAssetId: nextHomePersonaAssetId,
+    memberTripId:
+      typeof (user as User & { memberTripId?: unknown }).memberTripId === "string" &&
+      (user as User & { memberTripId?: string }).memberTripId?.trim()
+        ? (user as User & { memberTripId: string }).memberTripId.trim()
+        : null,
+    currentTripId:
+      typeof (user as User & { currentTripId?: unknown }).currentTripId === "string" &&
+      (user as User & { currentTripId?: string }).currentTripId?.trim()
+        ? (user as User & { currentTripId: string }).currentTripId.trim()
+        : null,
+    boardingRecordsByTripId
   };
 }
 
@@ -480,8 +542,33 @@ function normalizeTripFavorites(value: unknown): TripFavoriteRelation[] {
   }, []);
 }
 
+function normalizeRuntimeConfig(value: unknown): RuntimeConfig {
+  const fallback = createDefaultRuntimeConfig();
+  if (!isRecord(value)) {
+    return fallback;
+  }
+
+  const rawTripAdminUserIds = isRecord(value.tripAdminUserIds) ? value.tripAdminUserIds : {};
+
+  return {
+    homeTitle:
+      typeof value.homeTitle === "string" && value.homeTitle.trim()
+        ? value.homeTitle.trim()
+        : fallback.homeTitle,
+    tripAdminUserIds: Object.keys(fallback.tripAdminUserIds).reduce<Record<string, string | null>>(
+      (accumulator, tripId) => {
+        const rawUserId = rawTripAdminUserIds[tripId];
+        accumulator[tripId] =
+          typeof rawUserId === "string" && rawUserId.trim() ? rawUserId.trim() : null;
+        return accumulator;
+      },
+      {}
+    )
+  };
+}
+
 function normalizeState(state: AppState | null): AppState {
-  if (!state) {
+  if (!state || state.version !== APP_STATE_VERSION) {
     return createInitialAppState();
   }
 
@@ -501,7 +588,8 @@ function normalizeState(state: AppState | null): AppState {
       accumulator[trip.id] = normalizeTrip(trip as Trip);
       return accumulator;
     }, {}),
-    tripFavorites: normalizeTripFavorites((state as AppState & { tripFavorites?: unknown }).tripFavorites)
+    tripFavorites: normalizeTripFavorites((state as AppState & { tripFavorites?: unknown }).tripFavorites),
+    runtimeConfig: normalizeRuntimeConfig((state as AppState & { runtimeConfig?: unknown }).runtimeConfig)
   };
 
   const membershipSet = new Set(

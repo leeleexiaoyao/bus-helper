@@ -165,7 +165,7 @@
     <view wx:if="{{pageData}}" class="seed-data-card">
       <view class="seed-data-copy">
         <view class="seed-data-title">假数据</view>
-        <view class="seed-data-description">开启后自动填充 40 个完整用户和座位数据</view>
+        <view class="seed-data-description">开启后为 1车 和 2车 追加演示成员、占座和工具示例</view>
       </view>
       <switch
         class="seed-data-switch"
@@ -179,7 +179,7 @@
     <view wx:if="{{pageData && pageData.seedDemoEnabled}}" class="seed-role-card">
       <view class="seed-role-header">
         <view class="seed-role-title">角色切换</view>
-        <view class="seed-role-description">默认提供管理员和普通成员两个身份</view>
+        <view class="seed-role-description">固定提供 1车管理员、1车成员、2车管理员、2车成员</view>
       </view>
 
       <view

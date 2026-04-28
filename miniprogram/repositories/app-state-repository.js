@@ -313,7 +313,7 @@ function normalizeTrip(trip) {
     return Object.assign(Object.assign({}, trip), { tools: nextTools });
 }
 function normalizeUser(user) {
-    var _a;
+    var _a, _b, _c;
     const nextHomePersonaAssetId = typeof user.homePersonaAssetId === "string" &&
         ((_a = user.homePersonaAssetId) === null || _a === void 0 ? void 0 : _a.trim())
         ? user.homePersonaAssetId.trim()
@@ -324,7 +324,49 @@ function normalizeUser(user) {
         : "";
     const nextHometown = typeof user.hometown === "string" ? user.hometown.trim() : "";
     const nextAge = typeof user.age === "string" ? user.age.trim() : "";
-    return Object.assign(Object.assign({}, user), { bio: nextBio, livingCity: nextLivingCity, hometown: nextHometown, age: nextAge, tags: normalizeStringArray(user.tags), homePersonaAssetId: nextHomePersonaAssetId });
+    const rawBoardingRecordsByTripId = isRecord(user.boardingRecordsByTripId)
+        ? (user.boardingRecordsByTripId)
+        : {};
+    const boardingRecordsByTripId = Object.entries(rawBoardingRecordsByTripId).reduce((accumulator, [tripId, records]) => {
+        if (!tripId.trim() || !Array.isArray(records)) {
+            return accumulator;
+        }
+        accumulator[tripId] = records.reduce((recordAccumulator, record) => {
+            if (!isRecord(record)) {
+                return recordAccumulator;
+            }
+            const id = typeof record.id === "string" ? record.id.trim() : "";
+            const seatCode = typeof record.seatCode === "string" ? record.seatCode.trim() : "";
+            const createdAt = typeof record.createdAt === "number" ? record.createdAt : NaN;
+            const confirmDeadlineAt = typeof record.confirmDeadlineAt === "number" ? record.confirmDeadlineAt : NaN;
+            const resetAt = typeof record.resetAt === "number" ? record.resetAt : NaN;
+            if (!id ||
+                !seatCode ||
+                !Number.isFinite(createdAt) ||
+                !Number.isFinite(confirmDeadlineAt) ||
+                !Number.isFinite(resetAt)) {
+                return recordAccumulator;
+            }
+            recordAccumulator.push({
+                id,
+                tripId: tripId.trim(),
+                seatCode,
+                createdAt,
+                status: record.status === "confirmed" ? "confirmed" : "pending",
+                confirmDeadlineAt,
+                resetAt
+            });
+            return recordAccumulator;
+        }, []);
+        return accumulator;
+    }, {});
+    return Object.assign(Object.assign({}, user), { bio: nextBio, livingCity: nextLivingCity, hometown: nextHometown, age: nextAge, tags: normalizeStringArray(user.tags), homePersonaAssetId: nextHomePersonaAssetId, memberTripId: typeof user.memberTripId === "string" &&
+            ((_b = user.memberTripId) === null || _b === void 0 ? void 0 : _b.trim())
+            ? user.memberTripId.trim()
+            : null, currentTripId: typeof user.currentTripId === "string" &&
+            ((_c = user.currentTripId) === null || _c === void 0 ? void 0 : _c.trim())
+            ? user.currentTripId.trim()
+            : null, boardingRecordsByTripId });
 }
 function normalizeTripFavorites(value) {
     if (!Array.isArray(value)) {
@@ -350,8 +392,26 @@ function normalizeTripFavorites(value) {
         return accumulator;
     }, []);
 }
+function normalizeRuntimeConfig(value) {
+    const fallback = (0, constants_1.createDefaultRuntimeConfig)();
+    if (!isRecord(value)) {
+        return fallback;
+    }
+    const rawTripAdminUserIds = isRecord(value.tripAdminUserIds) ? value.tripAdminUserIds : {};
+    return {
+        homeTitle: typeof value.homeTitle === "string" && value.homeTitle.trim()
+            ? value.homeTitle.trim()
+            : fallback.homeTitle,
+        tripAdminUserIds: Object.keys(fallback.tripAdminUserIds).reduce((accumulator, tripId) => {
+            const rawUserId = rawTripAdminUserIds[tripId];
+            accumulator[tripId] =
+                typeof rawUserId === "string" && rawUserId.trim() ? rawUserId.trim() : null;
+            return accumulator;
+        }, {})
+    };
+}
 function normalizeState(state) {
-    if (!state) {
+    if (!state || state.version !== constants_1.APP_STATE_VERSION) {
         return (0, constants_1.createInitialAppState)();
     }
     const normalizedUsers = Object.entries(state.users).reduce((accumulator, [userId, user]) => {
@@ -365,7 +425,7 @@ function normalizeState(state) {
         }, normalizedUsers), trips: Object.values(state.trips).reduce((accumulator, trip) => {
             accumulator[trip.id] = normalizeTrip(trip);
             return accumulator;
-        }, {}), tripFavorites: normalizeTripFavorites(state.tripFavorites) });
+        }, {}), tripFavorites: normalizeTripFavorites(state.tripFavorites), runtimeConfig: normalizeRuntimeConfig(state.runtimeConfig) });
     const membershipSet = new Set(nextState.tripMembers.map((member) => `${member.tripId}:${member.userId}`));
     const dedupedFavorites = new Map();
     nextState.tripFavorites.forEach((favorite) => {

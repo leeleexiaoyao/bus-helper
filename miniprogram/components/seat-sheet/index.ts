@@ -15,6 +15,14 @@ Component({
     },
     member: {
       type: Object
+    },
+    tripLabel: {
+      type: String,
+      value: ""
+    },
+    confirmTitle: {
+      type: String,
+      value: ""
     }
   },
   data: {
@@ -51,6 +59,7 @@ Component({
       mode: string,
       member: {
         seatLabel?: string;
+        seatDisplayLabel?: string;
         isAdmin?: boolean;
         bio?: string;
         livingLocationDisplay?: LocationDisplay;
@@ -71,8 +80,11 @@ Component({
         isMemberDetailMode: mode === "member-detail",
         isAdminMemberDetailMode: mode === "admin-member-detail",
         showDetailCard:
-          mode === "self-detail" || mode === "member-detail" || mode === "admin-member-detail",
-        detailSeatLabel: member?.seatLabel ?? "未入座",
+          mode === "self-detail" ||
+          mode === "member-detail" ||
+          mode === "admin-member-detail" ||
+          mode === "readonly-member-detail",
+        detailSeatLabel: member?.seatDisplayLabel ?? member?.seatLabel ?? "未入座",
         detailBioText: member?.bio?.trim() || "暂无签名",
         detailLivingLocationDisplay: member?.livingLocationDisplay ?? {
           primary: "未填写",

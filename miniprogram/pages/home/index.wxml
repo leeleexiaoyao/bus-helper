@@ -25,65 +25,42 @@
 
         <view class="home-user-copy">
           <view class="home-user-greeting">👋 Hi，{{currentUser.nickname}}</view>
-          <view class="home-user-wish">旅途愉快~</view>
+          <view class="home-user-wish">{{viewerSeatSummary}}</view>
         </view>
       </view>
 
-      <view class="home-seat-summary">
-        <view class="home-seat-tag">我的座位</view>
-        <view class="home-seat-value {{viewerSeatText === '请选择您的座位' ? 'is-placeholder' : ''}}">{{viewerSeatText}}</view>
+      <view
+        class="home-boarding-btn {{boardingButton.isActive ? 'is-active' : ''}} {{boardingButton.isDisabled ? 'is-disabled' : ''}}"
+        hover-class="none"
+        bindtap="handleBoardingTap"
+      >
+        {{boardingButton.label}}
       </view>
     </view>
 
     <view class="trip-panel">
       <view class="trip-tabs">
         <view class="tabs-left">
-          <view class="{{seatsTabClassName}}" data-tab="seats" bindtap="handleTabChange">
+          <view class="home-tab is-active">
             <text>座位图</text>
-            <image wx:if="{{isSeatsTab}}" class="home-tab-line" src="/assets/icons/pic_tabbar_selectedline.svg" mode="widthFix" />
-          </view>
-          <view class="{{membersTabClassName}}" data-tab="members" bindtap="handleTabChange">
-            <text>成员列表</text>
-            <image wx:if="{{isMembersTab}}" class="home-tab-line" src="/assets/icons/pic_tabbar_selectedline.svg" mode="widthFix" />
+            <image class="home-tab-line" src="/assets/icons/pic_tabbar_selectedline.svg" mode="widthFix" />
           </view>
         </view>
-        <view class="tabs-stat">已入座 {{currentTrip.tripMeta.seatedCount}} / {{currentTrip.tripMeta.seatCount}}</view>
+        <view class="trip-meta-right">
+          <view class="tabs-stat">已入座 {{currentTrip.tripMeta.seatedCount}} / {{currentTrip.tripMeta.seatCount}}</view>
+          <view class="trip-switch-trigger" bindtap="handleOpenTripSwitcher">
+            <text class="trip-switch-trigger-label">{{currentTripLabel}}</text>
+            <image class="trip-switch-trigger-icon" src="/assets/icons/icon_homepage_switch.svg" mode="aspectFit" />
+          </view>
+        </view>
       </view>
 
       <view class="trip-content-card">
-        <seat-grid wx:if="{{isSeatsTab}}" rows="{{currentTrip.seatRows}}" bindseattap="handleSeatTap" />
-        <member-list wx:else members="{{seatedMembers}}" bindmembertap="handleMemberTap" />
-      </view>
-    </view>
-  </block>
-
-  <block wx:if="{{showTripEntry}}">
-    <view class="entry-card">
-      <view class="entry-title">请先创建或加入车次</view>
-      <view class="entry-copy">完成授权后即可使用小程序</view>
-
-      <view class="entry-actions">
-        <button class="entry-primary-btn" bindtap="goCreateTrip">创建车次</button>
-        <button class="entry-secondary-btn" bindtap="goJoinTrip">加入车次</button>
+        <seat-grid rows="{{currentTrip.seatRows}}" bindseattap="handleSeatTap" />
       </view>
     </view>
   </block>
 </view>
-
-<block wx:if="{{showAuthGate}}">
-  <view class="home-auth-mask" bindtap="handleCloseAuthGate"></view>
-  <view class="home-auth-sheet">
-    <auth-gate
-      displayMode="sheet"
-      title="获取你的头像、昵称"
-      subtitle="用于生成账号信息"
-      buttonText="保存"
-      presetNickname="{{authPresetNickname}}"
-      presetAvatarUrl="{{authPresetAvatarUrl}}"
-      bindauthorized="handleAuthorizeProfile"
-    />
-  </view>
-</block>
 
 <persona-sheet
   visible="{{showPersonaSheet}}"
@@ -100,6 +77,8 @@
   mode="{{sheetMode}}"
   seat="{{selectedSeat}}"
   member="{{selectedMember}}"
+  tripLabel="{{currentTripLabel}}"
+  confirmTitle="{{seatConfirmTitle}}"
   bindclose="handleSheetClose"
   bindconfirmclaim="handleClaimConfirm"
   bindreleasemine="handleReleaseMine"
