@@ -48,12 +48,18 @@ class TripRepository {
     listTripFavorites(tripId) {
         return this.appStateRepository.read().tripFavorites.filter((favorite) => favorite.tripId === tripId);
     }
+    listAllTripFavorites() {
+        return this.appStateRepository.read().tripFavorites.slice();
+    }
     getTripMember(tripId, userId) {
         var _a;
         return (_a = this.listTripMembers(tripId).find((member) => member.userId === userId)) !== null && _a !== void 0 ? _a : null;
     }
     hasTripFavorite(tripId, sourceUserId, targetUserId) {
         return this.listTripFavorites(tripId).some((favorite) => favorite.sourceUserId === sourceUserId && favorite.targetUserId === targetUserId);
+    }
+    hasFavorite(sourceUserId, targetUserId) {
+        return this.listAllTripFavorites().some((favorite) => favorite.sourceUserId === sourceUserId && favorite.targetUserId === targetUserId);
     }
     addTripMember(tripId, userId, role, joinedAt) {
         return this.appStateRepository.update((state) => {
@@ -73,9 +79,7 @@ class TripRepository {
     }
     addTripFavorite(tripId, sourceUserId, targetUserId, createdAt) {
         return this.appStateRepository.update((state) => {
-            const exists = state.tripFavorites.find((favorite) => favorite.tripId === tripId &&
-                favorite.sourceUserId === sourceUserId &&
-                favorite.targetUserId === targetUserId);
+            const exists = state.tripFavorites.find((favorite) => favorite.sourceUserId === sourceUserId && favorite.targetUserId === targetUserId);
             if (exists) {
                 return exists;
             }
@@ -104,6 +108,11 @@ class TripRepository {
             state.tripFavorites = state.tripFavorites.filter((favorite) => !(favorite.tripId === tripId &&
                 favorite.sourceUserId === sourceUserId &&
                 favorite.targetUserId === targetUserId));
+        });
+    }
+    removeFavorite(sourceUserId, targetUserId) {
+        this.appStateRepository.update((state) => {
+            state.tripFavorites = state.tripFavorites.filter((favorite) => !(favorite.sourceUserId === sourceUserId && favorite.targetUserId === targetUserId));
         });
     }
     removeTripFavoritesByTrip(tripId) {

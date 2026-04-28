@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  DEFAULT_HOME_SUBTITLE,
   DEFAULT_HOME_TITLE,
   FIXED_TRIP_IDS,
   createInitialAppState
@@ -61,6 +62,7 @@ function expectBusinessError(action: () => unknown | Promise<unknown>, code: str
 
   assert.equal(bootstrap.homeMode, "trip");
   assert.equal(bootstrap.homeTitle, DEFAULT_HOME_TITLE);
+  assert.equal(bootstrap.homeSubtitle, DEFAULT_HOME_SUBTITLE);
   assert.equal(bootstrap.currentTripLabel, "1车");
   assert.equal(bootstrap.canEditHomeTitle, false);
   assert.equal(bootstrap.currentTrip.tripMeta.tripId, FIXED_TRIP_IDS.trip1);
@@ -286,9 +288,9 @@ function expectBusinessError(action: () => unknown | Promise<unknown>, code: str
       "1车-Miya-未入座",
       "1车-老周-未入座",
       "2车-Miya-1A",
+      "2车-老周-未入座",
       "2车-小雨-未入座",
-      "2车-阿山-未入座",
-      "2车-老周-未入座"
+      "2车-阿山-未入座"
     ]
   );
   assert.equal(adminRecordPage.memberGroups[0].records.length, 1);
@@ -343,7 +345,7 @@ function expectBusinessError(action: () => unknown | Promise<unknown>, code: str
   const favoritesPage = service.getFavoritesPageData();
 
   assert.equal(favoritesPage.tripName, "2车");
-  assert.equal(favoritesPage.favoriteCount, 0);
+  assert.equal(favoritesPage.favoriteCount, 1);
   assert.equal(favoritesPage.showRankingTab, false);
 }
 
@@ -399,7 +401,7 @@ function expectBusinessError(action: () => unknown | Promise<unknown>, code: str
   service.disableSeedDemoData();
   const resetState = storage.getState();
   assert.equal(Object.keys(resetState?.users ?? {}).length, 4);
-  assert.equal((resetState?.tripMembers ?? []).length, 8);
+  assert.equal((resetState?.tripMembers ?? []).length, 4);
   assert.equal(resetState?.runtimeConfig.tripAdminUserIds[FIXED_TRIP_IDS.trip1], null);
   assert.equal(service.getProfilePageData().seedDemoEnabled, false);
 }
@@ -458,6 +460,82 @@ function expectBusinessError(action: () => unknown | Promise<unknown>, code: str
 
   assert.equal(service.bootstrapApp().homeTitle, "银河列车");
   assert.equal(service.getHomeSettingsPageData().homeTitle, "银河列车");
+}
+
+{
+  const state = createInitialAppState();
+  state.runtimeConfig.tripAdminUserIds[FIXED_TRIP_IDS.trip1] = "user-1";
+
+  const { service } = createService(state);
+  authorizeActiveUser(service, "小雨");
+
+  await service.saveHomeSettings("银河列车", "一路顺风");
+
+  assert.equal(service.bootstrapApp().homeTitle, "银河列车");
+  assert.equal(service.bootstrapApp().homeSubtitle, "一路顺风");
+  assert.equal(service.getHomeSettingsPageData().homeSubtitle, "一路顺风");
+}
+
+{
+  const { service } = createService();
+
+  service.switchCurrentTrip(FIXED_TRIP_IDS.trip2);
+  const bootstrap = service.bootstrapApp();
+
+  assert.equal(bootstrap.currentTrip.tripMeta.templateId, "template-53");
+  assert.equal(bootstrap.currentTrip.tripMeta.seatCount, 53);
+}
+
+{
+  const state = createInitialAppState();
+  state.runtimeConfig.tripAdminUserIds[FIXED_TRIP_IDS.trip2] = "user-3";
+
+  const { service } = createService(state);
+  service.switchActiveUser("user-3");
+  authorizeActiveUser(service, "Miya");
+
+  const pageData = service.saveTripSeatTemplate(FIXED_TRIP_IDS.trip1, "template-57");
+  service.switchCurrentTrip(FIXED_TRIP_IDS.trip1);
+
+  assert.equal(service.bootstrapApp().currentTrip.tripMeta.seatCount, 57);
+  assert.equal(
+    pageData.tripSeatSettings.find((setting) => setting.tripId === FIXED_TRIP_IDS.trip1)?.seatCount,
+    57
+  );
+}
+
+{
+  const state = createInitialAppState();
+  state.version = 14;
+
+  const { service } = createService(state);
+  service.switchCurrentTrip(FIXED_TRIP_IDS.trip2);
+
+  assert.equal(service.bootstrapApp().currentTrip.tripMeta.seatCount, 53);
+}
+
+{
+  const state = createInitialAppState();
+  state.runtimeConfig.tripAdminUserIds[FIXED_TRIP_IDS.trip1] = "user-1";
+
+  const { storage, service } = createService(state);
+  authorizeActiveUser(service, "小雨");
+  service.toggleFavoriteMember("user-2");
+  withMockedNow(Date.parse("2026-04-25T12:33:00+08:00"), () => service.toggleBoardingCheckIn());
+
+  const pageData = service.clearAllTripData();
+  const nextState = storage.getState()!;
+
+  assert.equal(pageData.canClearTripData, true);
+  assert.equal(nextState.tripMembers.length, 0);
+  assert.equal(nextState.tripFavorites.length, 0);
+  assert.equal(nextState.users["user-1"].currentTripId, null);
+  assert.equal(nextState.users["user-1"].memberTripId, null);
+  assert.deepEqual(nextState.users["user-1"].boardingRecordsByTripId, {});
+  assert.equal(nextState.trips[FIXED_TRIP_IDS.trip1].seatCodes.length, 49);
+  assert.equal(nextState.trips[FIXED_TRIP_IDS.trip2].seatCodes.length, 53);
+  assert.equal(nextState.runtimeConfig.homeTitle, DEFAULT_HOME_TITLE);
+  assert.equal(nextState.runtimeConfig.homeSubtitle, DEFAULT_HOME_SUBTITLE);
 }
 
 {

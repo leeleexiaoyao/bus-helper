@@ -1,5 +1,6 @@
 .page-navbar-spacer {
   width: 100%;
+  pointer-events: none;
 }
 
 .page-navbar-fixed {
@@ -15,30 +16,51 @@
 .page-navbar-bg {
   position: absolute;
   inset: 0;
-  background: rgba(255, 255, 255, 0.95);
-  border-bottom: 1rpx solid rgba(17, 17, 17, 0.04);
+  background: #f4f4f3;
 }
 
 .page-navbar-content {
   position: relative;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
   box-sizing: border-box;
-  padding-bottom: 0;
+  pointer-events: none;
+}
+
+.page-navbar-content--with-back {
+  gap: 12px;
+}
+
+.page-navbar-back {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: rgba(17, 17, 17, 0.06);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  pointer-events: auto;
+}
+
+.page-navbar-back--hover {
+  opacity: 0.8;
+}
+
+.page-navbar-back-icon {
+  width: 10px;
+  height: 10px;
+  border-left: 2px solid #1f2539;
+  border-bottom: 2px solid #1f2539;
+  transform: translateX(2px) rotate(45deg);
 }
 
 .page-navbar-title {
-  display: flex;
-  align-items: center;
-  height: 100%;
-  width: 100%;
-  text-align: left;
-  color: var(--text-primary);
-  font-size: 40rpx;
-  font-weight: 700;
-  line-height: 1;
-  white-space: nowrap;
+  flex: 1;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  line-height: 1.2;
 }

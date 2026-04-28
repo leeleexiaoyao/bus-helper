@@ -6,6 +6,7 @@
     <view class="member-main">
       <view class="member-title-row">
         <view class="member-name">{{member.nickname}}</view>
+        <view wx:if="{{member.isMutualFavoriteWithViewer}}" class="member-mutual-tag">互相标记</view>
         <view wx:if="{{member.isSelf}}" class="member-role-badge">我</view>
         <view wx:if="{{member.isAdmin}}" class="member-role-badge">管</view>
       </view>

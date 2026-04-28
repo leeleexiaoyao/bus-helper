@@ -4,8 +4,8 @@
       wx:for="{{list}}"
       wx:key="pagePath"
       class="tab-item {{selected === index ? 'is-active' : ''}}"
-      data-path="{{item.pagePath}}"
       data-index="{{index}}"
+      data-path="{{item.pagePath}}"
       bindtap="handleSwitch"
     >
       <image

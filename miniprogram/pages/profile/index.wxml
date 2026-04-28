@@ -99,31 +99,6 @@
             {{item.label}}
           </view>
         </view>
-
-        <view wx:if="{{hasProfileBio}}" class="profile-bio">{{pageData.currentUser.bio}}</view>
-
-        <view wx:if="{{hasProfileStats}}" class="profile-stats">
-          <view wx:if="{{profileStats.age.primary}}" class="profile-stat">
-            <view class="profile-stat-value {{profileStats.age.isPlaceholder ? 'profile-stat-value--placeholder' : ''}}">
-              <text>{{profileStats.age.primary}}</text>
-            </view>
-            <view class="profile-stat-label">年龄</view>
-          </view>
-          <view wx:if="{{profileStats.age.primary && (profileStats.living.primary || profileStats.hometown.primary)}}" class="profile-stat-divider"></view>
-          <view wx:if="{{profileStats.living.primary}}" class="profile-stat">
-            <view class="profile-stat-value {{profileStats.living.isPlaceholder ? 'profile-stat-value--placeholder' : ''}}">
-              <text>{{profileStats.living.primary}}</text>
-            </view>
-            <view class="profile-stat-label">居住</view>
-          </view>
-          <view wx:if="{{profileStats.hometown.primary && (profileStats.age.primary || profileStats.living.primary)}}" class="profile-stat-divider"></view>
-          <view wx:if="{{profileStats.hometown.primary}}" class="profile-stat">
-            <view class="profile-stat-value {{profileStats.hometown.isPlaceholder ? 'profile-stat-value--placeholder' : ''}}">
-              <text>{{profileStats.hometown.primary}}</text>
-            </view>
-            <view class="profile-stat-label">来自</view>
-          </view>
-        </view>
       </view>
 
       <image wx:if="{{hasProfileIllustration}}" class="profile-illustration" src="{{profileIllustrationUrl}}" mode="aspectFit" />

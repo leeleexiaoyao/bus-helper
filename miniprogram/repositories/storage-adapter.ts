@@ -1,4 +1,4 @@
-import { APP_STATE_STORAGE_KEY, createInitialAppState } from "../shared/constants";
+import { APP_STATE_STORAGE_KEY } from "../shared/constants";
 import type { AppState } from "../shared/types";
 
 export interface StorageAdapter {
@@ -6,31 +6,48 @@ export interface StorageAdapter {
   setState(state: AppState): void;
 }
 
-export class MemoryStorageAdapter implements StorageAdapter {
-  private state: AppState | null;
+let memoryState: AppState | null = null;
 
-  constructor(initialState: AppState | null = createInitialAppState()) {
-    this.state = initialState;
-  }
+function cloneState(state: AppState | null): AppState | null {
+  return state ? (JSON.parse(JSON.stringify(state)) as AppState) : null;
+}
 
-  getState(): AppState | null {
-    return this.state ? JSON.parse(JSON.stringify(this.state)) : null;
-  }
-
-  setState(state: AppState): void {
-    this.state = JSON.parse(JSON.stringify(state));
-  }
+function canUseWxStorage(): boolean {
+  return typeof wx !== "undefined" && typeof wx.getStorageSync === "function" && typeof wx.setStorageSync === "function";
 }
 
 export const wxStorageAdapter: StorageAdapter = {
   getState() {
-    try {
-      return (wx.getStorageSync(APP_STATE_STORAGE_KEY) as AppState | "") || null;
-    } catch (error) {
-      return null;
+    if (canUseWxStorage()) {
+      const state = wx.getStorageSync(APP_STATE_STORAGE_KEY) as AppState | "" | undefined;
+      if (state) {
+        memoryState = cloneState(state);
+        return state;
+      }
     }
+    return cloneState(memoryState);
   },
   setState(state) {
-    wx.setStorageSync(APP_STATE_STORAGE_KEY, state);
+    const snapshot = cloneState(state);
+    memoryState = snapshot;
+    if (snapshot && canUseWxStorage()) {
+      wx.setStorageSync(APP_STATE_STORAGE_KEY, snapshot);
+    }
   }
 };
+
+export class MemoryStorageAdapter implements StorageAdapter {
+  private state: AppState | null;
+
+  constructor(initialState: AppState | null = null) {
+    this.state = cloneState(initialState);
+  }
+
+  getState(): AppState | null {
+    return cloneState(this.state);
+  }
+
+  setState(state: AppState): void {
+    this.state = cloneState(state);
+  }
+}

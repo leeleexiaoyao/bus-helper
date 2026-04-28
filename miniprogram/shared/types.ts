@@ -186,6 +186,7 @@ export interface TripFavoriteRelation {
 
 export interface RuntimeConfig {
   homeTitle: string;
+  homeSubtitle: string;
   tripAdminUserIds: Record<string, string | null>;
 }
 
@@ -223,6 +224,7 @@ export interface BootstrapResult {
   demoUsers: DemoUserOption[];
   homeMode: "trip";
   homeTitle: string;
+  homeSubtitle: string;
   currentTripLabel: string;
   canEditHomeTitle: boolean;
   currentTrip: CurrentTripViewModel;
@@ -334,10 +336,6 @@ export interface CreateTripInput {
 
 export interface UpdateProfileInput {
   tagsInput: string;
-  bio: string;
-  livingCity: string;
-  hometown: string;
-  age: string;
 }
 
 export interface AuthorizeProfileInput {
@@ -653,11 +651,24 @@ export interface TagEditorViewModel {
 }
 
 export interface HomeSettingsPageViewModel extends AccessStateViewModel {
+  mode: "member" | "admin";
   homeTitle: string;
+  homeSubtitle: string;
   draftHomeTitle: string;
+  draftHomeSubtitle: string;
   canEditHomeTitle: boolean;
+  canClearTripData: boolean;
   currentTripLabel: string;
   viewerRoleLabel: string;
+  clearActionLabel: string;
+  clearActionDescription: string;
+  tripSeatSettings: Array<{
+    tripId: string;
+    tripLabel: string;
+    templateId: TemplateId;
+    templateLabel: string;
+    seatCount: number;
+  }>;
   isSaving: boolean;
 }
 

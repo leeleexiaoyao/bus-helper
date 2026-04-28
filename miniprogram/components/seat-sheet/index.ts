@@ -1,5 +1,3 @@
-import type { LocationDisplay } from "../../shared/types";
-
 Component({
   properties: {
     visible: {
@@ -34,20 +32,6 @@ Component({
     isAdminMemberDetailMode: false,
     showDetailCard: false,
     detailSeatLabel: "未入座",
-    detailBioText: "暂无签名",
-    detailLivingLocationDisplay: {
-      primary: "未填写",
-      secondary: "",
-      full: "",
-      isPlaceholder: true
-    } as LocationDisplay,
-    detailHometownLocationDisplay: {
-      primary: "未填写",
-      secondary: "",
-      full: "",
-      isPlaceholder: true
-    } as LocationDisplay,
-    detailAgeText: "未填写",
     detailPersonaImageUrl: "",
     showAdminBadge: false,
     showFavoriteAction: false,
@@ -61,10 +45,6 @@ Component({
         seatLabel?: string;
         seatDisplayLabel?: string;
         isAdmin?: boolean;
-        bio?: string;
-        livingLocationDisplay?: LocationDisplay;
-        hometownLocationDisplay?: LocationDisplay;
-        age?: string;
         homePersonaImageUrl?: string;
         isFavoritedByViewer?: boolean;
       } | null
@@ -85,20 +65,6 @@ Component({
           mode === "admin-member-detail" ||
           mode === "readonly-member-detail",
         detailSeatLabel: member?.seatDisplayLabel ?? member?.seatLabel ?? "未入座",
-        detailBioText: member?.bio?.trim() || "暂无签名",
-        detailLivingLocationDisplay: member?.livingLocationDisplay ?? {
-          primary: "未填写",
-          secondary: "",
-          full: "",
-          isPlaceholder: true
-        },
-        detailHometownLocationDisplay: member?.hometownLocationDisplay ?? {
-          primary: "未填写",
-          secondary: "",
-          full: "",
-          isPlaceholder: true
-        },
-        detailAgeText: member?.age?.trim() || "未填写",
         detailPersonaImageUrl: member?.homePersonaImageUrl ?? "",
         showAdminBadge: Boolean(member?.isAdmin),
         showFavoriteAction: mode === "member-detail" || mode === "admin-member-detail",

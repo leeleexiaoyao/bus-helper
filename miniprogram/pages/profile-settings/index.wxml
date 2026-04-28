@@ -1,10 +1,26 @@
 <view class="page-shell profile-settings-page" wx:if="{{pageData}}">
-  <view class="settings-card">
-    <view class="settings-page-title">首页标题</view>
-    <view class="settings-page-copy">当前全局标题会同时展示在 1车 和 2车 首页顶部。</view>
+  <block wx:if="{{pageData.mode === 'member'}}">
+    <view class="settings-card settings-card--danger">
+      <view class="settings-page-title">数据管理</view>
+      <view class="settings-page-copy">当前操作只会清除你在本机看到的相关数据，不会影响管理员端和后端数据库。</view>
+      <button
+        class="danger-btn"
+        loading="{{isClearingLocalData}}"
+        disabled="{{isClearingLocalData}}"
+        bindtap="handleClearLocalData"
+      >
+        {{isClearingLocalData ? '清除中...' : pageData.clearActionLabel}}
+      </button>
+      <view class="settings-danger-copy">{{pageData.clearActionDescription}}</view>
+    </view>
+  </block>
 
-    <block wx:if="{{pageData.canEditHomeTitle}}">
+  <block wx:else>
+    <view class="settings-card">
+      <view class="settings-page-title">首页文案</view>
+      <view class="settings-page-copy">标题和副标题会同时展示在 1车 和 2车 首页顶部。</view>
       <view class="settings-meta">当前身份：{{pageData.currentTripLabel}}{{pageData.viewerRoleLabel}}</view>
+      <view class="settings-field-label">首页标题</view>
       <input
         class="settings-input"
         value="{{draftHomeTitle}}"
@@ -13,22 +29,62 @@
         placeholder-class="settings-input-placeholder"
         bindinput="handleTitleInput"
       />
+      <view class="settings-field-label">首页副标题</view>
+      <input
+        class="settings-input"
+        value="{{draftHomeSubtitle}}"
+        maxlength="30"
+        placeholder="请输入首页副标题"
+        placeholder-class="settings-input-placeholder"
+        bindinput="handleSubtitleInput"
+      />
       <button
         class="primary-btn settings-save-btn"
-        loading="{{isSaving}}"
-        disabled="{{isSaving}}"
-        bindtap="handleSaveTitle"
+        loading="{{isSavingCopy}}"
+        disabled="{{isSavingCopy}}"
+        bindtap="handleSaveCopy"
       >
-        {{isSaving ? '保存中...' : '保存标题'}}
+        {{isSavingCopy ? '保存中...' : '保存首页文案'}}
       </button>
-    </block>
+    </view>
 
-    <block wx:else>
-      <view class="settings-value-card">
-        <view class="settings-value-label">当前标题</view>
-        <view class="settings-value-text">{{pageData.homeTitle}}</view>
+    <view class="settings-card settings-card--spaced">
+      <view class="settings-page-title">座位配置</view>
+      <view class="settings-page-copy">1车 和 2车 使用固定模板，可切换为 49 / 53 / 57 座。</view>
+
+      <view
+        class="seat-setting-item"
+        wx:for="{{pageData.tripSeatSettings}}"
+        wx:key="tripId"
+      >
+        <view class="seat-setting-main">
+          <view class="seat-setting-title">{{item.tripLabel}}</view>
+          <view class="seat-setting-copy">{{item.templateLabel}} · 当前 {{item.seatCount}} 个座位</view>
+        </view>
+
+        <button
+          class="seat-setting-action"
+          data-trip-id="{{item.tripId}}"
+          loading="{{seatUpdatingTripId === item.tripId}}"
+          disabled="{{seatUpdatingTripId === item.tripId || isClearingTripData}}"
+          bindtap="handleSeatTemplateTap"
+        >
+          {{seatUpdatingTripId === item.tripId ? '更新中...' : '更改'}}
+        </button>
       </view>
-      <view class="settings-readonly-tip">当前身份为 {{pageData.currentTripLabel}}{{pageData.viewerRoleLabel}}，可查看配置内容。</view>
-    </block>
-  </view>
+    </view>
+
+    <view class="settings-card settings-card--danger">
+      <view class="settings-page-title">危险操作</view>
+      <view class="settings-page-copy">清空两辆车的座位、成员归属、标记、工具和上车记录，个人资料与首页设置会保留。</view>
+      <button
+        class="danger-btn"
+        loading="{{isClearingTripData}}"
+        disabled="{{isClearingTripData || !!seatUpdatingTripId}}"
+        bindtap="handleClearTripData"
+      >
+        {{isClearingTripData ? '清空中...' : '清除所有车次信息'}}
+      </button>
+    </view>
+  </block>
 </view>

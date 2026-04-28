@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppStateRepository = void 0;
 exports.initializeAppState = initializeAppState;
 const constants_1 = require("../shared/constants");
+const seat_1 = require("../shared/seat");
 function isRecord(value) {
     return typeof value === "object" && value !== null;
 }
@@ -402,6 +403,9 @@ function normalizeRuntimeConfig(value) {
         homeTitle: typeof value.homeTitle === "string" && value.homeTitle.trim()
             ? value.homeTitle.trim()
             : fallback.homeTitle,
+        homeSubtitle: typeof value.homeSubtitle === "string" && value.homeSubtitle.trim()
+            ? value.homeSubtitle.trim()
+            : fallback.homeSubtitle,
         tripAdminUserIds: Object.keys(fallback.tripAdminUserIds).reduce((accumulator, tripId) => {
             const rawUserId = rawTripAdminUserIds[tripId];
             accumulator[tripId] =
@@ -410,22 +414,51 @@ function normalizeRuntimeConfig(value) {
         }, {})
     };
 }
+function migrateTripToTemplate(trip, templateId) {
+    const seatCodes = (0, seat_1.generateSeatCodes)(templateId);
+    const nextSeatMap = (0, seat_1.createSeatMap)(seatCodes);
+    seatCodes.forEach((seatCode) => {
+        var _a, _b;
+        const occupiedUserId = (_b = (_a = trip.seatMap) === null || _a === void 0 ? void 0 : _a[seatCode]) !== null && _b !== void 0 ? _b : null;
+        nextSeatMap[seatCode] = occupiedUserId;
+    });
+    return Object.assign(Object.assign({}, trip), { templateId,
+        seatCodes, seatMap: nextSeatMap });
+}
+function migrateState(state) {
+    if (!state) {
+        return null;
+    }
+    if (state.version === constants_1.APP_STATE_VERSION) {
+        return state;
+    }
+    if (state.version !== 14) {
+        return null;
+    }
+    const nextState = Object.assign(Object.assign({}, state), { version: constants_1.APP_STATE_VERSION, trips: Object.assign({}, state.trips), runtimeConfig: normalizeRuntimeConfig(state.runtimeConfig) });
+    const trip2 = nextState.trips[constants_1.FIXED_TRIP_IDS.trip2];
+    if (trip2 && trip2.templateId === "template-49" && trip2.seatCodes.length === 49) {
+        nextState.trips[constants_1.FIXED_TRIP_IDS.trip2] = migrateTripToTemplate(trip2, "template-53");
+    }
+    return nextState;
+}
 function normalizeState(state) {
-    if (!state || state.version !== constants_1.APP_STATE_VERSION) {
+    const migratedState = migrateState(state);
+    if (!migratedState) {
         return (0, constants_1.createInitialAppState)();
     }
-    const normalizedUsers = Object.entries(state.users).reduce((accumulator, [userId, user]) => {
+    const normalizedUsers = Object.entries(migratedState.users).reduce((accumulator, [userId, user]) => {
         accumulator[userId] = normalizeUser(user);
         return accumulator;
     }, {});
-    const nextState = Object.assign(Object.assign({}, state), { version: constants_1.APP_STATE_VERSION, users: constants_1.DEMO_USERS.reduce((accumulator, demoUser) => {
+    const nextState = Object.assign(Object.assign({}, migratedState), { version: constants_1.APP_STATE_VERSION, users: constants_1.DEMO_USERS.reduce((accumulator, demoUser) => {
             var _a;
             accumulator[demoUser.id] = (_a = accumulator[demoUser.id]) !== null && _a !== void 0 ? _a : Object.assign({}, demoUser);
             return accumulator;
-        }, normalizedUsers), trips: Object.values(state.trips).reduce((accumulator, trip) => {
+        }, normalizedUsers), trips: Object.values(migratedState.trips).reduce((accumulator, trip) => {
             accumulator[trip.id] = normalizeTrip(trip);
             return accumulator;
-        }, {}), tripFavorites: normalizeTripFavorites(state.tripFavorites), runtimeConfig: normalizeRuntimeConfig(state.runtimeConfig) });
+        }, {}), tripFavorites: normalizeTripFavorites(migratedState.tripFavorites), runtimeConfig: normalizeRuntimeConfig(migratedState.runtimeConfig) });
     const membershipSet = new Set(nextState.tripMembers.map((member) => `${member.tripId}:${member.userId}`));
     const dedupedFavorites = new Map();
     nextState.tripFavorites.forEach((favorite) => {

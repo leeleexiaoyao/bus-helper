@@ -46,9 +46,12 @@
       <view wx:else class="record-avatar avatar-fallback">{{item.initial}}</view>
       <view class="record-item-copy">
         <view class="record-name">{{item.nickname}}</view>
-        <view class="record-entry-status">已打卡</view>
+        <view class="record-entry-status">{{item.tripLabel}}{{item.seatLabel}}</view>
       </view>
-      <view class="record-item-time">{{item.formattedTime}}</view>
+      <view class="record-item-time-group">
+        <view class="record-item-time">{{item.formattedTime}}</view>
+        <view class="record-item-action">上车</view>
+      </view>
     </view>
   </block>
 

@@ -1,12 +1,2 @@
-<view class="page-shell">
-  <view class="card static-card" style="border-radius: 32rpx; overflow: hidden; background: #ffffff;">
-    <view class="section-title">建议反馈</view>
-    <view class="section-subtitle">
-      这个入口先作为静态占位页保留，后续会补充更完整的反馈方式和问题收集流程。
-    </view>
-
-    <view class="static-copy">
-      如果你在演示过程中发现交互不顺手、文案不清楚，或希望补充新的乘车工具，都可以在后续版本里继续收敛到这里。
-    </view>
-  </view>
-</view>
+<!--pages/feedback/index.wxml-->
+<text>pages/feedback/index.wxml</text>

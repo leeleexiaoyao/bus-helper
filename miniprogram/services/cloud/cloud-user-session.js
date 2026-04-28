@@ -17,6 +17,7 @@ const constants_1 = require("../../shared/constants");
 const app_state_repository_1 = require("../../repositories/app-state-repository");
 const storage_adapter_1 = require("../../repositories/storage-adapter");
 const cloud_1 = require("../../config/cloud");
+const local_user_reset_1 = require("../../utils/local-user-reset");
 const cloud_service_1 = require("./cloud-service");
 const CLOUD_USER_COLLECTION = "bus_buddy_users";
 let userWriteQueue = Promise.resolve();
@@ -201,6 +202,13 @@ async function syncCloudUserToLocalState() {
     }
     const identity = await (0, cloud_service_1.fetchCloudIdentity)();
     const repository = new app_state_repository_1.AppStateRepository(storage_adapter_1.wxStorageAdapter);
+    if ((0, local_user_reset_1.isLocallyClearedUser)(identity.openid)) {
+        repository.update((state) => {
+            state.users[identity.openid] = (0, local_user_reset_1.buildLocallyClearedUser)(identity.openid);
+            state.activeUserId = identity.openid;
+        });
+        return;
+    }
     const seedUser = getLocalSeedUser();
     let cloudUser = await readCloudUser(identity.openid);
     if (!cloudUser) {
@@ -218,7 +226,10 @@ async function syncCloudUserToLocalState() {
     });
 }
 function scheduleUserCloudSync(user) {
-    if (!canUseCloudRuntime() || !user.id || constants_1.DEMO_SWITCHABLE_USER_IDS.includes(user.id)) {
+    if (!canUseCloudRuntime() ||
+        !user.id ||
+        constants_1.DEMO_SWITCHABLE_USER_IDS.includes(user.id) ||
+        (0, local_user_reset_1.isLocallyClearedUser)(user.id)) {
         return;
     }
     const nextDocument = toCloudUserDocument(user);

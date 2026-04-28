@@ -1,5 +1,4 @@
 "use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
 Component({
     properties: {
         visible: {
@@ -34,20 +33,6 @@ Component({
         isAdminMemberDetailMode: false,
         showDetailCard: false,
         detailSeatLabel: "未入座",
-        detailBioText: "暂无签名",
-        detailLivingLocationDisplay: {
-            primary: "未填写",
-            secondary: "",
-            full: "",
-            isPlaceholder: true
-        },
-        detailHometownLocationDisplay: {
-            primary: "未填写",
-            secondary: "",
-            full: "",
-            isPlaceholder: true
-        },
-        detailAgeText: "未填写",
         detailPersonaImageUrl: "",
         showAdminBadge: false,
         showFavoriteAction: false,
@@ -55,7 +40,7 @@ Component({
     },
     observers: {
         "visible, mode, member": function (visible, mode, member) {
-            var _a, _b, _c, _d, _e, _f, _g;
+            var _a, _b, _c;
             if (visible) {
                 this.showSheet();
             }
@@ -72,21 +57,7 @@ Component({
                     mode === "admin-member-detail" ||
                     mode === "readonly-member-detail",
                 detailSeatLabel: (_b = (_a = member === null || member === void 0 ? void 0 : member.seatDisplayLabel) !== null && _a !== void 0 ? _a : member === null || member === void 0 ? void 0 : member.seatLabel) !== null && _b !== void 0 ? _b : "未入座",
-                detailBioText: ((_c = member === null || member === void 0 ? void 0 : member.bio) === null || _c === void 0 ? void 0 : _c.trim()) || "暂无签名",
-                detailLivingLocationDisplay: (_d = member === null || member === void 0 ? void 0 : member.livingLocationDisplay) !== null && _d !== void 0 ? _d : {
-                    primary: "未填写",
-                    secondary: "",
-                    full: "",
-                    isPlaceholder: true
-                },
-                detailHometownLocationDisplay: (_e = member === null || member === void 0 ? void 0 : member.hometownLocationDisplay) !== null && _e !== void 0 ? _e : {
-                    primary: "未填写",
-                    secondary: "",
-                    full: "",
-                    isPlaceholder: true
-                },
-                detailAgeText: ((_f = member === null || member === void 0 ? void 0 : member.age) === null || _f === void 0 ? void 0 : _f.trim()) || "未填写",
-                detailPersonaImageUrl: (_g = member === null || member === void 0 ? void 0 : member.homePersonaImageUrl) !== null && _g !== void 0 ? _g : "",
+                detailPersonaImageUrl: (_c = member === null || member === void 0 ? void 0 : member.homePersonaImageUrl) !== null && _c !== void 0 ? _c : "",
                 showAdminBadge: Boolean(member === null || member === void 0 ? void 0 : member.isAdmin),
                 showFavoriteAction: mode === "member-detail" || mode === "admin-member-detail",
                 favoriteButtonText: (member === null || member === void 0 ? void 0 : member.isFavoritedByViewer) ? "取消标记" : "标记"

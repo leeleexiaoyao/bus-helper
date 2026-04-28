@@ -15,33 +15,9 @@ interface TagEditorPageData {
   showPersonaSheet: boolean;
   personaSheetActive: boolean;
   personaDraftId: string;
-  bio: string;
-  livingCity: string;
-  livingRegion: string[];
-  hometown: string;
-  hometownRegion: string[];
-  ageOptions: number[];
-  agePickerIndex: number;
-  age: string;
   tagsInput: string;
   previewTags: string[];
   submitting: boolean;
-}
-
-const AGE_OPTIONS = Array.from({ length: 75 }, (_, index) => index + 16);
-const DEFAULT_AGE = 18;
-
-function resolveAgePickerIndex(age: string): number {
-  const numericAge = Number(age);
-  if (!Number.isInteger(numericAge)) {
-    return 0;
-  }
-
-  const targetAge =
-    numericAge >= AGE_OPTIONS[0] && numericAge <= AGE_OPTIONS[AGE_OPTIONS.length - 1]
-      ? numericAge
-      : DEFAULT_AGE;
-  return Math.max(0, AGE_OPTIONS.indexOf(targetAge));
 }
 
 Page({
@@ -55,14 +31,6 @@ Page({
     showPersonaSheet: false,
     personaSheetActive: false,
     personaDraftId: "",
-    bio: "",
-    livingCity: "",
-    livingRegion: [] as string[],
-    hometown: "",
-    hometownRegion: [] as string[],
-    ageOptions: AGE_OPTIONS,
-    agePickerIndex: resolveAgePickerIndex(""),
-    age: "",
     tagsInput: "",
     previewTags: [] as string[],
     submitting: false
@@ -107,13 +75,6 @@ Page({
       showPersonaSheet: false,
       personaSheetActive: false,
       personaDraftId: viewModel.currentPersonaId,
-      bio: viewModel.bio,
-      livingCity: viewModel.livingCity,
-      livingRegion: viewModel.livingRegion,
-      hometown: viewModel.hometown,
-      hometownRegion: viewModel.hometownRegion,
-      agePickerIndex: resolveAgePickerIndex(viewModel.age),
-      age: viewModel.age,
       tagsInput: viewModel.tagsInput,
       previewTags: viewModel.previewTags
     });
@@ -187,47 +148,11 @@ Page({
     this.personaSheetCloseTimer = 0;
   },
 
-  handleFieldInput(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
-    const field = String(event.currentTarget.dataset.field || "");
-    if (!field) {
-      return;
-    }
-
-    this.setData({
-      [field]: event.detail.value
-    });
-  },
-
   handleTagsInput(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
     const tagsInput = event.detail.value;
     this.setData({
       tagsInput,
       previewTags: parseTags(tagsInput)
-    });
-  },
-
-  handleLivingRegionChange(event: WechatMiniprogram.CustomEvent<{ value: string[] }>) {
-    const nextRegion = event.detail.value ?? [];
-    this.setData({
-      livingRegion: nextRegion,
-      livingCity: nextRegion.slice(0, 3).join("")
-    });
-  },
-
-  handleHometownRegionChange(event: WechatMiniprogram.CustomEvent<{ value: string[] }>) {
-    const nextRegion = event.detail.value ?? [];
-    this.setData({
-      hometownRegion: nextRegion.slice(0, 2),
-      hometown: nextRegion.slice(0, 2).join("")
-    });
-  },
-
-  handleAgeChange(event: WechatMiniprogram.CustomEvent<{ value: number }>) {
-    const nextIndex = Number(event.detail.value ?? 0);
-    const nextAge = this.data.ageOptions[nextIndex] ?? DEFAULT_AGE;
-    this.setData({
-      agePickerIndex: nextIndex,
-      age: String(nextAge)
     });
   },
 
@@ -242,10 +167,6 @@ Page({
 
     try {
       const viewModel = tripService.updateProfile({
-        bio: this.data.bio,
-        livingCity: this.data.livingCity,
-        hometown: this.data.hometown,
-        age: this.data.age,
         tagsInput: this.data.tagsInput
       });
       this.applyViewModel(viewModel);

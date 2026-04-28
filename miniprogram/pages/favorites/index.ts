@@ -9,7 +9,6 @@ Page({
     showAuthGate: true,
     showPageContent: false,
     showEmptyState: false,
-    navProgress: 0,
     authPresetNickname: "",
     authPresetAvatarUrl: "",
     activeTab: "mine" as "mine" | "ranking",
@@ -28,16 +27,6 @@ Page({
     this.refreshPage();
   },
 
-  onPageScroll(event: WechatMiniprogram.Page.IPageScrollOption) {
-    const navProgress = Math.max(0, Math.min(1, event.scrollTop / 72));
-    if (Math.abs(navProgress - this.data.navProgress) < 0.02) {
-      return;
-    }
-    this.setData({
-      navProgress
-    });
-  },
-
   refreshPage() {
     try {
       const pageData = tripService.getFavoritesPageData();
@@ -51,7 +40,6 @@ Page({
         showAuthGate: !pageData.isAuthorized,
         showPageContent: pageData.isAuthorized,
         showEmptyState,
-        navProgress: 0,
         authPresetNickname: pageData.currentUser.nickname,
         authPresetAvatarUrl: pageData.currentUser.avatarUrl,
         activeTab,

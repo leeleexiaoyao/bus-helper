@@ -1,18 +1,19 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.TOOL_META = exports.TOOL_TYPES = exports.DEMO_SWITCHABLE_USER_IDS = exports.DEMO_USERS = exports.TRIP_TEMPLATES = exports.FIXED_TRIP_LABELS = exports.DEFAULT_VIEW_TRIP_ID = exports.FIXED_TRIP_IDS = exports.HOME_PERSONA_OPTIONS = exports.DEFAULT_WHEEL_ITEMS = exports.WHEEL_MAX_ITEMS = exports.HOME_PERSONA_IMAGE_URL = exports.DEFAULT_HOME_TITLE = exports.DEFAULT_AVATAR_URL = exports.DEFAULT_DEPARTURE_TIME = exports.DEFAULT_TRIP_NAME = exports.MAX_MEMBER_FAVORITES_PER_TRIP = exports.APP_STATE_STORAGE_KEY = exports.APP_STATE_VERSION = void 0;
+exports.TOOL_META = exports.TOOL_TYPES = exports.DEMO_SWITCHABLE_USER_IDS = exports.DEMO_USERS = exports.TRIP_TEMPLATES = exports.FIXED_TRIP_LABELS = exports.DEFAULT_VIEW_TRIP_ID = exports.FIXED_TRIP_IDS = exports.HOME_PERSONA_OPTIONS = exports.DEFAULT_WHEEL_ITEMS = exports.WHEEL_MAX_ITEMS = exports.HOME_PERSONA_IMAGE_URL = exports.DEFAULT_HOME_SUBTITLE = exports.DEFAULT_HOME_TITLE = exports.DEFAULT_AVATAR_URL = exports.DEFAULT_DEPARTURE_TIME = exports.DEFAULT_TRIP_NAME = exports.MAX_MEMBER_FAVORITES_PER_TRIP = exports.APP_STATE_STORAGE_KEY = exports.APP_STATE_VERSION = void 0;
 exports.createDefaultRuntimeConfig = createDefaultRuntimeConfig;
 exports.createEmptyTripTools = createEmptyTripTools;
 exports.createInitialAppState = createInitialAppState;
 exports.createSeededDemoAppState = createSeededDemoAppState;
 exports.isSeededDemoAppState = isSeededDemoAppState;
-exports.APP_STATE_VERSION = 14;
+exports.APP_STATE_VERSION = 15;
 exports.APP_STATE_STORAGE_KEY = "bus-seat-buddy-state";
-exports.MAX_MEMBER_FAVORITES_PER_TRIP = 2;
+exports.MAX_MEMBER_FAVORITES_PER_TRIP = 6;
 exports.DEFAULT_TRIP_NAME = "未命名车次";
 exports.DEFAULT_DEPARTURE_TIME = "待定";
 exports.DEFAULT_AVATAR_URL = "";
-exports.DEFAULT_HOME_TITLE = "麒麟之旅";
+exports.DEFAULT_HOME_TITLE = "座位排序助手";
+exports.DEFAULT_HOME_SUBTITLE = "祝您旅途愉快~";
 exports.HOME_PERSONA_IMAGE_URL = "/assets/personas/home-persona.png";
 exports.WHEEL_MAX_ITEMS = 10;
 exports.DEFAULT_WHEEL_ITEMS = ["免单", "零食礼包", "饮料一杯", "神秘福袋", "再来一次", "感谢参与"];
@@ -116,6 +117,7 @@ exports.TOOL_TYPES = ["seat-draw", "vote", "wheel", "lottery"];
 function createDefaultRuntimeConfig() {
     return {
         homeTitle: exports.DEFAULT_HOME_TITLE,
+        homeSubtitle: exports.DEFAULT_HOME_SUBTITLE,
         tripAdminUserIds: {
             [exports.FIXED_TRIP_IDS.trip1]: null,
             [exports.FIXED_TRIP_IDS.trip2]: null
@@ -201,10 +203,10 @@ function buildBaseTrips() {
             tripName: exports.FIXED_TRIP_LABELS[exports.FIXED_TRIP_IDS.trip2],
             departureTime: "2025-04-25 02:30",
             password: "220002",
-            templateId: "template-49",
+            templateId: "template-53",
             creatorUserId: "user-3",
             status: "active",
-            seatCodes: generateSeatCodes("template-49"),
+            seatCodes: generateSeatCodes("template-53"),
             seatMap: {},
             tools: createEmptyTripTools(),
             createdAt: BASE_CREATED_AT + 1
@@ -213,7 +215,9 @@ function buildBaseTrips() {
     return trips.map((trip) => (Object.assign(Object.assign({}, trip), { seatMap: createSeatMap(trip.seatCodes) })));
 }
 function buildBaseTripMembers() {
-    return [exports.FIXED_TRIP_IDS.trip1, exports.FIXED_TRIP_IDS.trip2].flatMap((tripId, tripIndex) => exports.DEMO_USERS.map((user, userIndex) => ({
+    return [exports.FIXED_TRIP_IDS.trip1, exports.FIXED_TRIP_IDS.trip2].flatMap((tripId, tripIndex) => exports.DEMO_USERS
+        .filter((user) => user.memberTripId === tripId)
+        .map((user, userIndex) => ({
         tripId,
         userId: user.id,
         role: "member",
@@ -430,6 +434,7 @@ function createSeededDemoAppState() {
     trip2.tools = createSeedTripTools(exports.FIXED_TRIP_IDS.trip2, nextTripMembers.filter((member) => member.tripId === exports.FIXED_TRIP_IDS.trip2).map((member) => member.userId));
     return Object.assign(Object.assign({}, baseState), { users: nextUsers, trips: Object.assign(Object.assign({}, nextTrips), { [exports.FIXED_TRIP_IDS.trip1]: trip1, [exports.FIXED_TRIP_IDS.trip2]: trip2 }), tripMembers: nextTripMembers, runtimeConfig: {
             homeTitle: exports.DEFAULT_HOME_TITLE,
+            homeSubtitle: exports.DEFAULT_HOME_SUBTITLE,
             tripAdminUserIds: {
                 [exports.FIXED_TRIP_IDS.trip1]: "user-1",
                 [exports.FIXED_TRIP_IDS.trip2]: "user-3"

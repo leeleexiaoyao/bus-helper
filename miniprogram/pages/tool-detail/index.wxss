@@ -21,12 +21,12 @@
   left: 0;
   right: 0;
   z-index: 30;
-  background: #eceff7;
+  background: #ffffff;
   box-sizing: border-box;
 }
 
 .tool-detail-page--editor .custom-nav {
-  background: #eef2fb;
+  background: #ffffff;
 }
 
 .custom-nav-inner {

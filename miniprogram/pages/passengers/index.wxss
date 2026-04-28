@@ -1,59 +1,87 @@
 .passengers-page {
   min-height: 100vh;
+  position: relative;
   background: #f4f4f3;
-  padding-bottom: calc(env(safe-area-inset-bottom) + 40rpx);
+  padding: 0 32rpx calc(env(safe-area-inset-bottom) + 48rpx);
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
-.passengers-header {
-  padding: 40rpx 32rpx 0;
+.passengers-bg-hero {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 454rpx;
+  background: linear-gradient(180deg, #ecfbbb 0%, #f4f4f3 100%);
+  pointer-events: none;
 }
 
-.passengers-title {
+.passengers-topbar {
+  margin-top: -44rpx;
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.passengers-page-title {
   color: #111111;
-  font-size: 44rpx;
-  font-weight: 700;
-  line-height: 1.2;
+  font-size: 56rpx;
+  line-height: 1.18;
+  font-weight: 900;
 }
 
-.passengers-subtitle {
-  margin-top: 10rpx;
-  color: #6f7783;
-  font-size: 24rpx;
-  line-height: 1.4;
+.passengers-panel {
+  position: relative;
+  z-index: 2;
+  margin-top: 34rpx;
+  padding: 28rpx 24rpx 32rpx;
+  border-radius: 40rpx;
+  background: rgba(255, 255, 255, 0.7);
+  box-sizing: border-box;
 }
 
 .passengers-filters {
   display: flex;
-  gap: 16rpx;
-  padding: 24rpx 32rpx 0;
+  align-items: center;
+  gap: 40rpx;
+  padding: 0 24rpx;
 }
 
 .passengers-filter {
-  min-width: 132rpx;
-  height: 72rpx;
-  padding: 0 28rpx;
-  border-radius: 999rpx;
-  background: rgba(17, 17, 17, 0.06);
-  color: #6f7783;
-  font-size: 26rpx;
-  font-weight: 600;
   display: inline-flex;
+  position: relative;
   align-items: center;
   justify-content: center;
+  padding-bottom: 18rpx;
   box-sizing: border-box;
+  color: #7c8390;
+  font-size: 28rpx;
+  font-weight: 400;
+  line-height: 1.2;
 }
 
 .passengers-filter.is-active {
-  background: #111111;
-  color: #ffffff;
+  color: #111111;
+  font-weight: 700;
+}
+
+.passengers-filter-line {
+  position: absolute;
+  left: 50%;
+  bottom: -2rpx;
+  width: 52rpx;
+  transform: translateX(-50%);
 }
 
 .passengers-groups {
-  padding: 24rpx 32rpx 0;
+  padding: 28rpx 0 0;
 }
 
 .passenger-group + .passenger-group {
-  margin-top: 24rpx;
+  margin-top: 32rpx;
 }
 
 .passenger-group-head {
@@ -61,6 +89,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 16rpx;
+  padding: 0 4rpx;
 }
 
 .passenger-group-title {

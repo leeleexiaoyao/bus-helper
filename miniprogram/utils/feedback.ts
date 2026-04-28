@@ -1,18 +1,19 @@
-import { BusinessError } from "../shared/errors";
-
-export function getErrorMessage(error: unknown, fallback = "操作失败，请稍后再试。"): string {
-  if (error instanceof BusinessError) {
-    return error.message;
+function resolveErrorMessage(error: unknown): string {
+  if (typeof error === "string") {
+    return error;
   }
-  if (error instanceof Error) {
-    return error.message || fallback;
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) {
+      return message.trim();
+    }
   }
-  return fallback;
+  return "操作失败，请稍后重试";
 }
 
-export function showErrorToast(error: unknown, fallback?: string): void {
+export function showErrorToast(error: unknown): void {
   wx.showToast({
-    title: getErrorMessage(error, fallback),
+    title: resolveErrorMessage(error),
     icon: "none"
   });
 }

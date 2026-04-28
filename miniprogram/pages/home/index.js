@@ -7,7 +7,8 @@ const feedback_1 = require("../../utils/feedback");
 const initialData = {
     showTripContent: false,
     hasCurrentTrip: false,
-    navTitle: "麒麟之旅",
+    navTitle: "座位排序助手",
+    navSubtitle: "祝您旅途愉快~",
     currentTripLabel: "1车",
     navProgress: 0,
     currentUser: null,
@@ -88,6 +89,7 @@ Page({
             showTripContent: hasCurrentTrip,
             hasCurrentTrip,
             navTitle: result.homeTitle,
+            navSubtitle: result.homeSubtitle,
             currentTripLabel: result.currentTripLabel,
             navProgress: 0,
             currentUser: result.currentUser,

@@ -72,6 +72,19 @@
   margin-left: 18rpx;
 }
 
+.record-item-copy .record-name {
+  font-size: 26rpx;
+  font-weight: 700;
+}
+
+.record-item-copy .record-entry-status {
+  min-width: 74rpx;
+  height: 32rpx;
+  padding: 0 13rpx;
+  font-size: 19rpx;
+  font-weight: 400;
+}
+
 .record-name {
   color: #111111;
   font-size: 30rpx;
@@ -121,8 +134,22 @@
   text-align: right;
 }
 
-.record-item-time {
+.record-item-time-group {
   margin-left: 16rpx;
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.record-item-time {
+  flex-shrink: 0;
+}
+
+.record-item-action {
+  color: #6f7783;
+  font-size: 22rpx;
+  line-height: 1.4;
+  flex-shrink: 0;
 }
 
 .record-empty {

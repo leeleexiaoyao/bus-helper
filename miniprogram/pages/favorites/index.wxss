@@ -1,54 +1,29 @@
 .favorites-page {
   min-height: 100vh;
-  background: #f4f4f3;
-  padding-bottom: 40rpx;
-}
-
-.favorites-header {
-  padding: 40rpx 32rpx 16rpx;
-}
-
-.favorites-title {
-  font-size: 44rpx;
-  font-weight: 700;
-  color: #111111;
-}
-
-.favorites-subtitle {
-  margin-top: 10rpx;
-  font-size: 24rpx;
-  color: #666666;
-}
-
-.favorites-summary {
   display: flex;
-  gap: 16rpx;
-  padding: 0 32rpx;
+  flex-direction: column;
+  background: #f4f4f3;
+  padding: 0 0 calc(env(safe-area-inset-bottom) + 40rpx);
+  box-sizing: border-box;
 }
 
-.favorites-summary-card {
+.favorites-content {
   flex: 1;
-  padding: 26rpx 24rpx;
-  border-radius: 24rpx;
-  background: #ffffff;
+  min-height: 0;
+  padding: 28rpx 32rpx 0;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
 }
 
-.summary-label {
-  font-size: 22rpx;
-  color: #7b7b7b;
-}
-
-.summary-value {
-  margin-top: 8rpx;
-  font-size: 34rpx;
-  font-weight: 700;
-  color: #111111;
+auth-gate {
+  display: block;
 }
 
 .favorites-tabs {
   display: flex;
   gap: 16rpx;
-  padding: 24rpx 32rpx 0;
+  padding: 8rpx 0 0;
 }
 
 .favorites-tab {
@@ -73,7 +48,7 @@
 
 .favorites-list,
 .ranking-list {
-  padding: 24rpx 32rpx 0;
+  padding: 24rpx 0 0;
 }
 
 .favorite-card,
@@ -146,8 +121,9 @@
   padding: 0 16rpx;
   height: 42rpx;
   border-radius: 999rpx;
-  background: rgba(255, 122, 89, 0.14);
-  color: #ff7a59;
+  border: 1rpx solid var(--brand);
+  background: #ffffff;
+  color: var(--brand);
   font-size: 20rpx;
   font-weight: 600;
   display: inline-flex;
@@ -210,8 +186,9 @@
 }
 
 .favorites-empty {
-  min-height: calc(100vh - 420rpx);
-  padding: 0 32rpx;
+  flex: 1;
+  min-height: 0;
+  padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -220,7 +197,7 @@
 }
 
 .favorites-empty--solo {
-  min-height: calc(100vh - 120rpx);
+  padding-bottom: 8rpx;
 }
 
 .favorites-empty-title {

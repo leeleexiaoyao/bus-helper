@@ -8,7 +8,7 @@
     <view class="home-header">
       <view class="home-header-copy">
         <view class="home-title">{{navTitle}}</view>
-        <view class="home-subtitle">{{currentTrip.tripMeta.departureTime}}出发~</view>
+        <view class="home-subtitle">{{navSubtitle}}</view>
       </view>
       <image class="home-header-figure" src="/assets/icons/pic_homepage_chufa.png" mode="widthFix" />
     </view>

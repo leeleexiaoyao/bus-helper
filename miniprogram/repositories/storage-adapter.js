@@ -1,29 +1,42 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.wxStorageAdapter = exports.MemoryStorageAdapter = void 0;
+exports.MemoryStorageAdapter = exports.wxStorageAdapter = void 0;
 const constants_1 = require("../shared/constants");
+let memoryState = null;
+function cloneState(state) {
+    return state ? JSON.parse(JSON.stringify(state)) : null;
+}
+function canUseWxStorage() {
+    return typeof wx !== "undefined" && typeof wx.getStorageSync === "function" && typeof wx.setStorageSync === "function";
+}
+exports.wxStorageAdapter = {
+    getState() {
+        if (canUseWxStorage()) {
+            const state = wx.getStorageSync(constants_1.APP_STATE_STORAGE_KEY);
+            if (state) {
+                memoryState = cloneState(state);
+                return state;
+            }
+        }
+        return cloneState(memoryState);
+    },
+    setState(state) {
+        const snapshot = cloneState(state);
+        memoryState = snapshot;
+        if (snapshot && canUseWxStorage()) {
+            wx.setStorageSync(constants_1.APP_STATE_STORAGE_KEY, snapshot);
+        }
+    }
+};
 class MemoryStorageAdapter {
-    constructor(initialState = (0, constants_1.createInitialAppState)()) {
-        this.state = initialState;
+    constructor(initialState = null) {
+        this.state = cloneState(initialState);
     }
     getState() {
-        return this.state ? JSON.parse(JSON.stringify(this.state)) : null;
+        return cloneState(this.state);
     }
     setState(state) {
-        this.state = JSON.parse(JSON.stringify(state));
+        this.state = cloneState(state);
     }
 }
 exports.MemoryStorageAdapter = MemoryStorageAdapter;
-exports.wxStorageAdapter = {
-    getState() {
-        try {
-            return wx.getStorageSync(constants_1.APP_STATE_STORAGE_KEY) || null;
-        }
-        catch (error) {
-            return null;
-        }
-    },
-    setState(state) {
-        wx.setStorageSync(constants_1.APP_STATE_STORAGE_KEY, state);
-    }
-};

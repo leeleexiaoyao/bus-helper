@@ -36,6 +36,10 @@ function normalizeRuntimeConfig(rawDocument: unknown): RuntimeConfig {
       typeof rawDocument.homeTitle === "string" && rawDocument.homeTitle.trim()
         ? rawDocument.homeTitle.trim()
         : fallback.homeTitle,
+    homeSubtitle:
+      typeof rawDocument.homeSubtitle === "string" && rawDocument.homeSubtitle.trim()
+        ? rawDocument.homeSubtitle.trim()
+        : fallback.homeSubtitle,
     tripAdminUserIds: Object.keys(fallback.tripAdminUserIds).reduce<Record<string, string | null>>(
       (accumulator, tripId) => {
         const rawUserId = rawTripAdminUserIds[tripId];

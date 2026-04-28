@@ -14,13 +14,13 @@
   "lazyCodeLoading": "requiredComponents",
   "window": {
     "navigationBarTitleText": "巴士认座助手",
-    "navigationBarBackgroundColor": "#eff5fc",
+    "navigationBarBackgroundColor": "#ffffff",
     "navigationBarTextStyle": "black",
     "backgroundColor": "#edf3fa",
     "backgroundTextStyle": "light"
   },
   "tabBar": {
-    "custom": true,
+    "custom": false,
     "color": "#6e7f92",
     "selectedColor": "#ff6b3d",
     "backgroundColor": "#ffffff",
@@ -28,15 +28,15 @@
     "list": [
       {
         "pagePath": "pages/home/index",
-        "text": "首页",
+        "text": "座位",
         "iconPath": "assets/icons/tab-home.png",
         "selectedIconPath": "assets/icons/tab-home-active.png"
       },
       {
         "pagePath": "pages/passengers/index",
         "text": "乘客",
-        "iconPath": "assets/icons/tab-tools.png",
-        "selectedIconPath": "assets/icons/tab-tools-active.png"
+        "iconPath": "assets/icons/tab-passengers.png",
+        "selectedIconPath": "assets/icons/tab-passengers-active.png"
       },
       {
         "pagePath": "pages/profile/index",

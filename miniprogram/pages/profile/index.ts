@@ -14,12 +14,6 @@ interface ProfileMenuItem {
   showDivider: boolean;
 }
 
-interface ProfileStatDisplay {
-  primary: string;
-  secondary: string;
-  isPlaceholder: boolean;
-}
-
 const SETTINGS_ITEMS: ProfileMenuItem[] = [
   {
     id: "boarding-records",
@@ -82,81 +76,6 @@ const UNAUTHORIZED_SETTINGS_ITEMS: ProfileMenuItem[] = [
   }
 ];
 
-function buildTextStat(value: string): ProfileStatDisplay {
-  const trimmed = value.trim();
-  return {
-    primary: trimmed,
-    secondary: "",
-    isPlaceholder: false
-  };
-}
-
-function buildAgeStat(value: string): ProfileStatDisplay {
-  const trimmed = value.trim();
-  return {
-    primary: trimmed ? `${trimmed} 岁` : "",
-    secondary: "",
-    isPlaceholder: false
-  };
-}
-
-function trimProfileLocationSuffix(value: string): string {
-  const suffixes = ["特别行政区", "自治区", "自治州", "自治县", "地区", "盟", "省", "市", "区", "县"];
-  const matchedSuffix = suffixes.find((suffix) => value.endsWith(suffix));
-  if (!matchedSuffix) {
-    return value;
-  }
-
-  return value.slice(0, -matchedSuffix.length);
-}
-
-function parseLocationUnits(value: string): Array<{ name: string; suffix: string }> {
-  const units: Array<{ name: string; suffix: string }> = [];
-  const matcher = /(.+?)(特别行政区|自治区|自治州|自治县|地区|盟|省|市|区|县)/g;
-  let match: RegExpExecArray | null;
-
-  while ((match = matcher.exec(value)) !== null) {
-    units.push({
-      name: match[1],
-      suffix: match[2]
-    });
-  }
-
-  return units;
-}
-
-function buildLocationStatFromName(name: string): ProfileStatDisplay {
-  return {
-    primary: name,
-    secondary: "",
-    isPlaceholder: !name
-  };
-}
-
-function buildLivingLocationStat(value: string): ProfileStatDisplay {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return buildLocationStatFromName("");
-  }
-
-  const units = parseLocationUnits(trimmed);
-  const districtUnit = units.find((unit) => unit.suffix === "区" || unit.suffix === "县");
-  const cityUnit = units.find((unit) => unit.suffix === "市");
-  return buildLocationStatFromName(districtUnit?.name ?? cityUnit?.name ?? trimProfileLocationSuffix(trimmed));
-}
-
-function buildHometownLocationStat(value: string): ProfileStatDisplay {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return buildLocationStatFromName("");
-  }
-
-  const units = parseLocationUnits(trimmed);
-  const cityUnit = units.find((unit) => unit.suffix === "市");
-  const districtUnit = units.find((unit) => unit.suffix === "区" || unit.suffix === "县");
-  return buildLocationStatFromName(cityUnit?.name ?? districtUnit?.name ?? trimProfileLocationSuffix(trimmed));
-}
-
 function resolveProfileIllustrationUrl(homePersonaAssetId: string | null): string {
   if (!homePersonaAssetId) {
     return "";
@@ -180,14 +99,7 @@ Page({
     flowerIconUrl: "/assets/icons/me/pic_me_flower.svg",
     moreIconUrl: "/assets/icons/me/icon_me_more.svg",
     settingsItems: UNAUTHORIZED_SETTINGS_ITEMS,
-    profileTagViews: [] as TagColorView[],
-    hasProfileBio: false,
-    hasProfileStats: false,
-    profileStats: {
-      age: buildAgeStat(""),
-      living: buildTextStat(""),
-      hometown: buildTextStat("")
-    }
+    profileTagViews: [] as TagColorView[]
   },
 
   onLoad() {
@@ -221,9 +133,6 @@ Page({
     try {
       const pageData = tripService.getProfilePageData();
       const profileIllustrationUrl = resolveProfileIllustrationUrl(pageData.currentUser.homePersonaAssetId);
-      const ageStat = buildAgeStat(pageData.currentUser.age);
-      const livingStat = buildLivingLocationStat(pageData.currentUser.livingCity);
-      const hometownStat = buildHometownLocationStat(pageData.currentUser.hometown);
       this.setData({
         pageData,
         showProfileContent: pageData.isAuthorized,
@@ -234,14 +143,7 @@ Page({
         profileIllustrationUrl,
         hasProfileIllustration: Boolean(profileIllustrationUrl),
         settingsItems: pageData.isAuthorized ? SETTINGS_ITEMS : UNAUTHORIZED_SETTINGS_ITEMS,
-        profileTagViews: buildTagColorViews(pageData.tags),
-        hasProfileBio: Boolean(pageData.currentUser.bio.trim()),
-        hasProfileStats: Boolean(ageStat.primary || livingStat.primary || hometownStat.primary),
-        profileStats: {
-          age: ageStat,
-          living: livingStat,
-          hometown: hometownStat
-        }
+        profileTagViews: buildTagColorViews(pageData.tags)
       });
     } catch (error) {
       showErrorToast(error);

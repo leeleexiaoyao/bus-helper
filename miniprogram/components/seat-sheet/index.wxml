@@ -32,16 +32,14 @@
             <view class="detail-main">
               <view class="detail-title-row">
                 <view class="detail-name">{{member.nickname}}</view>
+                <view class="detail-mutual-tag" wx:if="{{member.isMutualFavoriteWithViewer}}">互相标记</view>
                 <view class="detail-seat">{{detailSeatLabel}}</view>
               </view>
 
               <view class="detail-line">
                 <view class="mini-tag" wx:if="{{member.isSelf}}">我</view>
                 <view class="mini-tag mini-tag--admin" wx:if="{{showAdminBadge}}">管理</view>
-                <view class="mini-tag mini-tag--mutual" wx:if="{{member.isMutualFavoriteWithViewer}}">互相标记</view>
               </view>
-
-              <view class="detail-bio">{{detailBioText}}</view>
 
               <view class="tag-list detail-tags" wx:if="{{member.tagViews.length}}">
                 <block wx:for="{{member.tagViews}}" wx:key="label" wx:for-item="tag">
@@ -57,27 +55,6 @@
             src="{{detailPersonaImageUrl}}"
             mode="heightFix"
           />
-        </view>
-
-        <view class="detail-stats">
-          <view class="detail-stat-item">
-            <view class="detail-stat-value {{detailLivingLocationDisplay.isPlaceholder ? 'detail-stat-value--placeholder' : ''}}">
-              <text>{{detailLivingLocationDisplay.primary}}</text>
-              <text wx:if="{{detailLivingLocationDisplay.secondary}}" class="detail-stat-value-secondary">{{detailLivingLocationDisplay.secondary}}</text>
-            </view>
-            <view class="detail-stat-label">居住</view>
-          </view>
-          <view class="detail-stat-item">
-            <view class="detail-stat-value {{detailHometownLocationDisplay.isPlaceholder ? 'detail-stat-value--placeholder' : ''}}">
-              <text>{{detailHometownLocationDisplay.primary}}</text>
-              <text wx:if="{{detailHometownLocationDisplay.secondary}}" class="detail-stat-value-secondary">{{detailHometownLocationDisplay.secondary}}</text>
-            </view>
-            <view class="detail-stat-label">来自</view>
-          </view>
-          <view class="detail-stat-item detail-stat-item--age">
-            <view class="detail-stat-value">{{detailAgeText}}</view>
-            <view class="detail-stat-label">年龄</view>
-          </view>
         </view>
       </view>
 

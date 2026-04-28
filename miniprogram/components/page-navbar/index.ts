@@ -19,6 +19,18 @@ Component({
     titleFontSize: {
       type: Number,
       value: 20
+    },
+    showBack: {
+      type: Boolean,
+      value: false
+    },
+    backDelta: {
+      type: Number,
+      value: 1
+    },
+    backFallbackUrl: {
+      type: String,
+      value: ""
     }
   },
   data: {
@@ -72,6 +84,27 @@ Component({
     }
   },
   methods: {
+    handleBackTap() {
+      const delta = Math.max(1, Number(this.properties.backDelta) || 1);
+      const fallbackUrl = String(this.properties.backFallbackUrl || "");
+
+      wx.navigateBack({
+        delta,
+        fail: () => {
+          if (fallbackUrl) {
+            wx.navigateTo({
+              url: fallbackUrl,
+              fail: () => {
+                wx.switchTab({
+                  url: fallbackUrl
+                });
+              }
+            });
+          }
+        }
+      });
+    },
+
     updateVisualState(progress: number, theme: string) {
       const safeProgress = Math.max(0, Math.min(1, Number(progress) || 0));
       const isLightTheme = theme === "light";

@@ -4,7 +4,8 @@ import {
   DEMO_USERS,
   TOOL_TYPES,
   createEmptyTripTools,
-  createInitialAppState
+  createInitialAppState,
+  FIXED_TRIP_IDS
 } from "../shared/constants";
 import type {
   AppState,
@@ -27,6 +28,7 @@ import type {
   VoteSelectionMode,
   VoteSubmission
 } from "../shared/types";
+import { createSeatMap, generateSeatCodes } from "../shared/seat";
 import type { StorageAdapter } from "./storage-adapter";
 
 type UnknownRecord = Record<string, unknown>;
@@ -555,6 +557,10 @@ function normalizeRuntimeConfig(value: unknown): RuntimeConfig {
       typeof value.homeTitle === "string" && value.homeTitle.trim()
         ? value.homeTitle.trim()
         : fallback.homeTitle,
+    homeSubtitle:
+      typeof value.homeSubtitle === "string" && value.homeSubtitle.trim()
+        ? value.homeSubtitle.trim()
+        : fallback.homeSubtitle,
     tripAdminUserIds: Object.keys(fallback.tripAdminUserIds).reduce<Record<string, string | null>>(
       (accumulator, tripId) => {
         const rawUserId = rawTripAdminUserIds[tripId];
@@ -567,29 +573,84 @@ function normalizeRuntimeConfig(value: unknown): RuntimeConfig {
   };
 }
 
-function normalizeState(state: AppState | null): AppState {
-  if (!state || state.version !== APP_STATE_VERSION) {
-    return createInitialAppState();
+function migrateTripToTemplate(trip: Trip, templateId: Trip["templateId"]): Trip {
+  const seatCodes = generateSeatCodes(templateId);
+  const nextSeatMap = createSeatMap(seatCodes);
+
+  seatCodes.forEach((seatCode) => {
+    const occupiedUserId = trip.seatMap?.[seatCode] ?? null;
+    nextSeatMap[seatCode] = occupiedUserId;
+  });
+
+  return {
+    ...trip,
+    templateId,
+    seatCodes,
+    seatMap: nextSeatMap
+  };
+}
+
+function migrateState(state: AppState | null): AppState | null {
+  if (!state) {
+    return null;
   }
 
-  const normalizedUsers = Object.entries(state.users).reduce<AppState["users"]>((accumulator, [userId, user]) => {
-    accumulator[userId] = normalizeUser(user as User);
-    return accumulator;
-  }, {});
+  if (state.version === APP_STATE_VERSION) {
+    return state;
+  }
+
+  if (state.version !== 14) {
+    return null;
+  }
 
   const nextState: AppState = {
     ...state,
+    version: APP_STATE_VERSION,
+    trips: {
+      ...state.trips
+    },
+    runtimeConfig: normalizeRuntimeConfig((state as AppState & { runtimeConfig?: unknown }).runtimeConfig)
+  };
+
+  const trip2 = nextState.trips[FIXED_TRIP_IDS.trip2];
+  if (trip2 && trip2.templateId === "template-49" && trip2.seatCodes.length === 49) {
+    nextState.trips[FIXED_TRIP_IDS.trip2] = migrateTripToTemplate(trip2, "template-53");
+  }
+
+  return nextState;
+}
+
+function normalizeState(state: AppState | null): AppState {
+  const migratedState = migrateState(state);
+  if (!migratedState) {
+    return createInitialAppState();
+  }
+
+  const normalizedUsers = Object.entries(migratedState.users).reduce<AppState["users"]>(
+    (accumulator, [userId, user]) => {
+      accumulator[userId] = normalizeUser(user as User);
+      return accumulator;
+    },
+    {}
+  );
+
+  const nextState: AppState = {
+    ...migratedState,
     version: APP_STATE_VERSION,
     users: DEMO_USERS.reduce<AppState["users"]>((accumulator, demoUser) => {
       accumulator[demoUser.id] = accumulator[demoUser.id] ?? { ...demoUser };
       return accumulator;
     }, normalizedUsers),
-    trips: Object.values(state.trips).reduce<AppState["trips"]>((accumulator, trip) => {
+    trips: Object.values(migratedState.trips).reduce<AppState["trips"]>((accumulator, trip) => {
       accumulator[trip.id] = normalizeTrip(trip as Trip);
       return accumulator;
     }, {}),
-    tripFavorites: normalizeTripFavorites((state as AppState & { tripFavorites?: unknown }).tripFavorites),
-    runtimeConfig: normalizeRuntimeConfig((state as AppState & { runtimeConfig?: unknown }).runtimeConfig)
+    tripFavorites: normalizeTripFavorites(
+      (migratedState as AppState & { tripFavorites?: unknown }).tripFavorites
+    ),
+    runtimeConfig: normalizeRuntimeConfig(
+      (migratedState as AppState & { runtimeConfig?: unknown }).runtimeConfig
+    )
   };
 
   const membershipSet = new Set(

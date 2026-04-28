@@ -56,12 +56,23 @@ export class TripRepository {
     return this.appStateRepository.read().tripFavorites.filter((favorite) => favorite.tripId === tripId);
   }
 
+  listAllTripFavorites(): TripFavoriteRelation[] {
+    return this.appStateRepository.read().tripFavorites.slice();
+  }
+
   getTripMember(tripId: string, userId: string): TripMember | null {
     return this.listTripMembers(tripId).find((member) => member.userId === userId) ?? null;
   }
 
   hasTripFavorite(tripId: string, sourceUserId: string, targetUserId: string): boolean {
     return this.listTripFavorites(tripId).some(
+      (favorite) =>
+        favorite.sourceUserId === sourceUserId && favorite.targetUserId === targetUserId
+    );
+  }
+
+  hasFavorite(sourceUserId: string, targetUserId: string): boolean {
+    return this.listAllTripFavorites().some(
       (favorite) =>
         favorite.sourceUserId === sourceUserId && favorite.targetUserId === targetUserId
     );
@@ -95,10 +106,7 @@ export class TripRepository {
   ): TripFavoriteRelation {
     return this.appStateRepository.update((state) => {
       const exists = state.tripFavorites.find(
-        (favorite) =>
-          favorite.tripId === tripId &&
-          favorite.sourceUserId === sourceUserId &&
-          favorite.targetUserId === targetUserId
+        (favorite) => favorite.sourceUserId === sourceUserId && favorite.targetUserId === targetUserId
       );
       if (exists) {
         return exists;
@@ -138,6 +146,15 @@ export class TripRepository {
             favorite.sourceUserId === sourceUserId &&
             favorite.targetUserId === targetUserId
           )
+      );
+    });
+  }
+
+  removeFavorite(sourceUserId: string, targetUserId: string): void {
+    this.appStateRepository.update((state) => {
+      state.tripFavorites = state.tripFavorites.filter(
+        (favorite) =>
+          !(favorite.sourceUserId === sourceUserId && favorite.targetUserId === targetUserId)
       );
     });
   }

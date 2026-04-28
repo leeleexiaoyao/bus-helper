@@ -10,14 +10,15 @@ import type {
   User
 } from "./types";
 
-export const APP_STATE_VERSION = 14;
+export const APP_STATE_VERSION = 15;
 export const APP_STATE_STORAGE_KEY = "bus-seat-buddy-state";
-export const MAX_MEMBER_FAVORITES_PER_TRIP = 2;
+export const MAX_MEMBER_FAVORITES_PER_TRIP = 6;
 
 export const DEFAULT_TRIP_NAME = "未命名车次";
 export const DEFAULT_DEPARTURE_TIME = "待定";
 export const DEFAULT_AVATAR_URL = "";
-export const DEFAULT_HOME_TITLE = "麒麟之旅";
+export const DEFAULT_HOME_TITLE = "座位排序助手";
+export const DEFAULT_HOME_SUBTITLE = "祝您旅途愉快~";
 export const HOME_PERSONA_IMAGE_URL = "/assets/personas/home-persona.png";
 export const WHEEL_MAX_ITEMS = 10;
 export const DEFAULT_WHEEL_ITEMS = ["免单", "零食礼包", "饮料一杯", "神秘福袋", "再来一次", "感谢参与"];
@@ -133,6 +134,7 @@ export const TOOL_TYPES: ToolType[] = ["seat-draw", "vote", "wheel", "lottery"];
 export function createDefaultRuntimeConfig(): RuntimeConfig {
   return {
     homeTitle: DEFAULT_HOME_TITLE,
+    homeSubtitle: DEFAULT_HOME_SUBTITLE,
     tripAdminUserIds: {
       [FIXED_TRIP_IDS.trip1]: null,
       [FIXED_TRIP_IDS.trip2]: null
@@ -235,10 +237,10 @@ function buildBaseTrips(): Trip[] {
       tripName: FIXED_TRIP_LABELS[FIXED_TRIP_IDS.trip2],
       departureTime: "2025-04-25 02:30",
       password: "220002",
-      templateId: "template-49",
+      templateId: "template-53",
       creatorUserId: "user-3",
       status: "active",
-      seatCodes: generateSeatCodes("template-49"),
+      seatCodes: generateSeatCodes("template-53"),
       seatMap: {},
       tools: createEmptyTripTools(),
       createdAt: BASE_CREATED_AT + 1
@@ -253,12 +255,14 @@ function buildBaseTrips(): Trip[] {
 
 function buildBaseTripMembers(): TripMember[] {
   return [FIXED_TRIP_IDS.trip1, FIXED_TRIP_IDS.trip2].flatMap((tripId, tripIndex) =>
-    DEMO_USERS.map((user, userIndex) => ({
-      tripId,
-      userId: user.id,
-      role: "member" as const,
-      joinedAt: BASE_CREATED_AT + tripIndex * 10 + userIndex
-    }))
+    DEMO_USERS
+      .filter((user) => user.memberTripId === tripId)
+      .map((user, userIndex) => ({
+        tripId,
+        userId: user.id,
+        role: "member" as const,
+        joinedAt: BASE_CREATED_AT + tripIndex * 10 + userIndex
+      }))
   );
 }
 
@@ -519,6 +523,7 @@ export function createSeededDemoAppState(): AppState {
     tripMembers: nextTripMembers,
     runtimeConfig: {
       homeTitle: DEFAULT_HOME_TITLE,
+      homeSubtitle: DEFAULT_HOME_SUBTITLE,
       tripAdminUserIds: {
         [FIXED_TRIP_IDS.trip1]: "user-1",
         [FIXED_TRIP_IDS.trip2]: "user-3"

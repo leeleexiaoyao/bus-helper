@@ -20,70 +20,7 @@
             <text class="editor-row-value editor-row-value--muted">{{authNickname}}</text>
           </view>
         </view>
-
-        <view class="editor-divider"></view>
-
-        <picker mode="region" value="{{livingRegion}}" bindchange="handleLivingRegionChange">
-          <view class="editor-row editor-row--action">
-            <text class="editor-row-label">居住</text>
-            <view class="editor-row-main">
-              <view class="editor-row-value-wrap editor-row-value-wrap--lifted">
-                <text class="editor-row-value {{livingCity ? '' : 'editor-row-value--placeholder'}}">
-                  {{livingCity ? livingCity : "请选择居住地"}}
-                </text>
-              </view>
-              <view class="editor-row-caret"></view>
-            </view>
-          </view>
-        </picker>
-
-        <view class="editor-divider"></view>
-
-        <picker mode="region" value="{{hometownRegion}}" bindchange="handleHometownRegionChange">
-          <view class="editor-row editor-row--action">
-            <text class="editor-row-label">来自</text>
-            <view class="editor-row-main">
-              <view class="editor-row-value-wrap editor-row-value-wrap--lifted">
-                <text class="editor-row-value {{hometown ? '' : 'editor-row-value--placeholder'}}">
-                  {{hometown ? hometown : "请选择省市"}}
-                </text>
-              </view>
-              <view class="editor-row-caret"></view>
-            </view>
-          </view>
-        </picker>
-
-        <view class="editor-divider"></view>
-
-        <picker mode="selector" range="{{ageOptions}}" value="{{agePickerIndex}}" bindchange="handleAgeChange">
-          <view class="editor-row editor-row--action">
-            <text class="editor-row-label">年龄</text>
-            <view class="editor-row-main">
-              <view class="editor-row-value-wrap">
-                <text class="editor-row-value {{age ? '' : 'editor-row-value--placeholder'}}">
-                  {{age ? age + "岁" : "请选择年龄"}}
-                </text>
-              </view>
-              <view class="editor-row-caret"></view>
-            </view>
-          </view>
-        </picker>
-
       </view>
-    </view>
-
-    <view class="editor-section">
-      <view class="editor-section-title">有话要说</view>
-      <textarea
-        class="editor-textarea"
-        value="{{bio}}"
-        maxlength="40"
-        placeholder="请输入你想说的话"
-        placeholder-style="color: #c7c7c7; font-size: 26rpx;"
-        auto-height
-        data-field="bio"
-        bindinput="handleFieldInput"
-      ></textarea>
     </view>
 
     <view class="editor-section">

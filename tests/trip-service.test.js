@@ -49,12 +49,13 @@ function expectBusinessError(action, code) {
     }
 }
 (async () => {
-    var _a, _b, _c, _d, _e, _f, _g;
+    var _a, _b, _c, _d, _e, _f, _g, _h;
     {
         const { service } = createService();
         const bootstrap = service.bootstrapApp();
         strict_1.default.equal(bootstrap.homeMode, "trip");
         strict_1.default.equal(bootstrap.homeTitle, constants_1.DEFAULT_HOME_TITLE);
+        strict_1.default.equal(bootstrap.homeSubtitle, constants_1.DEFAULT_HOME_SUBTITLE);
         strict_1.default.equal(bootstrap.currentTripLabel, "1车");
         strict_1.default.equal(bootstrap.canEditHomeTitle, false);
         strict_1.default.equal(bootstrap.currentTrip.tripMeta.tripId, constants_1.FIXED_TRIP_IDS.trip1);
@@ -305,7 +306,7 @@ function expectBusinessError(action, code) {
         service.disableSeedDemoData();
         const resetState = storage.getState();
         strict_1.default.equal(Object.keys((_f = resetState === null || resetState === void 0 ? void 0 : resetState.users) !== null && _f !== void 0 ? _f : {}).length, 4);
-        strict_1.default.equal(((_g = resetState === null || resetState === void 0 ? void 0 : resetState.tripMembers) !== null && _g !== void 0 ? _g : []).length, 8);
+        strict_1.default.equal(((_g = resetState === null || resetState === void 0 ? void 0 : resetState.tripMembers) !== null && _g !== void 0 ? _g : []).length, 4);
         strict_1.default.equal(resetState === null || resetState === void 0 ? void 0 : resetState.runtimeConfig.tripAdminUserIds[constants_1.FIXED_TRIP_IDS.trip1], null);
         strict_1.default.equal(service.getProfilePageData().seedDemoEnabled, false);
     }
@@ -347,6 +348,61 @@ function expectBusinessError(action, code) {
         await service.saveHomeTitle("银河列车");
         strict_1.default.equal(service.bootstrapApp().homeTitle, "银河列车");
         strict_1.default.equal(service.getHomeSettingsPageData().homeTitle, "银河列车");
+    }
+    {
+        const state = (0, constants_1.createInitialAppState)();
+        state.runtimeConfig.tripAdminUserIds[constants_1.FIXED_TRIP_IDS.trip1] = "user-1";
+        const { service } = createService(state);
+        authorizeActiveUser(service, "小雨");
+        await service.saveHomeSettings("银河列车", "一路顺风");
+        strict_1.default.equal(service.bootstrapApp().homeTitle, "银河列车");
+        strict_1.default.equal(service.bootstrapApp().homeSubtitle, "一路顺风");
+        strict_1.default.equal(service.getHomeSettingsPageData().homeSubtitle, "一路顺风");
+    }
+    {
+        const { service } = createService();
+        service.switchCurrentTrip(constants_1.FIXED_TRIP_IDS.trip2);
+        const bootstrap = service.bootstrapApp();
+        strict_1.default.equal(bootstrap.currentTrip.tripMeta.templateId, "template-53");
+        strict_1.default.equal(bootstrap.currentTrip.tripMeta.seatCount, 53);
+    }
+    {
+        const state = (0, constants_1.createInitialAppState)();
+        state.runtimeConfig.tripAdminUserIds[constants_1.FIXED_TRIP_IDS.trip2] = "user-3";
+        const { service } = createService(state);
+        service.switchActiveUser("user-3");
+        authorizeActiveUser(service, "Miya");
+        const pageData = service.saveTripSeatTemplate(constants_1.FIXED_TRIP_IDS.trip1, "template-57");
+        service.switchCurrentTrip(constants_1.FIXED_TRIP_IDS.trip1);
+        strict_1.default.equal(service.bootstrapApp().currentTrip.tripMeta.seatCount, 57);
+        strict_1.default.equal((_h = pageData.tripSeatSettings.find((setting) => setting.tripId === constants_1.FIXED_TRIP_IDS.trip1)) === null || _h === void 0 ? void 0 : _h.seatCount, 57);
+    }
+    {
+        const state = (0, constants_1.createInitialAppState)();
+        state.version = 14;
+        const { service } = createService(state);
+        service.switchCurrentTrip(constants_1.FIXED_TRIP_IDS.trip2);
+        strict_1.default.equal(service.bootstrapApp().currentTrip.tripMeta.seatCount, 53);
+    }
+    {
+        const state = (0, constants_1.createInitialAppState)();
+        state.runtimeConfig.tripAdminUserIds[constants_1.FIXED_TRIP_IDS.trip1] = "user-1";
+        const { storage, service } = createService(state);
+        authorizeActiveUser(service, "小雨");
+        service.toggleFavoriteMember("user-2");
+        withMockedNow(Date.parse("2026-04-25T12:33:00+08:00"), () => service.toggleBoardingCheckIn());
+        const pageData = service.clearAllTripData();
+        const nextState = storage.getState();
+        strict_1.default.equal(pageData.canClearTripData, true);
+        strict_1.default.equal(nextState.tripMembers.length, 0);
+        strict_1.default.equal(nextState.tripFavorites.length, 0);
+        strict_1.default.equal(nextState.users["user-1"].currentTripId, null);
+        strict_1.default.equal(nextState.users["user-1"].memberTripId, null);
+        strict_1.default.deepEqual(nextState.users["user-1"].boardingRecordsByTripId, {});
+        strict_1.default.equal(nextState.trips[constants_1.FIXED_TRIP_IDS.trip1].seatCodes.length, 49);
+        strict_1.default.equal(nextState.trips[constants_1.FIXED_TRIP_IDS.trip2].seatCodes.length, 53);
+        strict_1.default.equal(nextState.runtimeConfig.homeTitle, constants_1.DEFAULT_HOME_TITLE);
+        strict_1.default.equal(nextState.runtimeConfig.homeSubtitle, constants_1.DEFAULT_HOME_SUBTITLE);
     }
     {
         const { service } = createService();

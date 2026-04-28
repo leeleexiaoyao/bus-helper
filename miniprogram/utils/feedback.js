@@ -1,21 +1,22 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getErrorMessage = getErrorMessage;
 exports.showErrorToast = showErrorToast;
 exports.showSuccessToast = showSuccessToast;
-const errors_1 = require("../shared/errors");
-function getErrorMessage(error, fallback = "操作失败，请稍后再试。") {
-    if (error instanceof errors_1.BusinessError) {
-        return error.message;
+function resolveErrorMessage(error) {
+    if (typeof error === "string") {
+        return error;
     }
-    if (error instanceof Error) {
-        return error.message || fallback;
+    if (error && typeof error === "object" && "message" in error) {
+        const message = error.message;
+        if (typeof message === "string" && message.trim()) {
+            return message.trim();
+        }
     }
-    return fallback;
+    return "操作失败，请稍后重试";
 }
-function showErrorToast(error, fallback) {
+function showErrorToast(error) {
     wx.showToast({
-        title: getErrorMessage(error, fallback),
+        title: resolveErrorMessage(error),
         icon: "none"
     });
 }

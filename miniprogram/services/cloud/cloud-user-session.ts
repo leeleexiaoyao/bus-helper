@@ -3,6 +3,7 @@ import type { User } from "../../shared/types";
 import { AppStateRepository } from "../../repositories/app-state-repository";
 import { wxStorageAdapter } from "../../repositories/storage-adapter";
 import { hasConfiguredCloudEnv } from "../../config/cloud";
+import { buildLocallyClearedUser, isLocallyClearedUser } from "../../utils/local-user-reset";
 import { fetchCloudIdentity, getCloudDatabase } from "./cloud-service";
 
 const CLOUD_USER_COLLECTION = "bus_buddy_users";
@@ -234,6 +235,14 @@ export async function syncCloudUserToLocalState(): Promise<void> {
 
   const identity = await fetchCloudIdentity();
   const repository = new AppStateRepository(wxStorageAdapter);
+  if (isLocallyClearedUser(identity.openid)) {
+    repository.update((state) => {
+      state.users[identity.openid] = buildLocallyClearedUser(identity.openid);
+      state.activeUserId = identity.openid;
+    });
+    return;
+  }
+
   const seedUser = getLocalSeedUser();
   let cloudUser = await readCloudUser(identity.openid);
 
@@ -253,7 +262,12 @@ export async function syncCloudUserToLocalState(): Promise<void> {
 }
 
 export function scheduleUserCloudSync(user: User): void {
-  if (!canUseCloudRuntime() || !user.id || DEMO_SWITCHABLE_USER_IDS.includes(user.id)) {
+  if (
+    !canUseCloudRuntime() ||
+    !user.id ||
+    DEMO_SWITCHABLE_USER_IDS.includes(user.id) ||
+    isLocallyClearedUser(user.id)
+  ) {
     return;
   }
 

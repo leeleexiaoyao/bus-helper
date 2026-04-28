@@ -3,9 +3,17 @@
 <view class="page-navbar-fixed" style="height: {{navTotalHeight}}px; padding-top: {{statusBarHeight}}px;">
   <view class="page-navbar-bg" style="{{navOpacityStyle}}"></view>
 <view
-  class="page-navbar-content"
+  class="page-navbar-content {{showBack ? 'page-navbar-content--with-back' : ''}}"
   style="height: {{navHeight}}px; padding-left: {{titleLeftPadding}}px; padding-right: {{titleRightPadding}}px;"
 >
+  <view
+    wx:if="{{showBack}}"
+    class="page-navbar-back"
+    hover-class="page-navbar-back--hover"
+    bindtap="handleBackTap"
+  >
+    <view class="page-navbar-back-icon"></view>
+  </view>
   <view class="page-navbar-title" style="{{titleStyle}} font-size: {{resolvedTitleFontSize}}px;">{{title}}</view>
 </view>
 </view>

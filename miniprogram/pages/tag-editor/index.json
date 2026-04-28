@@ -1,6 +1,6 @@
 {
   "navigationBarTitleText": "编辑资料",
-  "navigationBarBackgroundColor": "#f3f3f3",
+  "navigationBarBackgroundColor": "#ffffff",
   "navigationBarTextStyle": "black",
   "usingComponents": {
     "persona-sheet": "/components/persona-sheet/index"

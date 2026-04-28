@@ -5,7 +5,7 @@ Component({
         list: [
             {
                 pagePath: "/pages/home/index",
-                text: "首页",
+                text: "座位",
                 iconPath: "/assets/icons/tab-home.svg",
                 selectedIconPath: "/assets/icons/tab-home-active.svg"
             },

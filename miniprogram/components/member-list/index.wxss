@@ -35,6 +35,7 @@
   display: flex;
   align-items: center;
   gap: 8rpx;
+  flex-wrap: wrap;
 }
 
 .member-name {
@@ -44,6 +45,22 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.member-mutual-tag {
+  height: 42rpx;
+  padding: 0 16rpx;
+  border-radius: 999rpx;
+  border: 1rpx solid var(--brand);
+  background: #ffffff;
+  color: var(--brand);
+  font-size: 20rpx;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .member-seat {
